@@ -1,19 +1,29 @@
-# steward
+# Ctrl
 
-Steward is a Command & Control backend system for Servers, IOT and Edge platforms where the network link for reaching them can be reliable like local networks, or totally unreliable like satellite links. An end node can even be offline when you give it a command, and Steward will make sure that the command is delivered when the node comes online.
+## Foreword
+
+ctrl is a fork of the code I earlier wrote for RaaLabs called Steward. The original repo was public and written under an MIT license, but in 2023 the original repo was made private, and are no longer avaialable to the public. The goal of this repo is to provide an actively maintained version for improved reliability and stability.
+
+NB: Filing of issues and bug fixes are highly appreciated. Feature requests will genereally not be followed up simply because I don't have the time to review it at this time :)
+
+## Intro
+
+ctrl is a Command & Control backend system for Servers, IOT and Edge platforms where the network link for reaching them can be reliable like local networks, or totally unreliable like satellite links. An end node can even be offline when you give it a command, and ctrl will make sure that the command is delivered when the node comes online.
 
 Example use cases:
 
 - Send a specific message to one or many end nodes that will instruct to run scripts or a series of shell commands to change config, restart services and control those systems.
 - Gather IOT/OT data from both secure and not secure devices and systems, and transfer them encrypted in a secure way over the internet to your central system for handling those data.
-- Collect metrics or monitor end nodes and store the result on a central Steward instance, or pass those data on to another central system for handling metrics or monitoring data.
+- Collect metrics or monitor end nodes and store the result on a central ctrl instance, or pass those data on to another central system for handling metrics or monitoring data.
 - Distribute certificates.
 
-As long as you can do something as an operator on in a shell on a system you can do the same with Steward in a secure way to one or all end nodes (servers) in one go with one single message/command.
+As long as you can do something as an operator on in a shell on a system you can do the same with ctrl in a secure way to one or all end nodes (servers) in one go with one single message/command.
 
 **NB** Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
 
-- [steward](#steward)
+- [Ctrl](#ctrl)
+  - [Foreword](#foreword)
+  - [Intro](#intro)
   - [What is it ?](#what-is-it-)
   - [Disclaimer](#disclaimer)
   - [Overview](#overview)
@@ -33,7 +43,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Timeouts and retries for requests](#timeouts-and-retries-for-requests)
       - [RetryWait](#retrywait)
     - [Flags and configuration file](#flags-and-configuration-file)
-    - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
+    - [Schema for the messages to send into ctrl via the API's](#schema-for-the-messages-to-send-into-ctrl-via-the-apis)
     - [Nats messaging timeouts](#nats-messaging-timeouts)
     - [Compression of the Nats message payload](#compression-of-the-nats-message-payload)
     - [Serialization of messages sent between nodes](#serialization-of-messages-sent-between-nodes)
@@ -90,14 +100,14 @@ As long as you can do something as an operator on in a shell on a system you can
   - [Howto](#howto)
     - [Options for running](#options-for-running)
     - [How to Run](#how-to-run)
-      - [Run Steward in the simplest possible way for testing](#run-steward-in-the-simplest-possible-way-for-testing)
+      - [Run ctrl in the simplest possible way for testing](#run-ctrl-in-the-simplest-possible-way-for-testing)
         - [Nats-server](#nats-server)
-        - [Install Steward](#install-steward)
+        - [Install ctrl](#install-ctrl)
         - [Build from source](#build-from-source)
           - [Download a release binary](#download-a-release-binary)
         - [Get it up and running](#get-it-up-and-running)
-        - [Send messages with Steward](#send-messages-with-steward)
-      - [Example for starting steward with some more options set](#example-for-starting-steward-with-some-more-options-set)
+        - [Send messages with ctrl](#send-messages-with-ctrl)
+      - [Example for starting ctrl with some more options set](#example-for-starting-ctrl-with-some-more-options-set)
       - [Nkey Authentication](#nkey-authentication)
       - [nats-server (the message broker)](#nats-server-the-message-broker)
         - [Nats-server config with nkey authentication example](#nats-server-config-with-nkey-authentication-example)
@@ -110,7 +120,7 @@ As long as you can do something as an operator on in a shell on a system you can
         - [Specify more messages at once do](#specify-more-messages-at-once-do)
         - [Send the same message to several hosts by using the toHosts field](#send-the-same-message-to-several-hosts-by-using-the-tohosts-field)
         - [Tail a log file on a node, and save the result of the tail centrally at the directory specified](#tail-a-log-file-on-a-node-and-save-the-result-of-the-tail-centrally-at-the-directory-specified)
-        - [Example for deleting the ringbuffer database and restarting steward](#example-for-deleting-the-ringbuffer-database-and-restarting-steward)
+        - [Example for deleting the ringbuffer database and restarting ctrl](#example-for-deleting-the-ringbuffer-database-and-restarting-ctrl)
   - [Concepts/Ideas](#conceptsideas)
     - [Naming](#naming)
       - [Subject](#subject)
@@ -122,7 +132,7 @@ As long as you can do something as an operator on in a shell on a system you can
 
 ## What is it ?
 
-Command And Control anything like Servers, Containers, VM's or others by creating and sending messages with methods who will describe what to do. Steward will then take the responsibility for making sure that the message are delivered to the receiver, and that the method specified are executed with the given parameters defined. An example of a message.
+Command And Control anything like Servers, Containers, VM's or others by creating and sending messages with methods who will describe what to do. ctrl will then take the responsibility for making sure that the message are delivered to the receiver, and that the method specified are executed with the given parameters defined. An example of a message.
 
 An example of a **request method** to feed into the system. All fields are explained in detail further down in the document.
 
@@ -144,9 +154,9 @@ An example of a **request method** to feed into the system. All fields are expla
 ]
 ```
 
-If the receiver `toNode` is down when the message was sent, it will be **retried** until delivered within the criterias set for `timeouts` and `retries`. The state of each message processed is handled by the owning steward instance where the message originated, and no state about the messages are stored in the NATS message broker.
+If the receiver `toNode` is down when the message was sent, it will be **retried** until delivered within the criterias set for `timeouts` and `retries`. The state of each message processed is handled by the owning ctrl instance where the message originated, and no state about the messages are stored in the NATS message broker.
 
-Since the initial connection from a Steward node is outbound towards the central NATS message broker no inbound firewall openings are needed.
+Since the initial connection from a ctrl node is outbound towards the central NATS message broker no inbound firewall openings are needed.
 
 ## Disclaimer
 
@@ -160,11 +170,11 @@ Expect the main branch to have breaking changes. If stability is needed, use the
 
 Send Commands with Request Methods to control your servers by passing a messages that will have guaranteed delivery  based on the criteries set, and when/if the receiving node is available. The result of the method executed will be delivered back to you from the node you sent it from.
 
-Steward uses **NATS** as message passing architecture for the commands back and forth from nodes. Delivery is guaranteed within the criterias set. All of the processes in the system are running concurrently, so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
+ctrl uses **NATS** as message passing architecture for the commands back and forth from nodes. Delivery is guaranteed within the criterias set. All of the processes in the system are running concurrently, so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
 
 A node can be a server running any host operating system, a container living in the cloud somewhere, a Rapsberry Pi, or something else that needs to be controlled that have an operating system installed.
 
-Steward can be compiled to run on all major architectures like **x86**, **amd64**,**arm64**, **ppc64** and more, with for example operating systems like **Linux**, **OSX**, **Windows**.
+ctrl can be compiled to run on all major architectures like **x86**, **amd64**,**arm64**, **ppc64** and more, with for example operating systems like **Linux**, **OSX**, **Windows**.
 
 ### Example of message flow
 
@@ -178,7 +188,7 @@ Joe's document describes how to build a system where everything is based on send
 
 I used those ideas as inspiration for building a fully concurrent system to control servers or container based systems by passing  messages between processes asynchronously to execute methods, handle errors, or handle the retrying if something fails.
 
-Steward is written in the programming language Go with NATS as the message broker.
+ctrl is written in the programming language Go with NATS as the message broker.
 
 ## Why
 
@@ -212,7 +222,7 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Load balancing
 
-Steward instances with the same **Nodename** will automatically load balance the handling of messages on a given subject, and any given message will only be handled once by one instance.
+ctrl instances with the same **Nodename** will automatically load balance the handling of messages on a given subject, and any given message will only be handled once by one instance.
 
 ### Logical structure
 
@@ -222,16 +232,16 @@ TODO: Make a diagram here...
 
 - **Node**: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
 - **Process**: A message handler that knows how to handle messages of a given subject concurrently.
-- **Message**: A message sent from one Steward node to another.
+- **Message**: A message sent from one ctrl node to another.
 
 ## Features
 
 ### Input methods
 
-New Request Messages in Json/Yaml format can be delivered by the user to Steward in the following ways:
+New Request Messages in Json/Yaml format can be delivered by the user to ctrl in the following ways:
 
-- **Unix Socket**. Use for example netcat or another tool to deliver new messages to a socket like `nc -U tmp/steward.sock < msg.yaml`.
-- **Read Folder**. Write/Copy messages to be delivered to the `readfolder` of Steward.
+- **Unix Socket**. Use for example netcat or another tool to deliver new messages to a socket like `nc -U tmp/ctrl.sock < msg.yaml`.
+- **Read Folder**. Write/Copy messages to be delivered to the `readfolder` of ctrl.
 - **TCP Listener**, Use for example netcat or another tool to deliver new messages a TCP Listener like `nc localhost:8888 < msg.yaml`.
 
 ### Error messages from nodes
@@ -242,7 +252,7 @@ New Request Messages in Json/Yaml format can be delivered by the user to Steward
 Tue Sep 21 09:17:55 2021, info: toNode: ship2, fromNode: central, method: REQOpProcessList: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type
 ```
 
-The error logs can be read on the central server in the directory `<steward-home>/data/errorLog`.
+The error logs can be read on the central server in the directory `<ctrl-home>/data/errorLog`.
 
 ### Message handling and threads
 
@@ -331,21 +341,21 @@ The flow will be like this:
 
 ### Flags and configuration file
 
-Steward supports both the use of flags with values set at startup, and the use of a config file.
+ctrl supports both the use of flags with values set at startup, and the use of a config file.
 
 - A default config file will be created at first startup if one does not exist
   - The default config will contain default values.
   - Any value also provided via a flag will also be written to the config file.
-- If **Steward** is restarted, the current content of the config file will be used as the new defaults.
-  - If you restart Steward without any flags specified, the values of the last run will be read from the config file.
+- If **ctrl** is restarted, the current content of the config file will be used as the new defaults.
+  - If you restart ctrl without any flags specified, the values of the last run will be read from the config file.
 - If new values are provided via CLI flags, they will take **precedence** over the ones currently in the config file.
   - The new CLI flag values will be written to the config, making it the default for the next restart.
 - The config file can be edited directly, removing the need for CLI flag use.
 - To create a default config, simply:
     1. Remove the current config file (or move it).
-    2. Restart Steward. A new default config file, with default values, will be created.
+    2. Restart ctrl. A new default config file, with default values, will be created.
 
-### Schema for the messages to send into Steward via the API's
+### Schema for the messages to send into ctrl via the API's
 
 - toNode : `string`
 - toNodes : `string array`
@@ -399,25 +409,25 @@ You can choose to enable compression of the payload in the Nats messages.
         compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression
 ```
 
-When starting a Steward instance with compression enabled it is the publishing of the message payload that is compressed.
+When starting a ctrl instance with compression enabled it is the publishing of the message payload that is compressed.
 
-The subscribing instance of Steward will automatically detect if the message is compressed or not, and decompress it if needed.
+The subscribing instance of ctrl will automatically detect if the message is compressed or not, and decompress it if needed.
 
-With other words, Steward will by default receive and handle both compressed and uncompressed messages, and you decide on the publishing side if you want to enable compression or not.
+With other words, ctrl will by default receive and handle both compressed and uncompressed messages, and you decide on the publishing side if you want to enable compression or not.
 
 ### Serialization of messages sent between nodes
 
-Steward support two serialization formats when sending messages. By default it uses the Go spesific **GOB** format, but serialization with **CBOR** are also supported.
+ctrl support two serialization formats when sending messages. By default it uses the Go spesific **GOB** format, but serialization with **CBOR** are also supported.
 
 A benefit of using **CBOR** is the size of the messages when transferred.
 
-To enable **CBOR** serialization either start **steward** by setting the serialization flag:
+To enable **CBOR** serialization either start **ctrl** by setting the serialization flag:
 
 ```bash
-./steward -serialization="cbor" <other flags here...>
+./ctrl -serialization="cbor" <other flags here...>
 ```
 
-Or edit the config file `<steward directory>/etc/config.toml` and set:
+Or edit the config file `<ctrl directory>/etc/config.toml` and set:
 
 ```toml
 Serialization = "cbor"
@@ -427,9 +437,9 @@ Serialization = "cbor"
 
 #### General functionality
 
-Messages can be automatically scheduled to be read and executed at startup of Steward.
+Messages can be automatically scheduled to be read and executed at startup of ctrl.
 
-A folder named **startup** will be present in the working directory of Steward, and you put the messages to be executed at startup here.
+A folder named **startup** will be present in the working directory of ctrl, and you put the messages to be executed at startup here.
 
 Messages put in the startup folder will not be sent to the broker but handled locally, and only (eventually) the reply message from the Request Method called will be sent to the broker.
 
@@ -463,7 +473,7 @@ Since messages used in startup folder are ment to be delivered locally we can si
 
 #### method timeout
 
-We can also make the request method run for as long as the Steward instance itself is running. We can do that by setting the **methodTimeout** field to a value of `-1`.
+We can also make the request method run for as long as the ctrl instance itself is running. We can do that by setting the **methodTimeout** field to a value of `-1`.
 
 This can make sense if you for example wan't to continously ping a host, or continously run a script on a node.
 
@@ -489,7 +499,7 @@ This can make sense if you for example wan't to continously ping a host, or cont
 This message is put in the `./startup` folder on **node1**.</br>
 We send the message to ourself, hence specifying ourself in the `toNode` field.</br>
 We specify the reply messages with the result to be sent to the console on **central** in the `fromNode` field.</br>
-In the example we start a TCP listener on port 8888, and we want the method to run for as long as Steward is running. So we set the **methodTimeout** to `-1`.</br>
+In the example we start a TCP listener on port 8888, and we want the method to run for as long as ctrl is running. So we set the **methodTimeout** to `-1`.</br>
 
 #### Schedule a Method in a message to be run several times
 
@@ -750,7 +760,7 @@ An example could be that you send a `REQCliCommand` message to some node, and yo
 
 #### REQToConsole
 
-This is a method that can be used to get the data of the message printed to console where Steward is running.
+This is a method that can be used to get the data of the message printed to console where ctrl is running.
 
 Default is to print to **stdout**, but printing to **stderr** can be done by setting the value of **methodArgs** to `"methodArgs": ["stderr"]`.
 
@@ -776,7 +786,7 @@ If used as a **replyMethod** set the **replyMethodArgs** `"replyMethodArgs": ["s
 
 Append the output of the reply message to a log file specified with the `directory` and `fileName` fields.
 
-If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **steward data folder** specified in the config file.
+If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **ctrl data folder** specified in the config file.
 
 ```json
 [
@@ -797,7 +807,7 @@ If there is already a file at the specified path with the specified name, and if
 
 Write the output of the reply message to a file specified with the `directory` and `fileName` fields, where the writing will write over any existing content of that file.
 
-If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **steward data folder** specified in the config file.
+If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **ctrl data folder** specified in the config file.
 
 ```json
 [
@@ -824,11 +834,11 @@ Same as REQToFile, but will not send an ACK when a message is delivered.
 
 The final result, if any, of the replyMethod will be sent to the central server.
 
-By using the `{{STEWARD_DATA}}` you can grab the output of your initial request method, and then use it as input in your reply method.
+By using the `{{ctrl_DATA}}` you can grab the output of your initial request method, and then use it as input in your reply method.
 
 **NB:** The echo command in the example below will remove new lines from the data. To also keep any new lines we need to put escaped **quotes** around the template variable. Like this:
 
-- `\"{{STEWARD_DATA}}\"`
+- `\"{{ctrl_DATA}}\"`
 
 Example of usage:
 
@@ -841,7 +851,7 @@ Example of usage:
         "method":"REQCliCommand",
         "methodArgs": ["bash","-c","tree"],
         "replyMethod":"REQCliCommand",
-        "replyMethodArgs": ["bash", "-c","echo \"{{STEWARD_DATA}}\" > apekatt.txt"],
+        "replyMethodArgs": ["bash", "-c","echo \"{{ctrl_DATA}}\" > apekatt.txt"],
         "replyMethodTimeOut": 10,
         "ACKTimeout":3,
         "retries":3,
@@ -861,7 +871,7 @@ Or the same using bash's herestring:
         "method":"REQCliCommand",
         "methodArgs": ["bash","-c","tree"],
         "replyMethod":"REQCliCommand",
-        "replyMethodArgs": ["bash", "-c","cat <<< {{STEWARD_DATA}} > hest.txt"],
+        "replyMethodArgs": ["bash", "-c","cat <<< {{ctrl_DATA}} > hest.txt"],
         "replyMethodTimeOut": 10,
         "ACKTimeout":3,
         "retries":3,
@@ -893,7 +903,7 @@ NB: The keypair used for the signing of messages are a separate keypair used onl
 
 The nodes will have a copy of the allowed public signing keys from the central server, and when a message is received, the signature is checked against the allowed public keys. If the signature is valid, the message is allowed to be processed further, otherwise it is denied if signature checking is enabled.
 
-Steward can be used either with no authorization at all, with signature checks only, or with ACL and signature checks. The features can be enabled or disabled in the **config.yaml** file.
+ctrl can be used either with no authorization at all, with signature checks only, or with ACL and signature checks. The features can be enabled or disabled in the **config.yaml** file.
 
 ##### Key registration on Central Server
 
@@ -912,7 +922,7 @@ If new keys are allowed into or deleted from the system, one attempt will be don
 
 ##### Key distribution to nodes
 
-1. Steward nodes will request key updates by sending a message to the central server with the **REQKeysRequestUpdate** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
+1. ctrl nodes will request key updates by sending a message to the central server with the **REQKeysRequestUpdate** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
 2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
 3. If the hashes are not equal a reply message of type **REQKeysDeliverUpdate** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those new keys.
 4. The end node will then update it's local key database.
@@ -931,7 +941,7 @@ Will remove the specified keys from the **ACK_DB**.
 
 ##### Acl updates
 
-1. Steward nodes will request acl updates by sending a message to the central server with the **REQAclRequestUpdate** method on a timed interval. The hash of the current Acl on a node will be put as the payload of the message.
+1. ctrl nodes will request acl updates by sending a message to the central server with the **REQAclRequestUpdate** method on a timed interval. The hash of the current Acl on a node will be put as the payload of the message.
 2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
 3. If the hashes are not equal a reply message of type **REQAclDeliverUpdate** will be sent back to the end node with a copy of the Acl's database for the node the request came from. The update will also contain the new hash of the new Acl's.
 4. The end node will then replace it's local Acl database with the update.
@@ -1002,7 +1012,7 @@ Imports the Acl given in JSON format in the first argument of the methodArgs.
 
 The location of the config file are given via an env variable at startup (default "./etc/).
 
-`env CONFIG_FOLDER </myconfig/folder/here> <steward binary>`
+`env CONFIG_FOLDER </myconfig/folder/here> <ctrl binary>`
 
 The different fields and their type in the config file. The fields of the config file can also be set by providing flag values at startup. Use the `-help` flag to get all the options.
 
@@ -1010,9 +1020,9 @@ Check [Appendix-A](#appendix-a) for a list of the flags/config options, and thei
 
 ### How to Run
 
-#### Run Steward in the simplest possible way for testing
+#### Run ctrl in the simplest possible way for testing
 
-**NB** Running Steward like this is perfect for testing in a local test environment, but is not something you would wan't to do in production.
+**NB** Running ctrl like this is perfect for testing in a local test environment, but is not something you would wan't to do in production.
 
 ##### Nats-server
 
@@ -1030,75 +1040,75 @@ Start the nats server listening on local interfaces and port 4222.
 
 `./nats-server -D`
 
-##### Install Steward
+##### Install ctrl
 
-You can either build Steward from source or download from release which is a compiled binary.
+You can either build ctrl from source or download from release which is a compiled binary.
 
 ##### Build from source
 
-Steward is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
+ctrl is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
 
 When Go is installed:
 
 Clone the repository:
 
-`git clone https://github.com/RaaLabs/steward.git`.
+`git clone https://github.com/RaaLabs/ctrl.git`.
 
 Change directory and build:
 
 ```bash
-cd ./steward/cmd/steward
-go build -o steward
+cd ./ctrl/cmd/ctrl
+go build -o ctrl
 ```
 
 ###### Download a release binary
 
-Release binaries for several architechures are available at <https://github.com/RaaLabs/steward/releases>
+Release binaries for several architechures are available at <https://github.com/RaaLabs/ctrl/releases>
 
 ##### Get it up and running
 
-**NB:** Remember to run the nats setup above before running the steward binary.
+**NB:** Remember to run the nats setup above before running the ctrl binary.
 
-Steward will create some directories for things like configuration file and other state files. By default it will create those files in the directory where you start Steward. So create individual directories for each Steward instance you want to run below.
+ctrl will create some directories for things like configuration file and other state files. By default it will create those files in the directory where you start ctrl. So create individual directories for each ctrl instance you want to run below.
 
 Start up a  **central** server which will act as your master server for things like logs and authorization.
 
 ```bash
  mkdir central & cd central
- env CONFIG_FOLDER=./etc/ <path-to-steward-binary-here> --nodeName="central" --centralNodeName="central"
+ env CONFIG_FOLDER=./etc/ <path-to-ctrl-binary-here> --nodeName="central" --centralNodeName="central"
 ```
 
 Start up a node that will attach to the **central** node
 
 ```bash
  mkdir ship1 & cd ship1
- env CONFIG_FOLDER=./etc/ <path-to-steward-binary-here> --nodeName="ship1" --centralNodeName="central"
+ env CONFIG_FOLDER=./etc/ <path-to-ctrl-binary-here> --nodeName="ship1" --centralNodeName="central"
 ```
 
-You can get all the options with `./steward --help`
+You can get all the options with `./ctrl --help`
 
-Steward will by default create the data and config directories needed in the current folder. This can be changed by using the different flags or editing the config file.
+ctrl will by default create the data and config directories needed in the current folder. This can be changed by using the different flags or editing the config file.
 
-You can also run multiple instances of Steward on the same machine. For testing you can create sub folders for each steward instance, go into each folder and start steward. When starting each Steward instance make sure you give each node a unique `--nodeName`.
+You can also run multiple instances of ctrl on the same machine. For testing you can create sub folders for each ctrl instance, go into each folder and start ctrl. When starting each ctrl instance make sure you give each node a unique `--nodeName`.
 
-##### Send messages with Steward
+##### Send messages with ctrl
 
-You can now go to one of the folders for nodes started, and inject messages into the socket file `./tmp/steward.sock` with the **nc** tool.
+You can now go to one of the folders for nodes started, and inject messages into the socket file `./tmp/ctrl.sock` with the **nc** tool.
 
 Example on Mac:
 
-`nc -U ./tmp/steward.sock < reqnone.msg`
+`nc -U ./tmp/ctrl.sock < reqnone.msg`
 
 Example on Linux:
 
-`nc -NU ./tmp/steward.sock < reqnone.msg`
+`nc -NU ./tmp/ctrl.sock < reqnone.msg`
 
-#### Example for starting steward with some more options set
+#### Example for starting ctrl with some more options set
 
 A complete example to start a central node called `central`.
 
 ```bash
-env CONFIG_FOLDER=./etc/ ./steward \
+env CONFIG_FOLDER=./etc/ ./ctrl \
  -nodeName="central" \
  -defaultMessageRetries=3 \
  -defaultMessageTimeout=5 \
@@ -1112,7 +1122,7 @@ env CONFIG_FOLDER=./etc/ ./steward \
 And start another node that will be managed via central.
 
 ```bash
-env CONFIG_FOLDER=./etc/ ./steward \
+env CONFIG_FOLDER=./etc/ ./ctrl \
  -nodeName="ship1" \ 
  -startPubREQHello=200 \
  -centralNodeName="central" \
@@ -1120,7 +1130,7 @@ env CONFIG_FOLDER=./etc/ ./steward \
  -brokerAddress="127.0.0.1:4222"
 ```
 
-**NB**: By default Steward creates it's folders like `./etc`, `./var`, and `./data` in the folder you're in when you start it. If you want to run multiple instances on the same machine you should create separate folders for each instance, and start Steward when you're in that folder. The location of the folders can also be specified within the config file.
+**NB**: By default ctrl creates it's folders like `./etc`, `./var`, and `./data` in the folder you're in when you start it. If you want to run multiple instances on the same machine you should create separate folders for each instance, and start ctrl when you're in that folder. The location of the folders can also be specified within the config file.
 
 #### Nkey Authentication
 
@@ -1130,7 +1140,7 @@ Read more in the sections below on how to generate nkey's.
 
 #### nats-server (the message broker)
 
-The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on **Steward** to point to the ip and port:
+The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on **ctrl** to point to the ip and port:
 
 `-brokerAddress="nats://10.0.0.124:4222"`
 
@@ -1196,11 +1206,11 @@ The official docs for nkeys can be found here <https://docs.nats.io/nats-server/
 - Generate a public (user) key from a private (seed) key file called `seed.txt`.
   - `nk -inkey seed.txt -pubout > user.txt`
 
-More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/steward/tree/main/doc) folder in this repository.
+More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/ctrl/tree/main/doc) folder in this repository.
 
 ##### Nkey from ED25519 SSH key
 
-Steward can also use an existing SSH ED25519 private key for authentication with the flag **-nkeyFromED25519SSHKeyFile="full-path-to-ssh-private-key"**. The SSH key will be converted to an Nkey if the option is used. The Seed and the User file will be stored in the **socketFolder** which by default is at **./tmp**
+ctrl can also use an existing SSH ED25519 private key for authentication with the flag **-nkeyFromED25519SSHKeyFile="full-path-to-ssh-private-key"**. The SSH key will be converted to an Nkey if the option is used. The Seed and the User file will be stored in the **socketFolder** which by default is at **./tmp**
 
 ### Message fields explanation
 
@@ -1210,13 +1220,13 @@ Check [Appendix-B](#appendix-b) for message fields and their explanation.
 
 The API for sending a message from one node to another node is by sending a structured JSON or YAML object into a listener port in of of the following ways.
 
-- unix socket called `steward.sock`. By default lives in the `./tmp` directory
+- unix socket called `ctrl.sock`. By default lives in the `./tmp` directory
 - tcpListener, specify host:port with startup flag, or config file.
 - httpListener, specify host:port with startup flag, or config file.
 
 #### Send to socket with netcat
 
-`nc -U ./tmp/steward.sock < myMessage.json`
+`nc -U ./tmp/ctrl.sock < myMessage.json`
 
 #### Sending a command from one Node to Another Node
 
@@ -1227,7 +1237,7 @@ In JSON:
 ```json
 [
     {
-        "directory":"/var/steward/cli-command/executed-result",
+        "directory":"/var/ctrl/cli-command/executed-result",
         "fileName": "some.log",
         "toNode": "ship1",
         "method":"REQCliCommand",
@@ -1334,7 +1344,7 @@ Or in YAML:
 ]
 ```
 
-##### Example for deleting the ringbuffer database and restarting steward
+##### Example for deleting the ringbuffer database and restarting ctrl
 
 ```json
 [
@@ -1343,7 +1353,7 @@ Or in YAML:
         "fileName":"system.log",
         "toNodes": ["ship2"],
         "method":"REQCliCommand",
-        "methodArgs": ["bash","-c","rm -rf /usr/local/steward/lib/incomingBuffer.db & systemctl restart steward"],
+        "methodArgs": ["bash","-c","rm -rf /usr/local/ctrl/lib/incomingBuffer.db & systemctl restart ctrl"],
         "replyMethod":"REQToFileAppend",
         "ACKTimeout":30,
         "retries":1,
@@ -1354,7 +1364,7 @@ Or in YAML:
 
 You can save the content to myfile.JSON and append it to the `socket` file:
 
-- `nc -U ./steward.sock < example/toShip1-REQCliCommand.json`
+- `nc -U ./ctrl.sock < example/toShip1-REQCliCommand.json`
 
 ## Concepts/Ideas
 
@@ -1466,7 +1476,7 @@ Compression string
 Serialization string
 // SetBlockProfileRate for block profiling
 SetBlockProfileRate int
-// EnableSocket for enabling the creation of a steward.sock file
+// EnableSocket for enabling the creation of a ctrl.sock file
 EnableSocket bool
 // EnableTUI will enable the Terminal User Interface
 EnableTUI bool
@@ -1538,7 +1548,7 @@ ToNode Node `json:"toNode" yaml:"toNode"`
 // are injected f.ex. on a socket, and there they are directly 
 //converted into separate node messages for each node, and from
 // there the ToNodes field is not used any more within the system.
-// With other words, a message that exists within Steward is always
+// With other words, a message that exists within ctrl is always
 // for just for a single node.
 ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 // The actual data in the message. This is typically where we
