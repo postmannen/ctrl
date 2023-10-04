@@ -5,9 +5,9 @@ RUN apk --no-cache add build-base git gcc
 RUN mkdir -p /build
 COPY ./ /build/
 
-WORKDIR /build/cmd/steward/
+WORKDIR /build/cmd/ctrl/
 RUN go version
-RUN go build -o steward
+RUN go build -o ctrl
 
 # final stage
 FROM alpine
@@ -15,7 +15,7 @@ FROM alpine
 RUN apk update && apk add curl && apk add nmap
 
 WORKDIR /app
-COPY --from=build-env /build/cmd/steward/steward /app/
+COPY --from=build-env /build/cmd/ctrl/ctrl /app/
 
 ENV RING_BUFFER_PERSIST_STORE "1"
 ENV RING_BUFFER_SIZE "1000"
@@ -48,7 +48,6 @@ ENV COMPRESSION ""
 ENV SERIALIZATION ""
 ENV SET_BLOCK_PROFILE_RATE "0"
 ENV ENABLE_SOCKET "1"
-ENV ENABLE_TUI "0"
 ENV ENABLE_SIGNATURE_CHECK "0"
 ENV ENABLE_ACL_CHECK "0"
 ENV IS_CENTRAL_AUTH "0"
@@ -75,7 +74,7 @@ ENV START_SUB_REQ_HTTP_GET_SCHEDULED ""
 ENV START_SUB_REQ_TAIL_FILE ""
 ENV START_SUB_REQ_CLI_COMMAND_CONT ""
 
-CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
+CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/ctrl\
     -ringBufferPersistStore=${RING_BUFFER_PERSIST_STORE}\
     -ringBufferSize=${RING_BUFFER_SIZE}\
     -socketFolder=${SOCKET_FOLDER}\
@@ -106,7 +105,6 @@ CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -serialization=${SERIALIZATION}\
     -setBlockProfileRate=${SET_BLOCK_PROFILE_RATE}\
     -enableSocket=${ENABLE_SOCKET}\
-    -enableTUI=${ENABLE_TUI}\
     -enableSignatureCheck=${ENABLE_SIGNATURE_CHECK}\
     -enableAclCheck=${ENABLE_ACL_CHECK}\
     -isCentralAuth=${IS_CENTRAL_AUTH}\
@@ -122,7 +120,6 @@ CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -startSubREQCopySrc=${START_SUB_REQ_COPY_SRC}\
     -startSubREQCopyDst=${START_SUB_REQ_COPY_DST}\
     -startSubREQToFileNACK=${START_SUB_REQ_TO_FILE_NACK}\
-    -startSubREQPing=${START_SUB_REQ_PING}\
     -startSubREQPong=${START_SUB_REQ_PONG}\
     -startSubREQCliCommand=${START_SUB_REQ_CLI_COMMAND}\
     -startSubREQToConsole=${START_SUB_REQ_TO_CONSOLE}\

@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"flag"
@@ -17,11 +17,6 @@ import (
 // an if check should be added to the checkConfigValues function
 // to set default values when reading from config file.
 type Configuration struct {
-	// RingBufferPersistStore, enable or disable the persisting of
-	// messages being processed to local db.
-	RingBufferPersistStore bool `comment:"RingBufferPersistStore, enable or disable the persisting of messages being processed to local db"`
-	// RingBufferSize
-	RingBufferSize int `comment:"RingBufferSize"`
 	// ConfigFolder, the location for the configuration folder on disk
 	ConfigFolder string `comment:"ConfigFolder, the location for the configuration folder on disk"`
 	// The folder where the socket file should live
@@ -86,10 +81,8 @@ type Configuration struct {
 	Serialization string `comment:"Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor"`
 	// SetBlockProfileRate for block profiling
 	SetBlockProfileRate int `comment:"SetBlockProfileRate for block profiling"`
-	// EnableSocket for enabling the creation of a steward.sock file
-	EnableSocket bool `comment:"EnableSocket for enabling the creation of a steward.sock file"`
-	// EnableTUI will enable the Terminal User Interface
-	EnableTUI bool `comment:"EnableTUI will enable the Terminal User Interface"`
+	// EnableSocket for enabling the creation of a ctrl.sock file
+	EnableSocket bool `comment:"EnableSocket for enabling the creation of a ctrl.sock file"`
 	// EnableSignatureCheck to enable signature checking
 	EnableSignatureCheck bool `comment:"EnableSignatureCheck to enable signature checking"`
 	// EnableAclCheck to enable ACL checking
@@ -131,10 +124,6 @@ type Configuration struct {
 	// Start subscriber for writing copied files to disk
 	StartSubREQCopyDst bool `comment:"Start subscriber for writing copied files to disk"`
 	// Start subscriber for Echo Request
-	StartSubREQPing bool `comment:"Start subscriber for Echo Request"`
-	// Start subscriber for Echo Reply
-	StartSubREQPong bool `comment:"Start subscriber for Echo Reply"`
-	// Start subscriber for CLICommandRequest
 	StartSubREQCliCommand bool `comment:"Start subscriber for CLICommandRequest"`
 	// Start subscriber for REQToConsole
 	StartSubREQToConsole bool `comment:"Start subscriber for REQToConsole"`
@@ -187,7 +176,6 @@ type ConfigurationFromFile struct {
 	Serialization                *string
 	SetBlockProfileRate          *int
 	EnableSocket                 *bool
-	EnableTUI                    *bool
 	EnableSignatureCheck         *bool
 	EnableAclCheck               *bool
 	IsCentralAuth                *bool
@@ -206,8 +194,6 @@ type ConfigurationFromFile struct {
 	StartSubREQToFileNACK       *bool
 	StartSubREQCopySrc          *bool
 	StartSubREQCopyDst          *bool
-	StartSubREQPing             *bool
-	StartSubREQPong             *bool
 	StartSubREQCliCommand       *bool
 	StartSubREQToConsole        *bool
 	StartSubREQHttpGet          *bool
@@ -226,8 +212,6 @@ func NewConfiguration() *Configuration {
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
 		ConfigFolder:                 "./etc/",
-		RingBufferPersistStore:       true,
-		RingBufferSize:               1000,
 		SocketFolder:                 "./tmp",
 		ReadFolder:                   "./readfolder",
 		EnableReadFolder:             true,
@@ -248,18 +232,17 @@ func newConfigurationDefaults() Configuration {
 		DefaultMessageRetries:        1,
 		DefaultMethodTimeout:         10,
 		SubscribersDataFolder:        "./data",
-		CentralNodeName:              "",
+		CentralNodeName:              "central",
 		RootCAPath:                   "",
 		NkeySeedFile:                 "",
 		NkeyFromED25519SSHKeyFile:    "",
 		ExposeDataFolder:             "",
 		ErrorMessageTimeout:          60,
 		ErrorMessageRetries:          10,
-		Compression:                  "",
-		Serialization:                "",
+		Compression:                  "z",
+		Serialization:                "cbor",
 		SetBlockProfileRate:          0,
 		EnableSocket:                 true,
-		EnableTUI:                    false,
 		EnableSignatureCheck:         false,
 		EnableAclCheck:               false,
 		IsCentralAuth:                false,
@@ -269,8 +252,8 @@ func newConfigurationDefaults() Configuration {
 		KeepPublishersAliveFor:       10,
 
 		StartPubREQHello:            30,
-		EnableKeyUpdates:            true,
-		EnableAclUpdates:            true,
+		EnableKeyUpdates:            false,
+		EnableAclUpdates:            false,
 		IsCentralErrorLogger:        false,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
@@ -278,8 +261,6 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQToFileNACK:       true,
 		StartSubREQCopySrc:          true,
 		StartSubREQCopyDst:          true,
-		StartSubREQPing:             true,
-		StartSubREQPong:             true,
 		StartSubREQCliCommand:       true,
 		StartSubREQToConsole:        true,
 		StartSubREQHttpGet:          true,
@@ -296,16 +277,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	var conf Configuration
 	cd := newConfigurationDefaults()
 
-	if cf.RingBufferSize == nil {
-		conf.RingBufferSize = cd.RingBufferSize
-	} else {
-		conf.RingBufferSize = *cf.RingBufferSize
-	}
-	if cf.RingBufferPersistStore == nil {
-		conf.RingBufferPersistStore = cd.RingBufferPersistStore
-	} else {
-		conf.RingBufferPersistStore = *cf.RingBufferPersistStore
-	}
 	if cf.ConfigFolder == nil {
 		conf.ConfigFolder = cd.ConfigFolder
 	} else {
@@ -466,11 +437,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableSocket = *cf.EnableSocket
 	}
-	if cf.EnableTUI == nil {
-		conf.EnableTUI = cd.EnableTUI
-	} else {
-		conf.EnableTUI = *cf.EnableTUI
-	}
 	if cf.EnableSignatureCheck == nil {
 		conf.EnableSignatureCheck = cd.EnableSignatureCheck
 	} else {
@@ -561,16 +527,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQCopyDst = *cf.StartSubREQCopyDst
 	}
-	if cf.StartSubREQPing == nil {
-		conf.StartSubREQPing = cd.StartSubREQPing
-	} else {
-		conf.StartSubREQPing = *cf.StartSubREQPing
-	}
-	if cf.StartSubREQPong == nil {
-		conf.StartSubREQPong = cd.StartSubREQPong
-	} else {
-		conf.StartSubREQPong = *cf.StartSubREQPong
-	}
 	if cf.StartSubREQCliCommand == nil {
 		conf.StartSubREQCliCommand = cd.StartSubREQCliCommand
 	} else {
@@ -633,9 +589,7 @@ func (c *Configuration) CheckFlags(version string) error {
 
 	*c = fc
 
-	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
-	flag.BoolVar(&c.RingBufferPersistStore, "ringBufferPersistStore", fc.RingBufferPersistStore, "true/false for enabling the persisting of ringbuffer to disk")
-	flag.IntVar(&c.RingBufferSize, "ringBufferSize", fc.RingBufferSize, "size of the ringbuffer")
+	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/ctrl/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.ReadFolder, "readFolder", fc.ReadFolder, "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
@@ -665,8 +619,7 @@ func (c *Configuration) CheckFlags(version string) error {
 	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
 	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
-	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false, for enabling the creation of a steward.sock file")
-	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
+	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false, for enabling the creation of ctrl.sock file")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", fc.EnableSignatureCheck, "true/false *TESTING* enable signature checking.")
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
@@ -690,8 +643,6 @@ func (c *Configuration) CheckFlags(version string) error {
 	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", fc.StartSubREQToFileNACK, "true/false")
 	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", fc.StartSubREQCopySrc, "true/false")
 	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", fc.StartSubREQCopyDst, "true/false")
-	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
-	flag.BoolVar(&c.StartSubREQPong, "startSubREQPong", fc.StartSubREQPong, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
 	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", fc.StartSubREQToConsole, "true/false")
 	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")

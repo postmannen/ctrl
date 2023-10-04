@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"crypto/ed25519"
@@ -13,7 +13,7 @@ import (
 )
 
 // nodeAuth is the structure that holds both keys and acl's
-// that the running steward node shall use for authorization.
+// that the running ctrl node shall use for authorization.
 // It holds a mutex to use when interacting with the map.
 type nodeAuth struct {
 	// ACL that defines where a node is allowed to recieve from.

@@ -108,8 +108,6 @@ spec:
               value: "0"
             - name: ENABLE_SOCKET
               value: "1"
-            - name: ENABLE_TUI
-              value: "0"
             - name: ENABLE_SIGNATURE_CHECK
               value: "0"
             - name: ENABLE_ACL_CHECK
@@ -162,7 +160,7 @@ spec:
             - name: MESSAGE_FULL_PATH
               value: "/app/message.yaml"
             - name: SOCKET_FULL_PATH
-              value: "/app/tmp/steward.sock"
+              value: "/app/tmp/ctrl.sock"
             - name: INTERVAL
               value: "10"
           name: stewardwriter1
@@ -183,7 +181,7 @@ spec:
             - name: MESSAGE_FULL_PATH
               value: "/app/message.yaml"
             - name: SOCKET_FULL_PATH
-              value: "/app/tmp/steward.sock"
+              value: "/app/tmp/ctrl.sock"
             - name: INTERVAL
               value: "10"
           name: stewardwriter2

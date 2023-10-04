@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"bufio"
@@ -6,20 +6,13 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 )
-
-type methodREQCliCommand struct {
-	event Event
-}
-
-func (m methodREQCliCommand) getKind() Event {
-	return m.event
-}
 
 // handler to run a CLI command with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // as a new message.
-func (m methodREQCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQCliCommand(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -63,10 +56,10 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			var foundEnvData bool
 			var envData string
 			for i, v := range message.MethodArgs {
-				if strings.Contains(v, "{{STEWARD_DATA}}") {
+				if strings.Contains(v, "{{CTRL_DATA}}") {
 					foundEnvData = true
 					// Replace the found env variable placeholder with an actual env variable
-					message.MethodArgs[i] = strings.Replace(message.MethodArgs[i], "{{STEWARD_DATA}}", "$STEWARD_DATA", -1)
+					message.MethodArgs[i] = strings.Replace(message.MethodArgs[i], "{{CTRL_DATA}}", "$CTRL_DATA", -1)
 
 					// Put all the data which is a slice of string into a single
 					// string so we can put it in a single env variable.
@@ -76,9 +69,9 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 
 			cmd := exec.CommandContext(ctx, c, a...)
 
-			// Check for the use of env variable for STEWARD_DATA, and set env if found.
+			// Check for the use of env variable for CTRL_DATA, and set env if found.
 			if foundEnvData {
-				envData = fmt.Sprintf("STEWARD_DATA=%v", envData)
+				envData = fmt.Sprintf("CTRL_DATA=%v", envData)
 				cmd.Env = append(cmd.Env, envData)
 			}
 
@@ -87,6 +80,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			cmd.Stdout = &out
 			cmd.Stderr = &stderr
 
+			cmd.WaitDelay = time.Second * 5
 			err := cmd.Run()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
@@ -110,9 +104,6 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		case out := <-outCh:
 			cancel()
 
-			// NB: Not quite sure what is the best way to handle the below
-			// isReply right now. Implementing as send to central for now.
-			//
 			// If this is this a reply message swap the toNode and fromNode
 			// fields so the output of the command are sent to central node.
 			if message.IsReply {
@@ -132,19 +123,11 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 
 // ---
 
-type methodREQCliCommandCont struct {
-	event Event
-}
-
-func (m methodREQCliCommandCont) getKind() Event {
-	return m.event
-}
-
 // Handler to run REQCliCommandCont, which is the same as normal
 // Cli command, but can be used when running a command that will take
 // longer time and you want to send the output of the command continually
 // back as it is generated, and not just when the command is finished.
-func (m methodREQCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQCliCommandCont(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -208,6 +191,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
+			cmd.WaitDelay = time.Second * 5
 			if err := cmd.Start(); err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, methodArgs: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er, logWarning)

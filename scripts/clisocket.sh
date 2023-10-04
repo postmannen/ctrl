@@ -49,5 +49,5 @@ EOF
 
 for element in "${array[@]}"; do
     sendMessage element "$command"
-    nc -U ./tmp/steward.sock <msg-"$element".yaml
+    nc -U ./tmp/ctrl.sock <msg-"$element".yaml
 done

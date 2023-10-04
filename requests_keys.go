@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"bytes"
@@ -8,16 +8,8 @@ import (
 
 // ---
 
-type methodREQPublicKey struct {
-	event Event
-}
-
-func (m methodREQPublicKey) getKind() Event {
-	return m.event
-}
-
 // Handler to get the public ed25519 key from a node.
-func (m methodREQPublicKey) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQPublicKey(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -55,16 +47,8 @@ func (m methodREQPublicKey) handler(proc process, message Message, node string) 
 
 // ----
 
-type methodREQKeysRequestUpdate struct {
-	event Event
-}
-
-func (m methodREQKeysRequestUpdate) getKind() Event {
-	return m.event
-}
-
 // Handler to get all the public ed25519 keys from a central server.
-func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQKeysRequestUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -137,16 +121,8 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 
 // ----
 
-type methodREQKeysDeliverUpdate struct {
-	event Event
-}
-
-func (m methodREQKeysDeliverUpdate) getKind() Event {
-	return m.event
-}
-
 // Handler to receive the public keys from a central server.
-func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -226,20 +202,12 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 
 // ----
 
-type methodREQKeysAllow struct {
-	event Event
-}
-
-func (m methodREQKeysAllow) getKind() Event {
-	return m.event
-}
-
 // Handler to allow new public keys into the database on central auth.
 // Nodes will send the public key in the REQHello messages. When they
 // are recived on the central server they will be put into a temp key
 // map, and we need to acknowledge them before they are moved into the
 // main key map, and then allowed to be sent out to other nodes.
-func (m methodREQKeysAllow) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQKeysAllow(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -423,15 +391,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 }
 
-type methodREQKeysDelete struct {
-	event Event
-}
-
-func (m methodREQKeysDelete) getKind() Event {
-	return m.event
-}
-
-func (m methodREQKeysDelete) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQKeysDelete(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQKeysDelete received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 

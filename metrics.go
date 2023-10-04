@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"fmt"
@@ -73,100 +73,100 @@ func newMetrics(hostAndPort string) *metrics {
 	}
 
 	m.promVersion = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "steward_build_version",
-		Help: "Build version of steward",
+		Name: "ctrl_build_version",
+		Help: "Build version of ctrl",
 	}, []string{"version"},
 	)
 	m.promRegistry.MustRegister(m.promVersion)
 
 	m.promProcessesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "steward_processes_total",
+		Name: "ctrl_processes_total",
 		Help: "The current number of total running processes",
 	})
 	m.promRegistry.MustRegister(m.promProcessesTotal)
 
 	m.promProcessesAllRunning = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "steward_processes_all_running",
+		Name: "ctrl_processes_all_running",
 		Help: "Name of the running processes",
 	}, []string{"processName"},
 	)
 	m.promRegistry.MustRegister(m.promProcessesAllRunning)
 
 	m.promHelloNodesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "steward_hello_nodes_total",
+		Name: "ctrl_hello_nodes_total",
 		Help: "The current number of total nodes who have said hello",
 	})
 	m.promRegistry.MustRegister(m.promHelloNodesTotal)
 
 	m.promHelloNodesContactLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "steward_hello_node_contact_last",
+		Name: "ctrl_hello_node_contact_last",
 		Help: "Name of the nodes who have said hello",
 	}, []string{"nodeName"})
 	m.promRegistry.MustRegister(m.promHelloNodesContactLast)
 
 	m.promMessagesProcessedIDLast = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "steward_messages_processed_id_last",
+		Name: "ctrl_messages_processed_id_last",
 		Help: "The last processed id in key value/store db",
 	})
 	m.promRegistry.MustRegister(m.promMessagesProcessedIDLast)
 
 	m.promRingbufferStalledMessagesTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_ringbuffer_stalled_messages_total",
+		Name: "ctrl_ringbuffer_stalled_messages_total",
 		Help: "Number of stalled messages in ringbuffer",
 	})
 	m.promRegistry.MustRegister(m.promRingbufferStalledMessagesTotal)
 
 	m.promInMemoryBufferMessagesCurrent = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "steward_in_memory_buffer_messages_current",
+		Name: "ctrl_in_memory_buffer_messages_current",
 		Help: "The current value of messages in memory buffer",
 	})
 	m.promRegistry.MustRegister(m.promInMemoryBufferMessagesCurrent)
 
 	// Register som metrics for messages delivered by users into the system.
 	m.promUserMessagesTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_user_messages_total",
+		Name: "ctrl_user_messages_total",
 		Help: "Number of total messages delivered by users into the system",
 	})
 	m.promRegistry.MustRegister(m.promUserMessagesTotal)
 
 	m.promNatsDeliveredTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_nats_delivered_total",
+		Name: "ctrl_nats_delivered_total",
 		Help: "Number of total messages delivered by nats",
 	})
 	m.promRegistry.MustRegister(m.promNatsDeliveredTotal)
 
 	m.promNatsMessagesFailedACKsTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_nats_messages_failed_acks_total",
+		Name: "ctrl_nats_messages_failed_acks_total",
 		Help: "Number of messages that never received an ack total",
 	})
 	m.promRegistry.MustRegister(m.promNatsMessagesFailedACKsTotal)
 
 	m.promNatsMessagesMissedACKsTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_nats_messages_missed_acks_total",
+		Name: "ctrl_nats_messages_missed_acks_total",
 		Help: "Number of messages missed receiving an ack total",
 	})
 	m.promRegistry.MustRegister(m.promNatsMessagesMissedACKsTotal)
 
 	m.promErrorMessagesReceivedTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_error_messages_received_total",
+		Name: "ctrl_error_messages_received_total",
 		Help: "Number of error messages received total",
 	})
 	m.promRegistry.MustRegister(m.promErrorMessagesReceivedTotal)
 
 	m.promErrorMessagesSentTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_error_messages_sent_total",
+		Name: "ctrl_error_messages_sent_total",
 		Help: "Number of error messages sent total",
 	})
 	m.promRegistry.MustRegister(m.promErrorMessagesSentTotal)
 
 	m.promInfoMessagesSentTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "steward_info_messages_sent_total",
+		Name: "ctrl_info_messages_sent_total",
 		Help: "Number of info messages sent total",
 	})
 	m.promRegistry.MustRegister(m.promInfoMessagesSentTotal)
 
 	m.promDBMessagesCurrent = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "steward_db_messages_current",
+		Name: "ctrl_db_messages_current",
 		Help: "The current value messages in database",
 	})
 	m.promRegistry.MustRegister(m.promDBMessagesCurrent)

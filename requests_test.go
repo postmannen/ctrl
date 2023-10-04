@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"bytes"
@@ -58,11 +58,11 @@ func TestMain(m *testing.M) {
 
 func newServerForTesting(addressAndPort string, testFolder string) (*server, *Configuration) {
 
-	// Start Steward instance
+	// Start ctrl instance
 	// ---------------------------------------
 	// tempdir := t.TempDir()
 
-	// Create the config to run a steward instance.
+	// Create the config to run a ctrl instance.
 	//tempdir := "./tmp"
 	conf := newConfigurationDefaults()
 	if *logging {
@@ -81,12 +81,12 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	conf.EnableDebug = false
 	conf.LogLevel = "none"
 
-	stewardServer, err := NewServer(&conf, "test")
+	ctrlServer, err := NewServer(&conf, "test")
 	if err != nil {
-		log.Fatalf(" * failed: could not start the Steward instance %v\n", err)
+		log.Fatalf(" * failed: could not start the ctrl instance %v\n", err)
 	}
 
-	return stewardServer, &conf
+	return ctrlServer, &conf
 }
 
 // Start up the nats-server message broker for testing purposes.
@@ -112,7 +112,7 @@ func writeMsgsToSocketTest(conf *Configuration, messages []Message, t *testing.T
 		t.Fatalf("writeMsgsToSocketTest: %v\n ", err)
 	}
 
-	socket, err := net.Dial("unix", filepath.Join(conf.SocketFolder, "steward.sock"))
+	socket, err := net.Dial("unix", filepath.Join(conf.SocketFolder, "ctrl.sock"))
 	if err != nil {
 		t.Fatalf(" * failed: could to open socket file for writing: %v\n", err)
 	}
@@ -273,7 +273,7 @@ func TestRequest(t *testing.T) {
 				MethodArgs:    []string{},
 				MethodTimeout: 5,
 				ReplyMethod:   REQTest,
-			}, want: []byte("central.REQHttpGet.EventACK"),
+			}, want: []byte("central.REQHttpGet"),
 			containsOrEquals: REQTestContains,
 			viaSocketOrCh:    viaCh,
 		},
@@ -288,7 +288,7 @@ func TestRequest(t *testing.T) {
 				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
 			}
 
-			tstSrv.toRingBufferCh <- []subjectAndMessage{sam}
+			tstSrv.samToSendCh <- []subjectAndMessage{sam}
 
 		case viaSocket:
 			msgs := []Message{tt.message}
@@ -341,7 +341,7 @@ func TestRequest(t *testing.T) {
 }
 
 // Check the tailing of files type.
-func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
+func checkREQTailFileTest(ctrlServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
 	// Create a file with some content.
 	fp := filepath.Join(tmpDir, "test.file")
 	fh, err := os.OpenFile(fp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
@@ -417,7 +417,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 }
 
 // Check the file copier.
-func checkREQCopySrc(stewardServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
+func checkREQCopySrc(ctrlServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
 	testFiles := 5
 
 	for i := 1; i <= testFiles; i++ {
@@ -474,8 +474,8 @@ func checkREQCopySrc(stewardServer *server, conf *Configuration, t *testing.T, t
 	return nil
 }
 
-func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testing.T, tempDir string) error {
-	mfs, err := stewardServer.metrics.promRegistry.Gather()
+func checkMetricValuesTest(ctrlServer *server, conf *Configuration, t *testing.T, tempDir string) error {
+	mfs, err := ctrlServer.metrics.promRegistry.Gather()
 	if err != nil {
 		return fmt.Errorf("error: promRegistry.gathering: %v", mfs)
 	}
@@ -486,7 +486,7 @@ func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testin
 
 	found := false
 	for _, mf := range mfs {
-		if mf.GetName() == "steward_processes_total" {
+		if mf.GetName() == "ctrl_processes_total" {
 			found = true
 
 			m := mf.GetMetric()
@@ -507,7 +507,7 @@ func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testin
 }
 
 // Check errorKernel
-func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuration, t *testing.T, tempDir string) error {
+func checkErrorKernelMalformedJSONtest(ctrlServer *server, conf *Configuration, t *testing.T, tempDir string) error {
 
 	// JSON message with error, missing brace.
 	m := `[
@@ -641,7 +641,7 @@ func findStringInFileTest(want string, fileName string, conf *Configuration, t *
 
 // Write message to socket for testing purposes.
 func writeToSocketTest(conf *Configuration, messageText string, t *testing.T) {
-	socket, err := net.Dial("unix", filepath.Join(conf.SocketFolder, "steward.sock"))
+	socket, err := net.Dial("unix", filepath.Join(conf.SocketFolder, "ctrl.sock"))
 	if err != nil {
 		t.Fatalf(" * failed: could to open socket file for writing: %v\n", err)
 	}

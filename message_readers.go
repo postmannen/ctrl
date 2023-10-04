@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"bytes"
@@ -16,10 +16,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// readStartupFolder will check the <workdir>/startup folder when Steward
+// readStartupFolder will check the <workdir>/startup folder when ctrl
 // starts for messages to process.
 // The purpose of the startup folder is that we can define messages on a
-// node that will be run when Steward starts up.
+// node that will be run when ctrl starts up.
 // Messages defined in the startup folder should have the toNode set to
 // self, and the from node set to where we want the answer sent. The reason
 // for this is that all replies normally pick up the host from the original
@@ -113,7 +113,7 @@ func (s *server) readStartupFolder() {
 		er = fmt.Errorf("%v", string(j))
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
-		s.directSAMSCh <- sams
+		s.samSendLocalCh <- sams
 
 	}
 
@@ -161,7 +161,7 @@ func (s *server) getFilePaths(dirName string) ([]string, error) {
 func (s *server) readSocket() {
 	// Loop, and wait for new connections.
 	for {
-		conn, err := s.StewardSocket.Accept()
+		conn, err := s.ctrlSocket.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
 			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
@@ -211,7 +211,8 @@ func (s *server) readSocket() {
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.toRingBufferCh <- sams
+			s.samToSendCh <- sams
+			s.auditLogCh <- sams
 
 		}(conn)
 	}
@@ -289,7 +290,8 @@ func (s *server) readFolder() {
 						}
 
 						// Send the SAM struct to be picked up by the ring buffer.
-						s.toRingBufferCh <- sams
+						s.samToSendCh <- sams
+						s.auditLogCh <- sams
 
 						// Delete the file.
 						err = os.Remove(event.Name)
@@ -366,22 +368,23 @@ func (s *server) readTCPListener() {
 			readBytes = bytes.Trim(readBytes, "\x00")
 
 			// unmarshal the JSON into a struct
-			sam, err := s.convertBytesToSAMs(readBytes)
+			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on tcp listener: %v", err)
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 				return
 			}
 
-			for i := range sam {
+			for i := range sams {
 
 				// Fill in the value for the FromNode field, so the receiver
 				// can check this field to know where it came from.
-				sam[i].Message.FromNode = Node(s.nodeName)
+				sams[i].Message.FromNode = Node(s.nodeName)
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.toRingBufferCh <- sam
+			s.samToSendCh <- sams
+			s.auditLogCh <- sams
 
 		}(conn)
 	}
@@ -410,22 +413,23 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	readBytes = bytes.Trim(readBytes, "\x00")
 
 	// unmarshal the JSON into a struct
-	sam, err := s.convertBytesToSAMs(readBytes)
+	sams, err := s.convertBytesToSAMs(readBytes)
 	if err != nil {
 		er := fmt.Errorf("error: malformed json received on HTTPListener: %v", err)
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 		return
 	}
 
-	for i := range sam {
+	for i := range sams {
 
 		// Fill in the value for the FromNode field, so the receiver
 		// can check this field to know where it came from.
-		sam[i].Message.FromNode = Node(s.nodeName)
+		sams[i].Message.FromNode = Node(s.nodeName)
 	}
 
 	// Send the SAM struct to be picked up by the ring buffer.
-	s.toRingBufferCh <- sam
+	s.samToSendCh <- sams
+	s.auditLogCh <- sams
 
 }
 
@@ -557,7 +561,6 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 
 	sub := Subject{
 		ToNode:    string(m.ToNode),
-		Event:     tmpH.getKind(),
 		Method:    m.Method,
 		messageCh: make(chan Message),
 	}

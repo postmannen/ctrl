@@ -8,8 +8,8 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-    main: ./cmd/steward/main.go
-    binary: steward
+    main: ./cmd/ctrl/main.go
+    binary: ctrl
 checksum:
   name_template: "checksums.txt"
 snapshot:
@@ -36,23 +36,23 @@ dockers:
       - "--label=org.opencontainers.image.version={{.Version}}"
 nfpms:
   - vendor: Raa Labs AS
-    homepage: https://github.com/raalabs/steward
+    homepage: https://github.com/postmannen/ctrl
     maintainer: Bjørn Tore Svinningen <postmannen@gmail.com>
     description: |-
       Infrastructure controller
     license: MIT
     formats:
       - rpm
-    bindir: /usr/local/steward/
+    bindir: /usr/local/ctrl/
     contents:
       - src: LICENSE
-        dst: /usr/share/doc/steward/LICENSE
+        dst: /usr/share/doc/ctrl/LICENSE
         file_info:
           owner: root
           group: root
           mode: 0644
       - src: README.md
-        dst: /usr/share/doc/steward/README.md
+        dst: /usr/share/doc/ctrl/README.md
         file_info:
           owner: root
           group: root

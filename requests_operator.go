@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"fmt"
@@ -8,16 +8,9 @@ import (
 )
 
 // --- OpProcessList
-type methodREQOpProcessList struct {
-	event Event
-}
-
-func (m methodREQOpProcessList) getKind() Event {
-	return m.event
-}
 
 // Handle Op Process List
-func (m methodREQOpProcessList) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQOpProcessList(proc process, message Message, node string) ([]byte, error) {
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -46,16 +39,8 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 
 // --- OpProcessStart
 
-type methodREQOpProcessStart struct {
-	event Event
-}
-
-func (m methodREQOpProcessStart) getKind() Event {
-	return m.event
-}
-
 // Handle Op Process Start
-func (m methodREQOpProcessStart) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQOpProcessStart(proc process, message Message, node string) ([]byte, error) {
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
@@ -101,21 +86,13 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 
 // --- OpProcessStop
 
-type methodREQOpProcessStop struct {
-	event Event
-}
-
-func (m methodREQOpProcessStop) getKind() Event {
-	return m.event
-}
-
 // RecevingNode Node        `json:"receivingNode"`
 // Method       Method      `json:"method"`
 // Kind         processKind `json:"kind"`
 // ID           int         `json:"id"`
 
 // Handle Op Process Start
-func (m methodREQOpProcessStop) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQOpProcessStop(proc process, message Message, node string) ([]byte, error) {
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()

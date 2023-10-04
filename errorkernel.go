@@ -5,7 +5,7 @@
 // that the action which the message where supposed to trigger
 // failed, or that an event where unable to be processed.
 
-package steward
+package ctrl
 
 import (
 	"context"

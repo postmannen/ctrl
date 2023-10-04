@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"fmt"
@@ -87,16 +87,8 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	return nil
 }
 
-type methodREQToFileAppend struct {
-	event Event
-}
-
-func (m methodREQToFileAppend) getKind() Event {
-	return m.event
-}
-
 // Handle appending data to file.
-func (m methodREQToFileAppend) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQToFileAppend(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(true, proc, message)
 	proc.errorKernel.errSend(proc, message, err, logWarning)
 
@@ -106,17 +98,9 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 
 // -----
 
-type methodREQToFile struct {
-	event Event
-}
-
-func (m methodREQToFile) getKind() Event {
-	return m.event
-}
-
 // Handle writing to a file. Will truncate any existing data if the file did already
 // exist.
-func (m methodREQToFile) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQToFile(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(false, proc, message)
 	proc.errorKernel.errSend(proc, message, err, logWarning)
 
@@ -126,18 +110,10 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 
 // --- methodREQTailFile
 
-type methodREQTailFile struct {
-	event Event
-}
-
-func (m methodREQTailFile) getKind() Event {
-	return m.event
-}
-
 // handler to run a tailing of files with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // as a new message.
-func (m methodREQTailFile) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQTailFile(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 

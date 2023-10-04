@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type Message struct {
 	// are injected f.ex. on a socket, and there they are directly
 	//converted into separate node messages for each node, and from
 	// there the ToNodes field is not used any more within the system.
-	// With other words, a message that exists within Steward is always
+	// With other words, a message that exists within ctrl is always
 	// for just for a single node.
 	ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 	// The Unique ID of the message
@@ -85,12 +85,6 @@ type Message struct {
 	// Schedule
 	Schedule []int `json:"schedule" yaml:"schedule"`
 
-	// done is used to signal when a message is fully processed.
-	// This is used for signaling back to the ringbuffer that we are
-	// done with processing a message, and the message can be removed
-	// from the ringbuffer and into the time series log.
-	done chan struct{}
-
 	// ctx for the specifix message. Used for for example canceling
 	// scheduled messages.
 	// NB: Commented out this field for specific message context
@@ -110,8 +104,6 @@ type Node string
 type Subject struct {
 	// node, the name of the node to receive the message.
 	ToNode string `json:"node" yaml:"toNode"`
-	// Event, event type like EventACK or EventNACK.
-	Event Event `json:"event" yaml:"event"`
 	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`
 	// messageCh is used by publisher kind processes to read new messages
@@ -129,7 +121,7 @@ type Subject struct {
 func newSubject(method Method, node string) Subject {
 	// Get the Event type for the Method.
 	ma := method.GetMethodsAvailable()
-	mh, ok := ma.CheckIfExists(method)
+	_, ok := ma.CheckIfExists(method)
 	//mh, ok := ma.Methodhandlers[method]
 	if !ok {
 		log.Printf("error: newSubject: no Event type specified for the method: %v\n", method)
@@ -138,7 +130,6 @@ func newSubject(method Method, node string) Subject {
 
 	return Subject{
 		ToNode:    node,
-		Event:     mh.getKind(),
 		Method:    method,
 		messageCh: make(chan Message),
 	}
@@ -154,7 +145,6 @@ func newSubjectNoVerifyHandler(method Method, node string) Subject {
 
 	return Subject{
 		ToNode:    node,
-		Event:     EventACK,
 		Method:    method,
 		messageCh: make(chan Message),
 	}
@@ -165,5 +155,5 @@ type subjectName string
 
 // Return a value of the subjectName for the subject as used with nats subject.
 func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s", s.ToNode, s.Method, s.Event))
+	return subjectName(fmt.Sprintf("%s.%s", s.ToNode, s.Method))
 }

@@ -37,7 +37,7 @@
 //
 // Check out the existing code below for more examples.
 
-package steward
+package ctrl
 
 import (
 	"context"
@@ -81,8 +81,6 @@ const (
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQToConsole Method = "REQToConsole"
-	// REQTuiToConsole
-	REQTuiToConsole Method = "REQTuiToConsole"
 	// Send text logging to some host by appending the output to a
 	// file, if the file do not exist we create it.
 	// A file with the full subject+hostName will be created on
@@ -112,12 +110,6 @@ const (
 	REQHello Method = "REQHello"
 	// Error log methods to centralError node.
 	REQErrorLog Method = "REQErrorLog"
-	// Echo request will ask the subscriber for a
-	// reply generated as a new message, and sent back to where
-	// the initial request was made.
-	REQPing Method = "REQPing"
-	// Will generate a reply for a ECHORequest
-	REQPong Method = "REQPong"
 	// Http Get
 	REQHttpGet Method = "REQHttpGet"
 	// Http Get Scheduled
@@ -171,14 +163,10 @@ const (
 	REQAclImport = "REQAclImport"
 )
 
+type HandlerFunc func(proc process, message Message, node string) ([]byte, error)
+
 // The mapping of all the method constants specified, what type
-// it references, and the kind if it is an Event or Command, and
-// if it is ACK or NACK.
-//
-//	Allowed values for the Event field are:
-//	 - EventACK
-//	 - EventNack
-//
+// it references.
 // The primary use of this table is that messages are not able to
 // pass the actual type of the request since it is sent as a string,
 // so we use the below table to find the actual type based on that
@@ -186,150 +174,57 @@ const (
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 
 	ma := MethodsAvailable{
-		Methodhandlers: map[Method]methodHandler{
-			REQInitial: methodREQInitial{
-				event: EventACK,
-			},
-			REQOpProcessList: methodREQOpProcessList{
-				event: EventACK,
-			},
-			REQOpProcessStart: methodREQOpProcessStart{
-				event: EventACK,
-			},
-			REQOpProcessStop: methodREQOpProcessStop{
-				event: EventACK,
-			},
-			REQCliCommand: methodREQCliCommand{
-				event: EventACK,
-			},
-			REQCliCommandCont: methodREQCliCommandCont{
-				event: EventACK,
-			},
-			REQToConsole: methodREQToConsole{
-				event: EventACK,
-			},
-			REQTuiToConsole: methodREQTuiToConsole{
-				event: EventACK,
-			},
-			REQToFileAppend: methodREQToFileAppend{
-				event: EventACK,
-			},
-			REQToFile: methodREQToFile{
-				event: EventACK,
-			},
-			REQToFileNACK: methodREQToFile{
-				event: EventNACK,
-			},
-			REQCopySrc: methodREQCopySrc{
-				event: EventACK,
-			},
-			REQCopyDst: methodREQCopyDst{
-				event: EventACK,
-			},
-			REQSUBCopySrc: methodREQSUB{
-				event: EventACK,
-			},
-			REQSUBCopyDst: methodREQSUB{
-				event: EventACK,
-			},
-			REQHello: methodREQHello{
-				event: EventNACK,
-			},
-			REQErrorLog: methodREQErrorLog{
-				event: EventACK,
-			},
-			REQPing: methodREQPing{
-				event: EventACK,
-			},
-			REQPong: methodREQPong{
-				event: EventACK,
-			},
-			REQHttpGet: methodREQHttpGet{
-				event: EventACK,
-			},
-			REQHttpGetScheduled: methodREQHttpGetScheduled{
-				event: EventACK,
-			},
-			REQTailFile: methodREQTailFile{
-				event: EventACK,
-			},
-			REQPublicKey: methodREQPublicKey{
-				event: EventACK,
-			},
-			REQKeysRequestUpdate: methodREQKeysRequestUpdate{
-				event: EventNACK,
-			},
-			REQKeysDeliverUpdate: methodREQKeysDeliverUpdate{
-				event: EventNACK,
-			},
-			REQKeysAllow: methodREQKeysAllow{
-				event: EventACK,
-			},
-			REQKeysDelete: methodREQKeysDelete{
-				event: EventACK,
-			},
+		Methodhandlers: map[Method]HandlerFunc{
+			REQInitial:           HandlerFunc(methodREQInitial),
+			REQOpProcessList:     HandlerFunc(methodREQOpProcessList),
+			REQOpProcessStart:    HandlerFunc(methodREQOpProcessStart),
+			REQOpProcessStop:     HandlerFunc(methodREQOpProcessStop),
+			REQCliCommand:        HandlerFunc(methodREQCliCommand),
+			REQCliCommandCont:    HandlerFunc(methodREQCliCommandCont),
+			REQToConsole:         HandlerFunc(methodREQToConsole),
+			REQToFileAppend:      HandlerFunc(methodREQToFileAppend),
+			REQToFile:            HandlerFunc(methodREQToFile),
+			REQToFileNACK:        HandlerFunc(methodREQToFile),
+			REQCopySrc:           HandlerFunc(methodREQCopySrc),
+			REQCopyDst:           HandlerFunc(methodREQCopyDst),
+			REQSUBCopySrc:        HandlerFunc(methodREQSUB),
+			REQSUBCopyDst:        HandlerFunc(methodREQSUB),
+			REQHello:             HandlerFunc(methodREQHello),
+			REQErrorLog:          HandlerFunc(methodREQErrorLog),
+			REQHttpGet:           HandlerFunc(methodREQHttpGet),
+			REQHttpGetScheduled:  HandlerFunc(methodREQHttpGetScheduled),
+			REQTailFile:          HandlerFunc(methodREQTailFile),
+			REQPublicKey:         HandlerFunc(methodREQPublicKey),
+			REQKeysRequestUpdate: HandlerFunc(methodREQKeysRequestUpdate),
+			REQKeysDeliverUpdate: HandlerFunc(methodREQKeysDeliverUpdate),
+			REQKeysAllow:         HandlerFunc(methodREQKeysAllow),
+			REQKeysDelete:        HandlerFunc(methodREQKeysDelete),
 
-			REQAclRequestUpdate: methodREQAclRequestUpdate{
-				event: EventNACK,
-			},
-			REQAclDeliverUpdate: methodREQAclDeliverUpdate{
-				event: EventNACK,
-			},
+			REQAclRequestUpdate: HandlerFunc(methodREQAclRequestUpdate),
+			REQAclDeliverUpdate: HandlerFunc(methodREQAclDeliverUpdate),
 
-			REQAclAddCommand: methodREQAclAddCommand{
-				event: EventACK,
-			},
-			REQAclDeleteCommand: methodREQAclDeleteCommand{
-				event: EventACK,
-			},
-			REQAclDeleteSource: methodREQAclDeleteSource{
-				event: EventACK,
-			},
-			REQAclGroupNodesAddNode: methodREQAclGroupNodesAddNode{
-				event: EventACK,
-			},
-			REQAclGroupNodesDeleteNode: methodREQAclGroupNodesDeleteNode{
-				event: EventACK,
-			},
-			REQAclGroupNodesDeleteGroup: methodREQAclGroupNodesDeleteGroup{
-				event: EventACK,
-			},
-			REQAclGroupCommandsAddCommand: methodREQAclGroupCommandsAddCommand{
-				event: EventACK,
-			},
-			REQAclGroupCommandsDeleteCommand: methodREQAclGroupCommandsDeleteCommand{
-				event: EventACK,
-			},
-			REQAclGroupCommandsDeleteGroup: methodREQAclGroupCommandsDeleteGroup{
-				event: EventACK,
-			},
-			REQAclExport: methodREQAclExport{
-				event: EventACK,
-			},
-			REQAclImport: methodREQAclImport{
-				event: EventACK,
-			},
-			REQTest: methodREQTest{
-				event: EventACK,
-			},
+			REQAclAddCommand:                 HandlerFunc(methodREQAclAddCommand),
+			REQAclDeleteCommand:              HandlerFunc(methodREQAclDeleteCommand),
+			REQAclDeleteSource:               HandlerFunc(methodREQAclDeleteSource),
+			REQAclGroupNodesAddNode:          HandlerFunc(methodREQAclGroupNodesAddNode),
+			REQAclGroupNodesDeleteNode:       HandlerFunc(methodREQAclGroupNodesDeleteNode),
+			REQAclGroupNodesDeleteGroup:      HandlerFunc(methodREQAclGroupNodesDeleteGroup),
+			REQAclGroupCommandsAddCommand:    HandlerFunc(methodREQAclGroupCommandsAddCommand),
+			REQAclGroupCommandsDeleteCommand: HandlerFunc(methodREQAclGroupCommandsDeleteCommand),
+			REQAclGroupCommandsDeleteGroup:   HandlerFunc(methodREQAclGroupCommandsDeleteGroup),
+			REQAclExport:                     HandlerFunc(methodREQAclExport),
+			REQAclImport:                     HandlerFunc(methodREQAclImport),
+			REQTest:                          HandlerFunc(methodREQTest),
 		},
 	}
 
 	return ma
 }
 
-// Reply methods. The slice generated here is primarily used within
-// the Stew client for knowing what of the req types are generally
-// used as reply methods.
-func (m Method) GetReplyMethods() []Method {
-	rm := []Method{REQToConsole, REQTuiToConsole, REQCliCommand, REQCliCommandCont, REQToFile, REQToFileAppend, REQNone}
-	return rm
-}
-
 // getHandler will check the methodsAvailable map, and return the
 // method handler for the method given
 // as input argument.
-func (m Method) getHandler(method Method) methodHandler {
+func (m Method) getHandler(method Method) HandlerFunc {
 	ma := m.GetMethodsAvailable()
 	mh, _ := ma.CheckIfExists(method)
 	// mh := ma.Methodhandlers[method]
@@ -354,15 +249,7 @@ func getContextForMethodTimeout(ctx context.Context, message Message) (context.C
 // ----
 
 // Initial parent method used to start other processes.
-type methodREQInitial struct {
-	event Event
-}
-
-func (m methodREQInitial) getKind() Event {
-	return m.event
-}
-
-func (m methodREQInitial) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQInitial(proc process, message Message, node string) ([]byte, error) {
 	// proc.procFuncCh <- message
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -374,15 +261,7 @@ func (m methodREQInitial) handler(proc process, message Message, node string) ([
 // Methods used in sub processes are defined within the the requests
 // they are spawned in, so this type is primarily for us to use the
 // same logic with sub process requests as we do with normal requests.
-type methodREQSUB struct {
-	event Event
-}
-
-func (m methodREQSUB) getKind() Event {
-	return m.event
-}
-
-func (m methodREQSUB) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQSUB(proc process, message Message, node string) ([]byte, error) {
 	// proc.procFuncCh <- message
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -393,13 +272,13 @@ func (m methodREQSUB) handler(proc process, message Message, node string) ([]byt
 // MethodsAvailable holds a map of all the different method types and the
 // associated handler to that method type.
 type MethodsAvailable struct {
-	Methodhandlers map[Method]methodHandler
+	Methodhandlers map[Method]HandlerFunc
 }
 
 // Check if exists will check if the Method is defined. If true the bool
 // value will be set to true, and the methodHandler function for that type
 // will be returned.
-func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
+func (ma MethodsAvailable) CheckIfExists(m Method) (HandlerFunc, bool) {
 	// First check if it is a sub process.
 	if strings.HasPrefix(string(m), "REQSUB") {
 		// Strip of the uuid after the method name.
@@ -531,9 +410,3 @@ func selectFileNaming(message Message, proc process) (string, string) {
 // ------------------------------------------------------------
 // Subscriber method handlers
 // ------------------------------------------------------------
-
-// The methodHandler interface.
-type methodHandler interface {
-	handler(proc process, message Message, node string) ([]byte, error)
-	getKind() Event
-}

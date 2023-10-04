@@ -10,14 +10,14 @@ import (
 
 	_ "net/http/pprof"
 
-	"github.com/RaaLabs/steward"
 	"github.com/pkg/profile"
+	"github.com/postmannen/ctrl"
 )
 
 // Use ldflags to set version
-// env CONFIGFOLDER=./etc/ go run -ldflags "-X main.version=v0.1.10" --race ./cmd/steward/.
+// env CONFIGFOLDER=./etc/ go run -ldflags "-X main.version=v0.1.10" --race ./cmd/ctrl/.
 // or
-// env GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=v0.1.10" -o steward
+// env GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=v0.1.10" -o ctrl
 var version string
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	//defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
 	//defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
 
-	c := steward.NewConfiguration()
+	c := ctrl.NewConfiguration()
 	err := c.CheckFlags(version)
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -45,7 +45,7 @@ func main() {
 		runtime.SetBlockProfileRate(c.SetBlockProfileRate)
 	}
 
-	s, err := steward.NewServer(c, version)
+	s, err := ctrl.NewServer(c, version)
 	if err != nil {
 		log.Printf("%v\n", err)
 		os.Exit(1)

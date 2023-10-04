@@ -1,16 +1,19 @@
 // Notes:
-package steward
+package ctrl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -34,8 +37,8 @@ type server struct {
 	configuration *Configuration
 	// The nats connection to the broker
 	natsConn *nats.Conn
-	// net listener for communicating via the steward socket
-	StewardSocket net.Listener
+	// net listener for communicating via the ctrl socket
+	ctrlSocket net.Listener
 	// processes holds all the information about running processes
 	processes *processes
 	// The name of the node
@@ -45,20 +48,16 @@ type server struct {
 	//
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
-	toRingBufferCh chan []subjectAndMessage
+	samToSendCh chan []subjectAndMessage
 	// directSAMSCh
-	directSAMSCh chan []subjectAndMessage
+	samSendLocalCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
-	// Ring buffer
-	ringBuffer *ringBuffer
 	// metric exporter
 	metrics *metrics
 	// Version of package
 	version string
-	// tui client
-	tui *tui
 	// processInitial is the initial process that all other processes are tied to.
 	processInitial process
 
@@ -70,6 +69,15 @@ type server struct {
 	helloRegister *helloRegister
 	// holds the logic for the central auth services
 	centralAuth *centralAuth
+	// message ID
+	messageID messageID
+	// audit logging
+	auditLogCh chan []subjectAndMessage
+}
+
+type messageID struct {
+	id int
+	mu sync.Mutex
 }
 
 // newServer will prepare and return a server type
@@ -135,7 +143,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	log.Printf(" * conn.Opts.ReconnectJitterTLS: %v\n", conn.Opts.ReconnectJitterTLS)
 	log.Printf(" * conn.Opts.ReconnectJitter: %v\n", conn.Opts.ReconnectJitter)
 
-	var stewardSocket net.Listener
+	var ctrlSocket net.Listener
 	var err error
 
 	// Check if tmp folder for socket exists, if not create it
@@ -147,24 +155,13 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		}
 	}
 
-	// Open the steward socket file, and start the listener if enabled.
+	// Open the ctrl socket file, and start the listener if enabled.
 	if configuration.EnableSocket {
-		stewardSocket, err = createSocket(configuration.SocketFolder, "steward.sock")
+		ctrlSocket, err = createSocket(configuration.SocketFolder, "ctrl.sock")
 		if err != nil {
 			cancel()
 			return nil, err
 		}
-	}
-
-	// Create the tui client structure if enabled.
-	var tuiClient *tui
-	if configuration.EnableTUI {
-		tuiClient, err = newTui(Node(configuration.NodeName))
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-
 	}
 
 	//var nodeAuth *nodeAuth
@@ -184,16 +181,16 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		configuration:  configuration,
 		nodeName:       configuration.NodeName,
 		natsConn:       conn,
-		StewardSocket:  stewardSocket,
-		toRingBufferCh: make(chan []subjectAndMessage),
-		directSAMSCh:   make(chan []subjectAndMessage),
+		ctrlSocket:     ctrlSocket,
+		samToSendCh:    make(chan []subjectAndMessage),
+		samSendLocalCh: make(chan []subjectAndMessage),
 		metrics:        metrics,
 		version:        version,
-		tui:            tuiClient,
 		errorKernel:    errorKernel,
 		nodeAuth:       nodeAuth,
 		helloRegister:  newHelloRegister(),
 		centralAuth:    centralAuth,
+		auditLogCh:     make(chan []subjectAndMessage),
 	}
 
 	s.processes = newProcesses(ctx, &s)
@@ -231,7 +228,7 @@ func newHelloRegister() *helloRegister {
 // communicate with that socket.
 func createSocket(socketFolder string, socketFileName string) (net.Listener, error) {
 
-	// Just as an extra check we eventually delete any existing Steward socket files if found.
+	// Just as an extra check we eventually delete any existing ctrl socket files if found.
 	socketFilepath := filepath.Join(socketFolder, socketFileName)
 	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(socketFilepath)
@@ -256,11 +253,11 @@ func createSocket(socketFolder string, socketFileName string) (net.Listener, err
 // if there is publisher process for a given message subject, and
 // if it does not exist it will spawn one.
 func (s *server) Start() {
-	log.Printf("Starting steward, version=%+v\n", s.version)
+	log.Printf("Starting ctrl, version=%+v\n", s.version)
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
 	go func() {
-		err := s.errorKernel.start(s.toRingBufferCh)
+		err := s.errorKernel.start(s.samToSendCh)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -295,6 +292,9 @@ func (s *server) Start() {
 		go s.readHttpListener()
 	}
 
+	// Start audit logger.
+	go s.startAuditLog(s.ctx)
+
 	// Start up the predefined subscribers.
 	//
 	// Since all the logic to handle processes are tied to the process
@@ -315,20 +315,10 @@ func (s *server) Start() {
 		go s.exposeDataFolder(s.ctx)
 	}
 
-	if s.configuration.EnableTUI {
-		go func() {
-			err := s.tui.Start(s.ctx, s.toRingBufferCh)
-			if err != nil {
-				log.Printf("%v\n", err)
-				os.Exit(1)
-			}
-		}()
-	}
-
 	// Start the processing of new messages from an input channel.
 	// NB: We might need to create a sub context for the ringbuffer here
 	// so we can cancel this context last, and not use the server.
-	s.routeMessagesToProcess("./incomingBuffer.db")
+	s.routeMessagesToProcess()
 
 	// Start reading the channel for injecting direct messages that should
 	// not be sent via the message broker.
@@ -336,6 +326,45 @@ func (s *server) Start() {
 
 	// Check and enable read the messages specified in the startup folder.
 	s.readStartupFolder()
+
+}
+
+// startAuditLog will start up the logging of all messages to audit file
+func (s *server) startAuditLog(ctx context.Context) {
+
+	storeFile := filepath.Join(s.configuration.DatabaseFolder, "store.log")
+	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0660)
+	if err != nil {
+		log.Printf("error: startPermanentStore: failed to open file: %v\n", err)
+	}
+	defer f.Close()
+
+	for {
+		select {
+		case sams := <-s.auditLogCh:
+
+			for _, sam := range sams {
+				msgForPermStore := Message{}
+				copier.Copy(&msgForPermStore, sam.Message)
+				// Remove the content of the data field.
+				msgForPermStore.Data = nil
+
+				js, err := json.Marshal(msgForPermStore)
+				if err != nil {
+					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
+					s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+				}
+				d := time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
+
+				_, err = f.WriteString(d)
+				if err != nil {
+					log.Printf("error:failed to write entry: %v\n", err)
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 
 }
 
@@ -348,7 +377,7 @@ func (s *server) directSAMSChRead() {
 			case <-s.ctx.Done():
 				log.Printf("info: stopped the directSAMSCh reader\n\n")
 				return
-			case sams := <-s.directSAMSCh:
+			case sams := <-s.samSendLocalCh:
 				// fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
@@ -361,12 +390,12 @@ func (s *server) directSAMSChRead() {
 
 					mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
 					if !ok {
-						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
+						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Method)
 						p.errorKernel.errSend(p, sams[i].Message, er, logError)
 						continue
 					}
 
-					p.handler = mh.handler
+					p.handler = mh
 
 					go executeHandler(p, sams[i].Message, s.nodeName)
 				}
@@ -389,8 +418,8 @@ func (s *server) Stop() {
 	s.cancel()
 	log.Printf("info: stopped the main context\n")
 
-	// Delete the steward socket file when the program exits.
-	socketFilepath := filepath.Join(s.configuration.SocketFolder, "steward.sock")
+	// Delete the ctrl socket file when the program exits.
+	socketFilepath := filepath.Join(s.configuration.SocketFolder, "ctrl.sock")
 
 	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(socketFilepath)
@@ -402,14 +431,6 @@ func (s *server) Stop() {
 
 }
 
-// samDBValueAndDelivered Contains the sam value as it is used in the
-// state DB, and also a delivered function to be called when this message
-// is picked up, so we can control if messages gets stale at some point.
-type samDBValueAndDelivered struct {
-	samDBValue samDBValue
-	delivered  func()
-}
-
 // routeMessagesToProcess takes a database name it's input argument.
 // The database will be used as the persistent k/v store for the work
 // queue which is implemented as a ring buffer.
@@ -419,32 +440,9 @@ type samDBValueAndDelivered struct {
 // worker process.
 // It will also handle the process of spawning more worker processes
 // for publisher subjects if it does not exist.
-func (s *server) routeMessagesToProcess(dbFileName string) {
-	// Prepare and start a new ring buffer
-	var bufferSize int = s.configuration.RingBufferSize
-	const samValueBucket string = "samValueBucket"
-	const indexValueBucket string = "indexValueBucket"
-
-	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingBufferCh, samValueBucket, indexValueBucket, s.errorKernel, s.processInitial)
-
-	ringBufferInCh := make(chan subjectAndMessage)
-	ringBufferOutCh := make(chan samDBValueAndDelivered)
-	// start the ringbuffer.
-	s.ringBuffer.start(s.ctx, ringBufferInCh, ringBufferOutCh)
-
+func (s *server) routeMessagesToProcess() {
 	// Start reading new fresh messages received on the incomming message
-	// pipe/file requested, and fill them into the buffer.
-	// Since the new messages comming into the system is a []subjectAndMessage
-	// we loop here, unfold the slice, and put single subjectAndMessages's on
-	// the channel to the ringbuffer.
-	go func() {
-		for sams := range s.toRingBufferCh {
-			for _, sam := range sams {
-				ringBufferInCh <- sam
-			}
-		}
-		close(ringBufferInCh)
-	}()
+	// pipe/file.
 
 	// Process the messages that are in the ring buffer. Check and
 	// send if there are a specific subject for it, and if no subject
@@ -454,99 +452,115 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
-		for samDBVal := range ringBufferOutCh {
-			go func(samDBVal samDBValueAndDelivered) {
-				// Signal back to the ringbuffer that message have been picked up.
-				samDBVal.delivered()
+		for samSlice := range s.samToSendCh {
+			for _, sam := range samSlice {
 
-				sam := samDBVal.samDBValue.SAM
-				// Check if the format of the message is correct.
-				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-					s.errorKernel.errSend(s.processInitial, sam.Message, er, logError)
-					return
-				}
+				go func(sam subjectAndMessage) {
+					s.messageID.mu.Lock()
+					s.messageID.id++
+					sam.Message.ID = s.messageID.id
+					s.messageID.mu.Unlock()
 
-				m := sam.Message
+					s.metrics.promMessagesProcessedIDLast.Set(float64(sam.Message.ID))
 
-				subjName := sam.Subject.name()
-				pn := processNameGet(subjName, processKindPublisher)
-
-				sendOK := func() bool {
-					var ctxCanceled bool
-
-					s.processes.active.mu.Lock()
-					defer s.processes.active.mu.Unlock()
-
-					// Check if the process exist, if it do not exist return false so a
-					// new publisher process will be created.
-					proc, ok := s.processes.active.procNames[pn]
-					if !ok {
-						return false
+					// Check if the format of the message is correct.
+					if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
+						er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
+						s.errorKernel.errSend(s.processInitial, sam.Message, er, logError)
+						return
 					}
 
-					if proc.ctx.Err() != nil {
-						ctxCanceled = true
+					switch {
+					case sam.Message.Retries < 0:
+						sam.Message.Retries = s.configuration.DefaultMessageRetries
 					}
-					if ok && ctxCanceled {
-						er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
-						s.errorKernel.logDebug(er, s.configuration)
-						delete(proc.processes.active.procNames, proc.processName)
-						return false
+					if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
+						sam.Message.MethodTimeout = s.configuration.DefaultMethodTimeout
 					}
 
-					// If found in map above, and go routine for publishing is running,
-					// put the message on that processes incomming message channel.
-					if ok && !ctxCanceled {
-						select {
-						case proc.subject.messageCh <- m:
-							er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
-							s.errorKernel.logDebug(er, s.configuration)
-						case <-proc.ctx.Done():
-							er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-							s.errorKernel.logDebug(er, s.configuration)
+					// ---
+
+					m := sam.Message
+
+					subjName := sam.Subject.name()
+					pn := processNameGet(subjName, processKindPublisher)
+
+					sendOK := func() bool {
+						var ctxCanceled bool
+
+						s.processes.active.mu.Lock()
+						defer s.processes.active.mu.Unlock()
+
+						// Check if the process exist, if it do not exist return false so a
+						// new publisher process will be created.
+						proc, ok := s.processes.active.procNames[pn]
+						if !ok {
+							return false
 						}
 
-						return true
+						if proc.ctx.Err() != nil {
+							ctxCanceled = true
+						}
+						if ok && ctxCanceled {
+							er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
+							s.errorKernel.logDebug(er, s.configuration)
+							delete(proc.processes.active.procNames, proc.processName)
+							return false
+						}
+
+						// If found in map above, and go routine for publishing is running,
+						// put the message on that processes incomming message channel.
+						if ok && !ctxCanceled {
+							select {
+							case proc.subject.messageCh <- m:
+								er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
+								s.errorKernel.logDebug(er, s.configuration)
+							case <-proc.ctx.Done():
+								er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
+								s.errorKernel.logDebug(er, s.configuration)
+							}
+
+							return true
+						}
+
+						// The process was not found, so we return false here so a new publisher
+						// process will be created later.
+						return false
+					}()
+
+					if sendOK {
+						return
 					}
 
-					// The process was not found, so we return false here so a new publisher
-					// process will be created later.
-					return false
-				}()
-
-				if sendOK {
-					return
-				}
-
-				er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
-				s.errorKernel.logDebug(er, s.configuration)
-
-				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				var proc process
-				switch {
-				case m.IsSubPublishedMsg:
-					proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
-				default:
-					proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
-				}
-
-				proc.spawnWorker()
-				er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-				s.errorKernel.logDebug(er, s.configuration)
-
-				// Now when the process is spawned we continue,
-				// and send the message to that new process.
-				select {
-				case proc.subject.messageCh <- m:
-					er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
+					er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
 					s.errorKernel.logDebug(er, s.configuration)
-				case <-proc.ctx.Done():
-					er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-					s.errorKernel.logDebug(er, s.configuration)
-				}
 
-			}(samDBVal)
+					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
+					var proc process
+					switch {
+					case m.IsSubPublishedMsg:
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+					default:
+						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+					}
+
+					proc.spawnWorker()
+					er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
+					s.errorKernel.logDebug(er, s.configuration)
+
+					// Now when the process is spawned we continue,
+					// and send the message to that new process.
+					select {
+					case proc.subject.messageCh <- m:
+						er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
+						s.errorKernel.logDebug(er, s.configuration)
+					case <-proc.ctx.Done():
+						er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
+						s.errorKernel.logDebug(er, s.configuration)
+					}
+
+				}(sam)
+			}
 		}
 	}()
 }

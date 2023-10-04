@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"bytes"
@@ -144,7 +144,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		processID:        pid,
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
-		toRingbufferCh:   server.toRingBufferCh,
+		toRingbufferCh:   server.samToSendCh,
 		configuration:    server.configuration,
 		processes:        server.processes,
 		natsConn:         server.natsConn,
@@ -271,7 +271,7 @@ func (p process) startSubscriber() {
 }
 
 var (
-	ErrACKSubscribeRetry = errors.New("steward: retrying to subscribe for ack message")
+	ErrACKSubscribeRetry = errors.New("ctrl: retrying to subscribe for ack message")
 )
 
 // messageDeliverNats will create the Nats message with headers and payload.
@@ -315,13 +315,6 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					return ErrACKSubscribeRetry
 				}
 				p.metrics.promNatsDeliveredTotal.Inc()
-
-				//err = natsConn.Flush()
-				//if err != nil {
-				//	er := fmt.Errorf("error: nats publish flush failed: %v", err)
-				//	log.Printf("%v\n", er)
-				//	return
-				//}
 
 				// The remaining logic is for handling ACK messages, so we return here
 				// since it was a NACK message, and all or now done.
@@ -415,7 +408,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 						return er
 
 					default:
-						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update steward to handle the new error type:   subject=%v: %v", p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update ctrl to handle the new error type:   subject=%v: %v", p.subject.name(), err)
 						p.errorKernel.logDebug(er, p.configuration)
 
 						return er
@@ -557,14 +550,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
 	//
-	// With ACK messages Steward will keep the state of the message delivery, and try to
+	// With ACK messages ctrl will keep the state of the message delivery, and try to
 	// resend the message if an ACK is not received within the timeout/retries specified
 	// in the message.
 	// When a process sends an ACK message, it will stop and wait for the nats-reply message
 	// for the time specified in the replyTimeout value. If no reply message is received
 	// within the given timeout the publishing process will try to resend the message for
-	// number of times specified in the retries field of the Steward message.
-	// When receiving a Steward-message with ACK enabled we send a message back the the
+	// number of times specified in the retries field of the ctrl message.
+	// When receiving a ctrl-message with ACK enabled we send a message back the the
 	// node where the message originated using the msg.Reply subject field of the nats-message.
 	//
 	// With NACK messages we do not send a nats reply message, so the message will only be
@@ -581,9 +574,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		if p.handler == nil {
 			// Look up the method handler for the specified method.
 			mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
-			p.handler = mh.handler
+			p.handler = mh
 			if !ok {
-				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
+				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Method)
 				p.errorKernel.errSend(p, message, er, logWarning)
 			}
 		}
@@ -606,9 +599,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		if p.handler == nil {
 			// Look up the method handler for the specified method.
 			mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
-			p.handler = mh.handler
+			p.handler = mh
 			if !ok {
-				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
+				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Method)
 				p.errorKernel.errSend(p, message, er, logWarning)
 			}
 		}
@@ -617,7 +610,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		_ = p.callHandler(message, thisNode)
 
 	default:
-		er := fmt.Errorf("info: did not find that specific type of event: %#v", p.subject.Event)
+		er := fmt.Errorf("info: did not find that specific type of event: %#v", p.subject.Method)
 		p.errorKernel.infoSend(p, message, er)
 
 	}
@@ -834,11 +827,6 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 	}
 
-	// Loop and handle 1 message at a time. If some part of the code
-	// fails in the loop we should throw an error and use `continue`
-	// to jump back here to the beginning of the loop and continue
-	// with the next message.
-
 	// Adding a timer that will be used for when to remove the sub process
 	// publisher. The timer is reset each time a message is published with
 	// the process, so the sub process publisher will not be removed until
@@ -940,11 +928,6 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once,
 	// processes map, and increment the message counter.
 	pn := processNameGet(p.subject.name(), processKindPublisher)
 
-	// NB: REMOVED: It doesn't really make sense to get the message id
-	// from the process. Implemented so this is picked up from the id
-	// used in the ringbuffer.
-	// m.ID = p.messageID
-
 	// The compressed value of the nats message payload. The content
 	// can either be compressed or in it's original form depening on
 	// the outcome of the switch below, and if compression were chosen
@@ -1004,16 +987,6 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once,
 	// Create the Nats message with headers and payload, and do the
 	// sending of the message.
 	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
-
-	if p.configuration.RingBufferPersistStore {
-		select {
-		case m.done <- struct{}{}:
-			// Signaling back to the ringbuffer that we are done with the
-			// current message, and it can remove it from the ringbuffer.
-		case <-p.ctx.Done():
-			return
-		}
-	}
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++

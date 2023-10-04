@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"bytes"
@@ -10,16 +10,8 @@ import (
 
 // ----
 
-type methodREQAclRequestUpdate struct {
-	event Event
-}
-
-func (m methodREQAclRequestUpdate) getKind() Event {
-	return m.event
-}
-
 // Handler to get all acl's from a central server.
-func (m methodREQAclRequestUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclRequestUpdate(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -98,16 +90,8 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 
 // ----
 
-type methodREQAclDeliverUpdate struct {
-	event Event
-}
-
-func (m methodREQAclDeliverUpdate) getKind() Event {
-	return m.event
-}
-
 // Handler to receive the acls from a central server.
-func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- subscriber methodREQAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -184,15 +168,7 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 
 // ---
 
-type methodREQAclAddCommand struct {
-	event Event
-}
-
-func (m methodREQAclAddCommand) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclAddCommand) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclAddCommand(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -254,15 +230,7 @@ func (m methodREQAclAddCommand) handler(proc process, message Message, node stri
 
 // ---
 
-type methodREQAclDeleteCommand struct {
-	event Event
-}
-
-func (m methodREQAclDeleteCommand) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclDeleteCommand) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclDeleteCommand(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -324,15 +292,7 @@ func (m methodREQAclDeleteCommand) handler(proc process, message Message, node s
 
 // ---
 
-type methodREQAclDeleteSource struct {
-	event Event
-}
-
-func (m methodREQAclDeleteSource) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclDeleteSource) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclDeleteSource(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclDeleteSource received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -393,15 +353,7 @@ func (m methodREQAclDeleteSource) handler(proc process, message Message, node st
 
 // ---
 
-type methodREQAclGroupNodesAddNode struct {
-	event Event
-}
-
-func (m methodREQAclGroupNodesAddNode) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclGroupNodesAddNode(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -462,15 +414,7 @@ func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, no
 
 // ---
 
-type methodREQAclGroupNodesDeleteNode struct {
-	event Event
-}
-
-func (m methodREQAclGroupNodesDeleteNode) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -531,15 +475,7 @@ func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message,
 
 // ---
 
-type methodREQAclGroupNodesDeleteGroup struct {
-	event Event
-}
-
-func (m methodREQAclGroupNodesDeleteGroup) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclGroupNodesDeleteGroup) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclGroupNodesDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -599,15 +535,7 @@ func (m methodREQAclGroupNodesDeleteGroup) handler(proc process, message Message
 
 // ---
 
-type methodREQAclGroupCommandsAddCommand struct {
-	event Event
-}
-
-func (m methodREQAclGroupCommandsAddCommand) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclGroupCommandsAddCommand) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclGroupCommandsAddCommand(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclGroupCommandsAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -668,15 +596,7 @@ func (m methodREQAclGroupCommandsAddCommand) handler(proc process, message Messa
 
 // ---
 
-type methodREQAclGroupCommandsDeleteCommand struct {
-	event Event
-}
-
-func (m methodREQAclGroupCommandsDeleteCommand) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -737,15 +657,7 @@ func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Me
 
 // ---
 
-type methodREQAclGroupCommandsDeleteGroup struct {
-	event Event
-}
-
-func (m methodREQAclGroupCommandsDeleteGroup) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -805,15 +717,7 @@ func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Mess
 
 // ---
 
-type methodREQAclExport struct {
-	event Event
-}
-
-func (m methodREQAclExport) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclExport) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclExport(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclExport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -869,15 +773,7 @@ func (m methodREQAclExport) handler(proc process, message Message, node string) 
 
 // ---
 
-type methodREQAclImport struct {
-	event Event
-}
-
-func (m methodREQAclImport) getKind() Event {
-	return m.event
-}
-
-func (m methodREQAclImport) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQAclImport(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- methodREQAclImport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 

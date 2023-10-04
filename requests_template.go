@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 // ---- Template that can be used for creating request methods
 

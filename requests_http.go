@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"context"
@@ -9,16 +9,8 @@ import (
 	"time"
 )
 
-type methodREQHttpGet struct {
-	event Event
-}
-
-func (m methodREQHttpGet) getKind() Event {
-	return m.event
-}
-
 // handler to do a Http Get.
-func (m methodREQHttpGet) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQHttpGet(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 
@@ -117,17 +109,9 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 
 // ---
 
-type methodREQHttpGetScheduled struct {
-	event Event
-}
-
-func (m methodREQHttpGetScheduled) getKind() Event {
-	return m.event
-}
-
 // handler to do a Http Get Scheduled.
 // The second element of the MethodArgs slice holds the timer defined in seconds.
-func (m methodREQHttpGetScheduled) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQHttpGetScheduled(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf, proc.configuration)
 

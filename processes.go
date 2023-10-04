@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"context"
@@ -30,8 +30,6 @@ type processes struct {
 	metrics *metrics
 	// Waitgroup to keep track of all the processes started.
 	wg sync.WaitGroup
-	// tui
-	tui *tui
 	// errorKernel
 	errorKernel *errorKernel
 	// configuration
@@ -47,7 +45,6 @@ func newProcesses(ctx context.Context, server *server) *processes {
 	p := processes{
 		server:        server,
 		active:        *newProcsMap(),
-		tui:           server.tui,
 		errorKernel:   server.errorKernel,
 		configuration: server.configuration,
 		nodeAuth:      server.nodeAuth,
@@ -163,24 +160,12 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, REQErrorLog, nil)
 	}
 
-	if proc.configuration.StartSubREQPing {
-		proc.startup.subscriber(proc, REQPing, nil)
-	}
-
-	if proc.configuration.StartSubREQPong {
-		proc.startup.subscriber(proc, REQPong, nil)
-	}
-
 	if proc.configuration.StartSubREQCliCommand {
 		proc.startup.subscriber(proc, REQCliCommand, nil)
 	}
 
 	if proc.configuration.StartSubREQToConsole {
 		proc.startup.subscriber(proc, REQToConsole, nil)
-	}
-
-	if proc.configuration.EnableTUI {
-		proc.startup.subscriber(proc, REQTuiToConsole, nil)
 	}
 
 	if proc.configuration.StartPubREQHello != 0 {

@@ -1,30 +1,21 @@
 # Ctrl
 
-## Foreword
-
-ctrl is a fork of the code I earlier wrote for RaaLabs called Steward. The original repo was public and written under an MIT license, but in 2023 the original repo was made private, and are no longer avaialable to the public. The goal of this repo is to provide an actively maintained version for improved reliability and stability.
-
-NB: Filing of issues and bug fixes are highly appreciated. Feature requests will genereally not be followed up simply because I don't have the time to review it at this time :)
-
 ## Intro
 
-ctrl is a Command & Control backend system for Servers, IOT and Edge platforms where the network link for reaching them can be reliable like local networks, or totally unreliable like satellite links. An end node can even be offline when you give it a command, and ctrl will make sure that the command is delivered when the node comes online.
+ctrl is a Command & Control backend system for Servers, IOT and Edge platforms. Simply put, control anything that runs an operating system.
 
 Example use cases:
 
-- Send a specific message to one or many end nodes that will instruct to run scripts or a series of shell commands to change config, restart services and control those systems.
+- Send command to one or many end nodes that will instruct to run scripts or a series of shell commands to change config, restart services and control those systems.
 - Gather IOT/OT data from both secure and not secure devices and systems, and transfer them encrypted in a secure way over the internet to your central system for handling those data.
 - Collect metrics or monitor end nodes and store the result on a central ctrl instance, or pass those data on to another central system for handling metrics or monitoring data.
 - Distribute certificates.
 
 As long as you can do something as an operator on in a shell on a system you can do the same with ctrl in a secure way to one or all end nodes (servers) in one go with one single message/command.
 
-**NB** Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
-
 - [Ctrl](#ctrl)
-  - [Foreword](#foreword)
   - [Intro](#intro)
-  - [What is it ?](#what-is-it-)
+  - [Example](#example)
   - [Disclaimer](#disclaimer)
   - [Overview](#overview)
     - [Example of message flow](#example-of-message-flow)
@@ -52,7 +43,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [How to send the reply to another node](#how-to-send-the-reply-to-another-node)
       - [Use local as the toNode nodename](#use-local-as-the-tonode-nodename)
       - [method timeout](#method-timeout)
-        - [Example](#example)
+        - [Example for method timeout](#example-for-method-timeout)
       - [Schedule a Method in a message to be run several times](#schedule-a-method-in-a-message-to-be-run-several-times)
     - [Request Methods](#request-methods)
       - [REQOpProcessList](#reqopprocesslist)
@@ -66,13 +57,13 @@ As long as you can do something as an operator on in a shell on a system you can
       - [REQHello](#reqhello)
       - [REQCopySrc](#reqcopysrc)
       - [REQErrorLog](#reqerrorlog)
-    - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
       - [REQNone](#reqnone)
       - [REQToConsole](#reqtoconsole)
       - [REQToFileAppend](#reqtofileappend)
+        - [Write to a socket file](#write-to-a-socket-file)
       - [REQToFile](#reqtofile)
-      - [REQToFileNACK](#reqtofilenack)
-      - [ReqCliCommand](#reqclicommand-1)
+        - [Write to socket file](#write-to-socket-file)
+      - [ReqCliCommand as reply method](#reqclicommand-as-reply-method)
     - [Errors reporting](#errors-reporting)
     - [Prometheus metrics](#prometheus-metrics)
     - [Security / Authorization](#security--authorization)
@@ -100,19 +91,15 @@ As long as you can do something as an operator on in a shell on a system you can
   - [Howto](#howto)
     - [Options for running](#options-for-running)
     - [How to Run](#how-to-run)
-      - [Run ctrl in the simplest possible way for testing](#run-ctrl-in-the-simplest-possible-way-for-testing)
-        - [Nats-server](#nats-server)
-        - [Install ctrl](#install-ctrl)
-        - [Build from source](#build-from-source)
-          - [Download a release binary](#download-a-release-binary)
+      - [Nats-server](#nats-server)
+      - [Build ctrl from source](#build-ctrl-from-source)
         - [Get it up and running](#get-it-up-and-running)
         - [Send messages with ctrl](#send-messages-with-ctrl)
-      - [Example for starting ctrl with some more options set](#example-for-starting-ctrl-with-some-more-options-set)
+        - [Example for starting ctrl with some more options set](#example-for-starting-ctrl-with-some-more-options-set)
       - [Nkey Authentication](#nkey-authentication)
       - [nats-server (the message broker)](#nats-server-the-message-broker)
         - [Nats-server config with nkey authentication example](#nats-server-config-with-nkey-authentication-example)
-        - [Nkey from ED25519 SSH key](#nkey-from-ed25519-ssh-key)
-    - [Message fields explanation](#message-fields-explanation)
+      - [Nkey from ED25519 SSH key](#nkey-from-ed25519-ssh-key)
     - [How to send a Message](#how-to-send-a-message)
       - [Send to socket with netcat](#send-to-socket-with-netcat)
       - [Sending a command from one Node to Another Node](#sending-a-command-from-one-node-to-another-node)
@@ -125,16 +112,11 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Naming](#naming)
       - [Subject](#subject)
         - [Complete subject example](#complete-subject-example)
-  - [TODO](#todo)
-    - [Add Op option the remove messages from the queue on nodes](#add-op-option-the-remove-messages-from-the-queue-on-nodes)
-  - [Appendix-A](#appendix-a)
-  - [Appendix-B](#appendix-b)
+  - [History](#history)
 
-## What is it ?
+## Example
 
-Command And Control anything like Servers, Containers, VM's or others by creating and sending messages with methods who will describe what to do. ctrl will then take the responsibility for making sure that the message are delivered to the receiver, and that the method specified are executed with the given parameters defined. An example of a message.
-
-An example of a **request method** to feed into the system. All fields are explained in detail further down in the document.
+An example of a **request** message to copy into ctrl's **readfolder**.
 
 ```json
 [
@@ -209,10 +191,10 @@ If one process hangs on a long running message method it will not affect the res
 ### Publisher
 
 1. A message in valid format is appended to one of the input methods. Available inputs are Unix Socket listener, TCP listener, and File Reader.
-1. The message is picked up by the system and put on a FIFO ringbuffer.
-1. The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
-1. The message is then serialized to binary format, and sent to the subscriber on the receiving node.
-1. If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
+2. The message is picked up by the system.
+3. The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
+4. The message is then serialized to binary format, and sent to the subscriber on the receiving node.
+5. If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
 
 ### Subscriber
 
@@ -246,13 +228,13 @@ New Request Messages in Json/Yaml format can be delivered by the user to ctrl in
 
 ### Error messages from nodes
 
-- Error messages will be sent back to the central error handler upon failure on a node.
+- Error messages will be sent back to the central error handler and the originating node upon failure.
 
 ```log
 Tue Sep 21 09:17:55 2021, info: toNode: ship2, fromNode: central, method: REQOpProcessList: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type
 ```
 
-The error logs can be read on the central server in the directory `<ctrl-home>/data/errorLog`.
+The error logs can be read on the central server in the directory `<ctrl-home>/data/errorLog`, and in the log of the instance the source node.
 
 ### Message handling and threads
 
@@ -279,7 +261,7 @@ If a message are **ACK** or **NACK** type are defined by the value of the **ACKT
 
 - Default timeouts to wait for ACK messages and max attempts to retry sending a message are specified upon startup. This can be overridden on the message level.
 
-- Timeouts can be specified on both the **message**, and the **method**.
+- Timeouts can be specified on both the **message** delivery, and the **method**.
   - A message can have a timeout used for used for when to resend and how many retries.
   - If the method triggers a shell command, the command can have its own timeout, allowing process timeout for long/stuck commands, or for telling how long the command is supposed to run.
 
@@ -330,7 +312,7 @@ Instead of solely depending in the ack timeout the **RetryWait** can be used. Re
 ]
 ```
 
-This is the same as the previos example, but it will also wait another 10 seconds after it noticed that an ACK was not received before the message is retried.
+This is the same as the previous example, but it will also wait another 10 seconds after it noticed that an ACK was not received before the message is retried.
 
 The flow will be like this:
 
@@ -451,7 +433,7 @@ As an example. If You want to place a message on the startup folder of **node1**
 
 #### Use local as the toNode nodename
 
-Since messages used in startup folder are ment to be delivered locally we can simply things a bit by setting the **toNode** field value of the message to **local**.
+Since messages used in startup folder are ment to be delivered locally we can simplify things a bit by setting the **toNode** field value of the message to **local**.
 
 ```json
 [
@@ -477,7 +459,7 @@ We can also make the request method run for as long as the ctrl instance itself 
 
 This can make sense if you for example wan't to continously ping a host, or continously run a script on a node.
 
-##### Example
+##### Example for method timeout
 
 ```json
 [
@@ -750,8 +732,6 @@ Method for receiving error logs for Central error logger.
 
 **NB**: This is **not** to be used by users. Use **REQToFileAppend** instead.
 
-### Request Methods used for reply messages
-
 #### REQNone
 
 Don't send a reply message.
@@ -801,6 +781,8 @@ If the value of the **directory** field is not prefixed with `./` or `/` the dir
 ]
 ```
 
+##### Write to a socket file
+
 If there is already a file at the specified path with the specified name, and if that file is a socket, then the request method will automatically switch to socket communication and write to the socket instead of normal file writing.
 
 #### REQToFile
@@ -822,17 +804,11 @@ If the value of the **directory** field is not prefixed with `./` or `/` the dir
 ]
 ```
 
+##### Write to socket file
+
 If there is already a file at the specified path with the specified name, and if that file is a socket, then the request method will automatically switch to socket communication and write to the socket instead of normal file writing.
 
-#### REQToFileNACK
-
-Same as REQToFile, but will not send an ACK when a message is delivered.
-
-#### ReqCliCommand
-
-**ReqCliCommand** is a bit special in that it can be used as both **method** and **replyMethod**
-
-The final result, if any, of the replyMethod will be sent to the central server.
+#### ReqCliCommand as reply method
 
 By using the `{{ctrl_DATA}}` you can grab the output of your initial request method, and then use it as input in your reply method.
 
@@ -1016,15 +992,9 @@ The location of the config file are given via an env variable at startup (defaul
 
 The different fields and their type in the config file. The fields of the config file can also be set by providing flag values at startup. Use the `-help` flag to get all the options.
 
-Check [Appendix-A](#appendix-a) for a list of the flags/config options, and their usage.
-
 ### How to Run
 
-#### Run ctrl in the simplest possible way for testing
-
-**NB** Running ctrl like this is perfect for testing in a local test environment, but is not something you would wan't to do in production.
-
-##### Nats-server
+#### Nats-server
 
 Download the **nats-server** from <https://github.com/nats-io/nats-server/releases/>
 
@@ -1040,19 +1010,13 @@ Start the nats server listening on local interfaces and port 4222.
 
 `./nats-server -D`
 
-##### Install ctrl
-
-You can either build ctrl from source or download from release which is a compiled binary.
-
-##### Build from source
+#### Build ctrl from source
 
 ctrl is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
 
-When Go is installed:
-
 Clone the repository:
 
-`git clone https://github.com/RaaLabs/ctrl.git`.
+`git clone https://github.com/postmannen/ctrl.git`.
 
 Change directory and build:
 
@@ -1060,10 +1024,6 @@ Change directory and build:
 cd ./ctrl/cmd/ctrl
 go build -o ctrl
 ```
-
-###### Download a release binary
-
-Release binaries for several architechures are available at <https://github.com/RaaLabs/ctrl/releases>
 
 ##### Get it up and running
 
@@ -1103,7 +1063,7 @@ Example on Linux:
 
 `nc -NU ./tmp/ctrl.sock < reqnone.msg`
 
-#### Example for starting ctrl with some more options set
+##### Example for starting ctrl with some more options set
 
 A complete example to start a central node called `central`.
 
@@ -1208,13 +1168,9 @@ The official docs for nkeys can be found here <https://docs.nats.io/nats-server/
 
 More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/ctrl/tree/main/doc) folder in this repository.
 
-##### Nkey from ED25519 SSH key
+#### Nkey from ED25519 SSH key
 
 ctrl can also use an existing SSH ED25519 private key for authentication with the flag **-nkeyFromED25519SSHKeyFile="full-path-to-ssh-private-key"**. The SSH key will be converted to an Nkey if the option is used. The Seed and the User file will be stored in the **socketFolder** which by default is at **./tmp**
-
-### Message fields explanation
-
-Check [Appendix-B](#appendix-b) for message fields and their explanation.
 
 ### How to send a Message
 
@@ -1223,6 +1179,7 @@ The API for sending a message from one node to another node is by sending a stru
 - unix socket called `ctrl.sock`. By default lives in the `./tmp` directory
 - tcpListener, specify host:port with startup flag, or config file.
 - httpListener, specify host:port with startup flag, or config file.
+- readfolder, copy messages to send directly into the folder.
 
 #### Send to socket with netcat
 
@@ -1364,7 +1321,7 @@ Or in YAML:
 
 You can save the content to myfile.JSON and append it to the `socket` file:
 
-- `nc -U ./ctrl.sock < example/toShip1-REQCliCommand.json`
+- `cp <message-name> <pathto>/readfolder`
 
 ## Concepts/Ideas
 
@@ -1404,204 +1361,10 @@ For CliCommand message to a node named "ship1" of type Event and it wants an Ack
 
 `ship1.REQCliCommand.EventACK`
 
-## TODO
+## History
 
-### Add Op option the remove messages from the queue on nodes
+ctrl is the continuation of the code I earlier wrote for RaaLabs called Steward. The original repo was public with a MIT license, but in October 2023 the original repo was made private, and are no longer avaialable to the public. The goal of this repo is to provide an actively maintained, reliable and stable version. This is also a playground for myself to test out ideas an features for such a service as described earlier.
 
-If messages have been sent, and not picked up by a node it might make sense to have some method to clear messages on a node. This could either be done by message ID, and/or time duration.
+This started out as an idea I had for how to control infrastructure.  This is the continuation of the same idea, and a project I'm working on free of charge in my own spare time, so please be gentle :)
 
-## Appendix-A
-
-```Go
-// RingBufferPermStore enable or disable the persisting of
-// messages being processed to local db.
-RingBufferPersistStore bool
-// RingBufferSize
-RingBufferSize int
-// The configuration folder on disk
-ConfigFolder string
-// The folder where the socket file should live
-SocketFolder string
-// TCP Listener for sending messages to the system
-TCPListener string
-// HTTP Listener for sending messages to the system
-HTTPListener string
-// The folder where the database should live
-DatabaseFolder string
-// some unique string to identify this Edge unit
-NodeName string
-// the address of the message broker
-BrokerAddress string
-// NatsConnOptTimeout the timeout for trying the connect to nats broker
-NatsConnOptTimeout int
-// nats connect retry
-NatsConnectRetryInterval int
-// NatsReconnectJitter in milliseconds
-NatsReconnectJitter int
-// NatsReconnectJitterTLS in seconds
-NatsReconnectJitterTLS int
-// REQKeysRequestUpdateInterval in seconds
-REQKeysRequestUpdateInterval int
-// REQAclRequestUpdateInterval in seconds
-REQAclRequestUpdateInterval int
-// The number of the profiling port
-ProfilingPort string
-// host and port for prometheus listener, e.g. localhost:2112
-PromHostAndPort string
-// set to true if this is the node that should receive the error log's from other nodes
-DefaultMessageTimeout int
-// Default value for how long can a request method max be allowed to run.
-DefaultMethodTimeout int
-// default amount of retries that will be done before a message is thrown away, and out of the system
-DefaultMessageRetries int
-// Publisher data folder
-SubscribersDataFolder string
-// central node to receive messages published from nodes
-CentralNodeName string
-// Path to the certificate of the root CA
-RootCAPath string
-// Full path to the NKEY's seed file
-NkeySeedFile string
-// NkeyPublicKey
-NkeyPublicKey string `toml:"-"`
-// The host and port to expose the data folder
-ExposeDataFolder string
-// Timeout for error messages
-ErrorMessageTimeout int
-// Retries for error messages.
-ErrorMessageRetries int
-// Compression
-Compression string
-// Serialization
-Serialization string
-// SetBlockProfileRate for block profiling
-SetBlockProfileRate int
-// EnableSocket for enabling the creation of a ctrl.sock file
-EnableSocket bool
-// EnableTUI will enable the Terminal User Interface
-EnableTUI bool
-// EnableSignatureCheck
-EnableSignatureCheck bool
-// EnableAclCheck
-EnableAclCheck bool
-// IsCentralAuth
-IsCentralAuth bool
-// EnableDebug will also enable printing all the messages received in the errorKernel
-// to STDERR.
-EnableDebug bool
-// KeepPublishersAliveFor number of seconds.
-// Timer that will be used for when to remove the sub process
-// publisher. The timer is reset each time a message is published with
-// the process, so the sub process publisher will not be removed until
-// it have not received any messages for the given amount of time.
-KeepPublishersAliveFor int
-
-// Make the current node send hello messages to central at given interval in seconds
-StartPubREQHello int
-// Enable the updates of public keys
-EnableKeyUpdates bool
-
-// Enable the updates of acl's
-EnableAclUpdates bool
-
-// Start the central error logger.
-IsCentralErrorLogger bool
-// Subscriber for hello messages
-StartSubREQHello bool
-// Subscriber for text logging
-StartSubREQToFileAppend bool
-// Subscriber for writing to file
-StartSubREQToFile bool
-// Subscriber for writing to file without ACK
-StartSubREQToFileNACK bool
-// Subscriber for reading files to copy
-StartSubREQCopySrc bool
-// Subscriber for writing copied files to disk
-StartSubREQCopyDst bool
-// Subscriber for Echo Request
-StartSubREQPing bool
-// Subscriber for Echo Reply
-StartSubREQPong bool
-// Subscriber for CLICommandRequest
-StartSubREQCliCommand bool
-// Subscriber for REQToConsole
-StartSubREQToConsole bool
-// Subscriber for REQHttpGet
-StartSubREQHttpGet bool
-// Subscriber for REQHttpGetScheduled
-StartSubREQHttpGetScheduled bool
-// Subscriber for tailing log files
-StartSubREQTailFile bool
-// Subscriber for continously delivery of output from cli commands.
-StartSubREQCliCommandCont bool
-
-```
-
-## Appendix-B
-
-```go
-// The node to send the message to.
-ToNode Node `json:"toNode" yaml:"toNode"`
-// ToNodes to specify several hosts to send message to in the
-// form of an slice/array.
-// The ToNodes field is only a concept that exists when messages
-// are injected f.ex. on a socket, and there they are directly 
-//converted into separate node messages for each node, and from
-// there the ToNodes field is not used any more within the system.
-// With other words, a message that exists within ctrl is always
-// for just for a single node.
-ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
-// The actual data in the message. This is typically where we
-// specify the cli commands to execute on a node, and this is
-// also the field where we put the returned data in a reply
-// message.
-Data []string `json:"data" yaml:"data"`
-// Method, what request type to use, like REQCliCommand, REQHttpGet..
-Method Method `json:"method" yaml:"method"`
-// Additional arguments that might be needed when executing the
-// method. Can be f.ex. an ip address if it is a tcp sender, or the
-// shell command to execute in a cli session.
-MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
-// ReplyMethod, is the method to use for the reply message.
-// By default the reply method will be set to log to file, but
-// you can override it setting your own here.
-ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
-// Additional arguments that might be needed when executing the reply
-// method. Can be f.ex. an ip address if it is a tcp sender, or the
-// shell command to execute in a cli session.
-ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
-// IsReply are used to tell that this is a reply message. By default
-// the system sends the output of a request method back to the node
-// the message originated from. If it is a reply method we want the
-// result of the reply message to be sent to the central server, so
-// we can use this value if set to swap the toNode, and fromNode
-// fields.
-IsReply bool `json:"isReply" yaml:"isReply"`
-// From what node the message originated
-FromNode Node
-// ACKTimeout for waiting for an ack message
-ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
-// Resend retries
-Retries int `json:"retries" yaml:"retries"`
-// The ACK timeout of the new message created via a request event.
-ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
-// The retries of the new message created via a request event.
-ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
-// Timeout for long a process should be allowed to operate
-MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-// Timeout for long a process should be allowed to operate
-ReplyMethodTimeout int `json:"replyMethodTimeout" yaml:"replyMethodTimeout"`
-// Directory is a string that can be used to create the
-//directory structure when saving the result of some method.
-// For example "syslog","metrics", or "metrics/mysensor"
-// The type is typically used in the handler of a method.
-Directory string `json:"directory" yaml:"directory"`
-// FileName is used to be able to set a wanted name
-// on a file being saved as the result of data being handled
-// by a method handler.
-FileName string `json:"fileName" yaml:"fileName"`
-// PreviousMessage are used for example if a reply message is
-// generated and we also need a copy of  the details of the the
-// initial request message.
-PreviousMessage *Message
-```
+NB: Filing of issues and bug fixes are highly appreciated. Feature requests will genereally not be followed up simply because I don't have the time to review it at this time :

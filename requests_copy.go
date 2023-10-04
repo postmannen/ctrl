@@ -1,4 +1,4 @@
-package steward
+package ctrl
 
 import (
 	"context"
@@ -30,14 +30,6 @@ type copyInitialData struct {
 	MaxTotalCopyTime int
 	FileMode         fs.FileMode
 	FolderPermission uint64
-}
-
-type methodREQCopySrc struct {
-	event Event
-}
-
-func (m methodREQCopySrc) getKind() Event {
-	return m.event
 }
 
 // methodREQCopySrc are handles the initial and first part of
@@ -88,7 +80,7 @@ func (m methodREQCopySrc) getKind() Event {
 // -----------------------------------------------------
 // Handle writing to a file. Will truncate any existing data if the file did already
 // exist.
-func (m methodREQCopySrc) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 	// If the toNode field is not the same as nodeName of the receiving node
 	// we should forward the message to that specified toNode. This will allow
@@ -297,19 +289,11 @@ func newSubProcess(ctx context.Context, server *server, subject Subject, process
 
 // ----
 
-type methodREQCopyDst struct {
-	event Event
-}
-
-func (m methodREQCopyDst) getKind() Event {
-	return m.event
-}
-
 // methodREQCopyDst are handles the initial and first part of
 // the message flow for a copy to destination request.
 // It's main role is to start up a sub process for the destination
 // in which all the actual file copying is done.
-func (m methodREQCopyDst) handler(proc process, message Message, node string) ([]byte, error) {
+func methodREQCopyDst(proc process, message Message, node string) ([]byte, error) {
 	var subProcessName string
 
 	proc.processes.wg.Add(1)
@@ -459,10 +443,11 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// Check the file is a unix socket, and if it is we write the
 		// data to the socket instead of writing it to a normal file.
 		// We don't care about the error.
-		fi, _ := os.Stat(file)
-		// if err != nil {
-		// 	fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
-		// }
+		fi, err := os.Stat(file)
+		if err != nil {
+			fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
+			fmt.Printf(" ** DEBUG: fi: %#v\n", fi)
+		}
 
 		// We want to be able to send the reply message when the copying is done,
 		// and also for any eventual errors within the subProcFunc. We want to
@@ -471,7 +456,12 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// individual files.
 		msgForSubReplies := initialMessage
 		msgForSubErrors := initialMessage
-		if fi.Mode().Type() != fs.ModeSocket {
+		if fi != nil {
+			if fi.Mode().Type() != fs.ModeSocket {
+				msgForSubReplies.FileName = msgForSubReplies.FileName + ".copyreply"
+				msgForSubErrors.FileName = msgForSubErrors.FileName + ".copyerror"
+			}
+		} else {
 			msgForSubReplies.FileName = msgForSubReplies.FileName + ".copyreply"
 			msgForSubErrors.FileName = msgForSubErrors.FileName + ".copyerror"
 		}
