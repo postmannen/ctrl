@@ -1,5 +1,9 @@
 # Ctrl
 
+Ctrl is a fork of Steward which I wrote for Raalabs. The intention of this fork is to have a repo for bug fixes and do updates. The fork was renamed from Steward to ctrl to avoid possible naming conflicts.
+
+Steward was written with an MIT License. With the new fork the service was renamed to ctrl and the license were changed to AGPL V3.0. More information in the [LICENSE-CHANGE.md](LICENSE-CHANGE.md) and [LICENSE](LICENSE) files.
+
 ## Intro
 
 ctrl is a Command & Control backend system for Servers, IOT and Edge platforms. Simply put, control anything that runs an operating system.
