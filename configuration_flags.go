@@ -69,6 +69,8 @@ type Configuration struct {
 	NkeyPublicKey string `toml:"-"`
 	//
 	NkeyFromED25519SSHKeyFile string `comment:"Full path to the ED25519 SSH private key. Will generate the NKEY Seed from an SSH ED25519 private key file. NB: This option will take precedence over NkeySeedFile if specified"`
+	// NkeySeed
+	NkeySeed string `toml:"-"`
 	// The host and port to expose the data folder, <host>:<port>
 	ExposeDataFolder string `comment:"The host and port to expose the data folder, <host>:<port>"`
 	// Timeout in seconds for error messages
@@ -169,6 +171,7 @@ type ConfigurationFromFile struct {
 	RootCAPath                   *string
 	NkeySeedFile                 *string
 	NkeyFromED25519SSHKeyFile    *string
+	NkeySeed                     *string
 	ExposeDataFolder             *string
 	ErrorMessageTimeout          *int
 	ErrorMessageRetries          *int
@@ -236,6 +239,7 @@ func newConfigurationDefaults() Configuration {
 		RootCAPath:                   "",
 		NkeySeedFile:                 "",
 		NkeyFromED25519SSHKeyFile:    "",
+		NkeySeed:                     "",
 		ExposeDataFolder:             "",
 		ErrorMessageTimeout:          60,
 		ErrorMessageRetries:          10,
@@ -401,6 +405,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.NkeyFromED25519SSHKeyFile = cd.NkeyFromED25519SSHKeyFile
 	} else {
 		conf.NkeyFromED25519SSHKeyFile = *cf.NkeyFromED25519SSHKeyFile
+	}
+	if cf.NkeySeed == nil {
+		conf.NkeySeed = cd.NkeySeed
+	} else {
+		conf.NkeySeed = *cf.NkeySeed
 	}
 	if cf.ExposeDataFolder == nil {
 		conf.ExposeDataFolder = cd.ExposeDataFolder
@@ -613,6 +622,7 @@ func (c *Configuration) CheckFlags(version string) error {
 	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
 	flag.StringVar(&c.NkeyFromED25519SSHKeyFile, "nkeyFromED25519SSHKeyFile", fc.NkeyFromED25519SSHKeyFile, "The full path of the nkeys seed file")
 	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "Full path to the ED25519 SSH private key. Will generate the NKEY Seed from an SSH ED25519 private key file. NB: This option will take precedence over NkeySeedFile if specified")
+	flag.StringVar(&c.NkeySeed, "nkeySeed", fc.NkeySeed, "The actual nkey seed. To use if not stored in file")
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")

@@ -97,7 +97,37 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		opt = nats.RootCAs(configuration.RootCAPath)
 	}
 
-	if configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "" {
+	switch {
+	case configuration.NkeySeed != "":
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to get current working directory when creating tmp seed file: %v", err)
+		}
+
+		pth := filepath.Join(cwd, "seed.txt")
+
+		// f, err := os.CreateTemp(pth, "")
+		// if err != nil {
+		// 	return nil, fmt.Errorf("error: failed to create tmp seed file: %v", err)
+		// }
+
+		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0700)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to write temp seed file: %v", err)
+		}
+
+		opt, err = nats.NkeyOptionFromSeed(pth)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to read temp nkey seed file: %v", err)
+		}
+		err = os.Remove(pth)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to remove temp seed file: %v", err)
+		}
+
+	case configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "":
 		var err error
 
 		opt, err = nats.NkeyOptionFromSeed(configuration.NkeySeedFile)
@@ -105,9 +135,8 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
 		}
-	}
 
-	if configuration.NkeyFromED25519SSHKeyFile != "" {
+	case configuration.NkeyFromED25519SSHKeyFile != "":
 		var err error
 
 		opt, err = configuration.nkeyOptFromSSHKey()
@@ -115,6 +144,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
 		}
+
 	}
 
 	var conn *nats.Conn
