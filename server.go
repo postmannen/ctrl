@@ -101,6 +101,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	case configuration.NkeySeed != "":
 		cwd, err := os.Getwd()
 		if err != nil {
+			cancel()
 			return nil, fmt.Errorf("error: failed to get current working directory when creating tmp seed file: %v", err)
 		}
 
@@ -113,6 +114,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0700)
 		if err != nil {
+			cancel()
 			return nil, fmt.Errorf("error: failed to write temp seed file: %v", err)
 		}
 
@@ -332,7 +334,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s, sub, "", nil)
+	s.processInitial = newProcess(context.TODO(), s, sub, "")
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -342,7 +344,7 @@ func (s *server) Start() {
 	// Start exposing the the data folder via HTTP if flag is set.
 	if s.configuration.ExposeDataFolder != "" {
 		log.Printf("info: Starting expose of data folder via HTTP\n")
-		go s.exposeDataFolder(s.ctx)
+		go s.exposeDataFolder()
 	}
 
 	// Start the processing of new messages from an input channel.
@@ -569,9 +571,9 @@ func (s *server) routeMessagesToProcess() {
 					var proc process
 					switch {
 					case m.IsSubPublishedMsg:
-						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisher)
 					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+						proc = newProcess(s.ctx, s, sub, processKindPublisher)
 					}
 
 					proc.spawnWorker()
@@ -595,7 +597,7 @@ func (s *server) routeMessagesToProcess() {
 	}()
 }
 
-func (s *server) exposeDataFolder(ctx context.Context) {
+func (s *server) exposeDataFolder() {
 	fileHandler := func(w http.ResponseWriter, r *http.Request) {
 		// w.Header().Set("Content-Type", "text/html")
 		http.FileServer(http.Dir(s.configuration.SubscribersDataFolder)).ServeHTTP(w, r)

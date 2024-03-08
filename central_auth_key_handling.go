@@ -69,7 +69,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	p := pki{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
 		nodesAcked:             newNodesAcked(),
-		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
+		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(),
 		configuration:          configuration,
 		bucketNamePublicKeys:   "publicKeys",
 		errorKernel:            errorKernel,
@@ -398,7 +398,7 @@ type nodeNotAckedPublicKeys struct {
 }
 
 // newNodeNotAckedPublicKeys will return a prepared type of nodePublicKeys.
-func newNodeNotAckedPublicKeys(configuration *Configuration) *nodeNotAckedPublicKeys {
+func newNodeNotAckedPublicKeys() *nodeNotAckedPublicKeys {
 	n := nodeNotAckedPublicKeys{
 		KeyMap: make(map[Node][]byte),
 	}

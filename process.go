@@ -125,7 +125,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind, procFunc func() error) process {
+func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	server.processes.mu.Lock()
 	server.processes.lastProcessID++
