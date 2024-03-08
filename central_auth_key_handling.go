@@ -69,7 +69,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	p := pki{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
 		nodesAcked:             newNodesAcked(),
-		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
+		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(),
 		configuration:          configuration,
 		bucketNamePublicKeys:   "publicKeys",
 		errorKernel:            errorKernel,
@@ -305,7 +305,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	c.pki.nodesAcked.keysAndHash.Hash = hash
 
 	// Store the key to the db for persistence.
-	c.pki.dbUpdateHash(hash[:])
+	err = c.pki.dbUpdateHash(hash[:])
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
 		c.pki.errorKernel.errSend(proc, message, er, logError)
@@ -398,7 +398,7 @@ type nodeNotAckedPublicKeys struct {
 }
 
 // newNodeNotAckedPublicKeys will return a prepared type of nodePublicKeys.
-func newNodeNotAckedPublicKeys(configuration *Configuration) *nodeNotAckedPublicKeys {
+func newNodeNotAckedPublicKeys() *nodeNotAckedPublicKeys {
 	n := nodeNotAckedPublicKeys{
 		KeyMap: make(map[Node][]byte),
 	}

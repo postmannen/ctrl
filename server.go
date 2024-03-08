@@ -97,7 +97,39 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		opt = nats.RootCAs(configuration.RootCAPath)
 	}
 
-	if configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "" {
+	switch {
+	case configuration.NkeySeed != "":
+		cwd, err := os.Getwd()
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to get current working directory when creating tmp seed file: %v", err)
+		}
+
+		pth := filepath.Join(cwd, "seed.txt")
+
+		// f, err := os.CreateTemp(pth, "")
+		// if err != nil {
+		// 	return nil, fmt.Errorf("error: failed to create tmp seed file: %v", err)
+		// }
+
+		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0700)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to write temp seed file: %v", err)
+		}
+
+		opt, err = nats.NkeyOptionFromSeed(pth)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to read temp nkey seed file: %v", err)
+		}
+		err = os.Remove(pth)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to remove temp seed file: %v", err)
+		}
+
+	case configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "":
 		var err error
 
 		opt, err = nats.NkeyOptionFromSeed(configuration.NkeySeedFile)
@@ -105,9 +137,8 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
 		}
-	}
 
-	if configuration.NkeyFromED25519SSHKeyFile != "" {
+	case configuration.NkeyFromED25519SSHKeyFile != "":
 		var err error
 
 		opt, err = configuration.nkeyOptFromSSHKey()
@@ -115,6 +146,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
 		}
+
 	}
 
 	var conn *nats.Conn
@@ -302,7 +334,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s, sub, "", nil)
+	s.processInitial = newProcess(context.TODO(), s, sub, "")
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -312,7 +344,7 @@ func (s *server) Start() {
 	// Start exposing the the data folder via HTTP if flag is set.
 	if s.configuration.ExposeDataFolder != "" {
 		log.Printf("info: Starting expose of data folder via HTTP\n")
-		go s.exposeDataFolder(s.ctx)
+		go s.exposeDataFolder()
 	}
 
 	// Start the processing of new messages from an input channel.
@@ -539,9 +571,9 @@ func (s *server) routeMessagesToProcess() {
 					var proc process
 					switch {
 					case m.IsSubPublishedMsg:
-						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisher)
 					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+						proc = newProcess(s.ctx, s, sub, processKindPublisher)
 					}
 
 					proc.spawnWorker()
@@ -565,7 +597,7 @@ func (s *server) routeMessagesToProcess() {
 	}()
 }
 
-func (s *server) exposeDataFolder(ctx context.Context) {
+func (s *server) exposeDataFolder() {
 	fileHandler := func(w http.ResponseWriter, r *http.Request) {
 		// w.Header().Set("Content-Type", "text/html")
 		http.FileServer(http.Dir(s.configuration.SubscribersDataFolder)).ServeHTTP(w, r)

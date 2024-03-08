@@ -322,7 +322,7 @@ func TestRequest(t *testing.T) {
 		case fileContains:
 			resultFile := filepath.Join(tstConf.SubscribersDataFolder, tt.message.Directory, string(tt.message.FromNode), tt.message.FileName)
 
-			found, err := findStringInFileTest(string(tt.want), resultFile, tstConf, t)
+			found, err := findStringInFileTest(string(tt.want), resultFile)
 			if err != nil || found == false {
 				t.Fatalf(" \U0001F631  [FAILED]	: %v: %v\n", tt.info, err)
 
@@ -334,14 +334,14 @@ func TestRequest(t *testing.T) {
 
 	// --- Other REQ tests that does not fit well into the general table above.
 
-	checkREQTailFileTest(tstSrv, tstConf, t, tstTempDir)
-	checkMetricValuesTest(tstSrv, tstConf, t, tstTempDir)
-	checkErrorKernelMalformedJSONtest(tstSrv, tstConf, t, tstTempDir)
-	checkREQCopySrc(tstSrv, tstConf, t, tstTempDir)
+	checkREQTailFileTest(tstConf, t, tstTempDir)
+	checkMetricValuesTest(tstSrv, t)
+	checkErrorKernelMalformedJSONtest(tstConf, t)
+	checkREQCopySrc(tstConf, t, tstTempDir)
 }
 
 // Check the tailing of files type.
-func checkREQTailFileTest(ctrlServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
+func checkREQTailFileTest(conf *Configuration, t *testing.T, tmpDir string) error {
 	// Create a file with some content.
 	fp := filepath.Join(tmpDir, "test.file")
 	fh, err := os.OpenFile(fp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
@@ -407,7 +407,7 @@ func checkREQTailFileTest(ctrlServer *server, conf *Configuration, t *testing.T,
 
 	cancel()
 
-	_, err = findStringInFileTest("some file content", resultFile, conf, t)
+	_, err = findStringInFileTest("some file content", resultFile)
 	if err != nil {
 		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQTailFileTest: %v", err)
 	}
@@ -417,7 +417,7 @@ func checkREQTailFileTest(ctrlServer *server, conf *Configuration, t *testing.T,
 }
 
 // Check the file copier.
-func checkREQCopySrc(ctrlServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
+func checkREQCopySrc(conf *Configuration, t *testing.T, tmpDir string) error {
 	testFiles := 5
 
 	for i := 1; i <= testFiles; i++ {
@@ -474,7 +474,7 @@ func checkREQCopySrc(ctrlServer *server, conf *Configuration, t *testing.T, tmpD
 	return nil
 }
 
-func checkMetricValuesTest(ctrlServer *server, conf *Configuration, t *testing.T, tempDir string) error {
+func checkMetricValuesTest(ctrlServer *server, t *testing.T) error {
 	mfs, err := ctrlServer.metrics.promRegistry.Gather()
 	if err != nil {
 		return fmt.Errorf("error: promRegistry.gathering: %v", mfs)
@@ -507,7 +507,7 @@ func checkMetricValuesTest(ctrlServer *server, conf *Configuration, t *testing.T
 }
 
 // Check errorKernel
-func checkErrorKernelMalformedJSONtest(ctrlServer *server, conf *Configuration, t *testing.T, tempDir string) error {
+func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) error {
 
 	// JSON message with error, missing brace.
 	m := `[
@@ -550,7 +550,7 @@ func checkErrorKernelMalformedJSONtest(ctrlServer *server, conf *Configuration, 
 		case <-chUpdated:
 			// We got an update, so we continue to check if we find the string we're
 			// looking for.
-			found, err := findStringInFileTest("error: malformed json", resultFile, conf, t)
+			found, err := findStringInFileTest("error: malformed json", resultFile)
 			if !found && err != nil {
 				return fmt.Errorf(" \U0001F631  [FAILED]	: checkErrorKernelMalformedJSONtest: %v", err)
 			}
@@ -605,7 +605,7 @@ func checkFileUpdated(fileRealPath string, fileUpdated chan bool) {
 }
 
 // Check if a file contains the given string.
-func findStringInFileTest(want string, fileName string, conf *Configuration, t *testing.T) (bool, error) {
+func findStringInFileTest(want string, fileName string) (bool, error) {
 	// Wait n seconds for the results file to be created
 	n := 50
 

@@ -68,7 +68,7 @@ func methodREQOpProcessStart(proc process, message Message, node string) ([]byte
 
 		// Create the process and start it.
 		sub := newSubject(method, proc.configuration.NodeName)
-		procNew := newProcess(proc.ctx, proc.server, sub, processKindSubscriber, nil)
+		procNew := newProcess(proc.ctx, proc.server, sub, processKindSubscriber)
 		go procNew.spawnWorker()
 
 		txt := fmt.Sprintf("info: OpProcessStart: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)

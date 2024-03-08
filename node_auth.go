@@ -154,7 +154,7 @@ func (n *nodeAcl) saveToFile() error {
 
 	enc := json.NewEncoder(fh)
 	enc.SetEscapeHTML(false)
-	enc.Encode(n.aclAndHash)
+	err = enc.Encode(n.aclAndHash)
 
 	// HERE
 	// b, err := json.Marshal(n.aclAndHash)

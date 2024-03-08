@@ -308,7 +308,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 		// defer a.schemaMain.mu.Unlock()
 		enc := json.NewEncoder(fh)
 		enc.SetEscapeHTML(false)
-		enc.Encode(c.accessLists.schemaMain.ACLMap)
+		err = enc.Encode(c.accessLists.schemaMain.ACLMap)
 		if err != nil {
 			er := fmt.Errorf("error: generateACLsForAllNodes: encoding json to file failed: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
 			c.errorKernel.logError(er, c.configuration)
