@@ -9,11 +9,11 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hpcloud/tail v1.0.0
 	github.com/jinzhu/copier v0.4.0
+	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.0
 	github.com/nats-io/nats-server/v2 v2.8.4
 	github.com/nats-io/nats.go v1.25.0
 	github.com/nats-io/nkeys v0.4.4
-	github.com/pelletier/go-toml/v2 v2.0.7
 	github.com/pkg/profile v1.7.0
 	github.com/prometheus/client_golang v1.14.0
 	go.etcd.io/bbolt v1.3.7

@@ -27,11 +27,11 @@ func main() {
 	//defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
 
 	c := ctrl.NewConfiguration()
-	err := c.CheckFlags(version)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
+	// err := c.CheckFlags(version)
+	// if err != nil {
+	// 	log.Printf("%v\n", err)
+	// 	return
+	// }
 
 	// Start profiling if profiling port is specified
 	if c.ProfilingPort != "" {

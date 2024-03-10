@@ -2,12 +2,11 @@ package ctrl
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
-	"path/filepath"
+	"strconv"
 
-	toml "github.com/pelletier/go-toml/v2"
+	"github.com/joho/godotenv"
 )
 
 // Configuration are the structure that holds all the different
@@ -139,75 +138,87 @@ type Configuration struct {
 	StartSubREQCliCommandCont bool `comment:"Start subscriber for continously delivery of output from cli commands."`
 }
 
-// ConfigurationFromFile should have the same structure as
-// Configuration. This structure is used when parsing the
-// configuration values from file, so we are able to detect
-// if a value were given or not when parsing.
-type ConfigurationFromFile struct {
-	ConfigFolder                 *string
-	RingBufferPersistStore       *bool
-	RingBufferSize               *int
-	SocketFolder                 *string
-	ReadFolder                   *string
-	EnableReadFolder             *bool
-	TCPListener                  *string
-	HTTPListener                 *string
-	DatabaseFolder               *string
-	NodeName                     *string
-	BrokerAddress                *string
-	NatsConnOptTimeout           *int
-	NatsConnectRetryInterval     *int
-	NatsReconnectJitter          *int
-	NatsReconnectJitterTLS       *int
-	REQKeysRequestUpdateInterval *int
-	REQAclRequestUpdateInterval  *int
-	ProfilingPort                *string
-	PromHostAndPort              *string
-	DefaultMessageTimeout        *int
-	DefaultMessageRetries        *int
-	DefaultMethodTimeout         *int
-	SubscribersDataFolder        *string
-	CentralNodeName              *string
-	RootCAPath                   *string
-	NkeySeedFile                 *string
-	NkeyFromED25519SSHKeyFile    *string
-	NkeySeed                     *string
-	ExposeDataFolder             *string
-	ErrorMessageTimeout          *int
-	ErrorMessageRetries          *int
-	Compression                  *string
-	Serialization                *string
-	SetBlockProfileRate          *int
-	EnableSocket                 *bool
-	EnableSignatureCheck         *bool
-	EnableAclCheck               *bool
-	IsCentralAuth                *bool
-	EnableDebug                  *bool
-	LogLevel                     *string
-	LogConsoleTimestamps         *bool
-	KeepPublishersAliveFor       *int
-
-	StartPubREQHello            *int
-	EnableKeyUpdates            *bool
-	EnableAclUpdates            *bool
-	IsCentralErrorLogger        *bool
-	StartSubREQHello            *bool
-	StartSubREQToFileAppend     *bool
-	StartSubREQToFile           *bool
-	StartSubREQToFileNACK       *bool
-	StartSubREQCopySrc          *bool
-	StartSubREQCopyDst          *bool
-	StartSubREQCliCommand       *bool
-	StartSubREQToConsole        *bool
-	StartSubREQHttpGet          *bool
-	StartSubREQHttpGetScheduled *bool
-	StartSubREQTailFile         *bool
-	StartSubREQCliCommandCont   *bool
-}
-
 // NewConfiguration will return a *Configuration.
 func NewConfiguration() *Configuration {
-	c := Configuration{}
+	c := newConfigurationDefaults()
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v\n", err)
+	}
+
+	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/ctrl/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
+	flag.StringVar(&c.SocketFolder, "socketFolder", CheckEnv("SOCKET_FOLDER", c.SocketFolder).(string), "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.ReadFolder, "readFolder", CheckEnv("READ_FOLDER", c.ReadFolder).(string), "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.TCPListener, "tcpListener", CheckEnv("TCP_LISTENER", c.TCPListener).(string), "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
+	flag.StringVar(&c.HTTPListener, "httpListener", CheckEnv("HTTP_LISTENER", c.HTTPListener).(string), "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
+	flag.StringVar(&c.DatabaseFolder, "databaseFolder", CheckEnv("DATABASE_FOLDER", c.DatabaseFolder).(string), "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.NodeName, "nodeName", CheckEnv("NODE_NAME", c.NodeName).(string), "some unique string to identify this Edge unit")
+	flag.StringVar(&c.BrokerAddress, "brokerAddress", CheckEnv("BROKER_ADDRESS", c.BrokerAddress).(string), "the address of the message broker")
+	flag.IntVar(&c.NatsConnOptTimeout, "natsConnOptTimeout", CheckEnv("NATS_CONN_OPT_TIMEOUT", c.NatsConnOptTimeout).(int), "default nats client conn timeout in seconds")
+	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", CheckEnv("NATS_CONNECT_RETRY_INTERVAL", c.NatsConnectRetryInterval).(int), "default nats retry connect interval in seconds.")
+	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", CheckEnv("NATS_RECONNECT_JITTER", c.NatsReconnectJitter).(int), "default nats ReconnectJitter interval in milliseconds.")
+	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", CheckEnv("NATS_RECONNECT_JITTER_TLS", c.NatsReconnectJitterTLS).(int), "default nats ReconnectJitterTLS interval in seconds.")
+	flag.IntVar(&c.REQKeysRequestUpdateInterval, "REQKeysRequestUpdateInterval", CheckEnv("REQ_KEYS_UPDATE_INTERVAL", c.REQKeysRequestUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
+	flag.IntVar(&c.REQAclRequestUpdateInterval, "REQAclRequestUpdateInterval", CheckEnv("REQ_ACL_REQUEST_UPDATE_INTERVAL", c.REQAclRequestUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
+	flag.StringVar(&c.ProfilingPort, "profilingPort", CheckEnv("PROFILING_PORT", c.ProfilingPort).(string), "The number of the profiling port")
+	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", CheckEnv("PROM_HOST_AND_PORT", c.PromHostAndPort).(string), "host and port for prometheus listener, e.g. localhost:2112")
+	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", CheckEnv("DEFAULT_MESSAGE_TIMEOUT", c.DefaultMessageTimeout).(int), "default message timeout in seconds. This can be overridden on the message level")
+	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", CheckEnv("DEFAULT_MESSAGE_RETRIES", c.DefaultMessageRetries).(int), "default amount of retries that will be done before a message is thrown away, and out of the system")
+	flag.IntVar(&c.DefaultMethodTimeout, "defaultMethodTimeout", CheckEnv("DEFAULT_METHOD_TIMEOUT", c.DefaultMethodTimeout).(int), "default amount of seconds a request method max will be allowed to run")
+	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", CheckEnv("SUBSCRIBER_DATA_FOLDER", c.SubscribersDataFolder).(string), "The data folder where subscribers are allowed to write their data if needed")
+	flag.StringVar(&c.CentralNodeName, "centralNodeName", CheckEnv("CENTRAL_NODE_NAME", c.CentralNodeName).(string), "The name of the central node to receive messages published by this node")
+	flag.StringVar(&c.RootCAPath, "rootCAPath", CheckEnv("ROOT_CA_PATH", c.RootCAPath).(string), "If TLS, enter the path for where to find the root CA certificate")
+	flag.StringVar(&c.NkeyFromED25519SSHKeyFile, "nkeyFromED25519SSHKeyFile", CheckEnv("NKEY_FROM_ED25519_SSH_KEY_FILE", c.NkeyFromED25519SSHKeyFile).(string), "The full path of the nkeys seed file")
+	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", CheckEnv("NKEY_SEED_FILE", c.NkeySeedFile).(string), "Full path to the ED25519 SSH private key. Will generate the NKEY Seed from an SSH ED25519 private key file. NB: This option will take precedence over NkeySeedFile if specified")
+	flag.StringVar(&c.NkeySeed, "nkeySeed", CheckEnv("NKEY_SEED", c.NkeySeed).(string), "The actual nkey seed. To use if not stored in file")
+	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", CheckEnv("EXPOSE_DATA_FOLDER", c.ExposeDataFolder).(string), "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
+	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", CheckEnv("ERROR_MESSAGE_TIMEOUT", c.ErrorMessageTimeout).(int), "The number of seconds to wait for an error message to time out")
+	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", CheckEnv("ERROR_MESSAGE_RETRIES", c.ErrorMessageRetries).(int), "The number of if times to retry an error message before we drop it")
+	flag.StringVar(&c.Compression, "compression", CheckEnv("COMPRESSION", c.Compression).(string), "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
+	flag.StringVar(&c.Serialization, "serialization", CheckEnv("SERIALIZATION", c.Serialization).(string), "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
+	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", CheckEnv("BLOCK_PROFILE_RATE", c.SetBlockProfileRate).(int), "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
+	flag.BoolVar(&c.EnableSocket, "enableSocket", CheckEnv("ENABLE_SOCKET", c.EnableSocket).(bool), "true/false, for enabling the creation of ctrl.sock file")
+	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", CheckEnv("ENABLE_SIGNATURE_CHECK", c.EnableSignatureCheck).(bool), "true/false *TESTING* enable signature checking.")
+	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", CheckEnv("ENABLE_ACL_CHECK", c.EnableAclCheck).(bool), "true/false *TESTING* enable Acl checking.")
+	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", CheckEnv("IS_CENTRAL_AUTH", c.IsCentralAuth).(bool), "true/false, *TESTING* is this the central auth server")
+	flag.BoolVar(&c.EnableDebug, "enableDebug", CheckEnv("ENABLE_DEBUG", c.EnableDebug).(bool), "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
+	flag.StringVar(&c.LogLevel, "logLevel", CheckEnv("LOG_LEVEL", c.LogLevel).(string), "error/info/warning/debug/none")
+	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", CheckEnv("LOG_CONSOLE_TIMESTAMPS", c.LogConsoleTimestamps).(bool), "true/false for enabling or disabling timestamps when printing errors and information to stderr")
+	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", CheckEnv("KEEP_PUBLISHERS_ALIVE_FOR", c.KeepPublishersAliveFor).(int), "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
+
+	// Start of Request publishers/subscribers
+
+	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", CheckEnv("START_PUB_REQ_HELLO", c.StartPubREQHello).(int), "Make the current node send hello messages to central at given interval in seconds")
+
+	flag.BoolVar(&c.EnableKeyUpdates, "EnableKeyUpdates", CheckEnv("ENABLE_KEY_UPDATES", c.EnableKeyUpdates).(bool), "true/false")
+
+	flag.BoolVar(&c.EnableAclUpdates, "EnableAclUpdates", CheckEnv("ENABLE_ACL_UPDATES", c.EnableAclUpdates).(bool), "true/false")
+
+	flag.BoolVar(&c.IsCentralErrorLogger, "isCentralErrorLogger", CheckEnv("IS_CENTRAL_ERROR_LOGGER", c.IsCentralErrorLogger).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", CheckEnv("START_SUB_REQ_HELLO", c.StartSubREQHello).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", CheckEnv("START_SUB_REQ_TO_FILE_APPEND", c.StartSubREQToFileAppend).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", CheckEnv("START_SUB_REQ_TO_FILE", c.StartSubREQToFile).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", CheckEnv("START_SUB_REQ_TO_FILE_NACK", c.StartSubREQToFileNACK).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", CheckEnv("START_SUB_REQ_COPY_SRC", c.StartSubREQCopySrc).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", CheckEnv("START_SUB_REQ_COPY_DST", c.StartSubREQCopyDst).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", CheckEnv("START_SUB_REQ_CLI_COMMAND", c.StartSubREQCliCommand).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", CheckEnv("START_SUB_REQ_TO_CONSOLE", c.StartSubREQToConsole).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", CheckEnv("START_SUB_REQ_HTTP_GET", c.StartSubREQHttpGet).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQHttpGetScheduled, "startSubREQHttpGetScheduled", CheckEnv("START_SUB_REQ_HTTP_GET_SCHEDULED", c.StartSubREQHttpGetScheduled).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", CheckEnv("START_SUB_REQ_TAIL_FILE", c.StartSubREQTailFile).(bool), "true/false")
+	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", CheckEnv("START_SUB_REQ_CLI_COMMAND_CONT", c.StartSubREQCliCommandCont).(bool), "true/false")
+
+	// Check that mandatory flag values have been set.
+	switch {
+	case c.NodeName == "":
+		log.Fatalf("error: the nodeName config option or flag cannot be empty, check -help\n")
+	case c.CentralNodeName == "":
+		log.Fatalf("error: the centralNodeName config option or flag cannot be empty, check -help\n")
+	}
+
+	flag.Parse()
+
 	return &c
 }
 
@@ -275,474 +286,30 @@ func newConfigurationDefaults() Configuration {
 	return c
 }
 
-// Check if all values are present in config file, and if not
-// found use the default value.
-func checkConfigValues(cf ConfigurationFromFile) Configuration {
-	var conf Configuration
-	cd := newConfigurationDefaults()
-
-	if cf.ConfigFolder == nil {
-		conf.ConfigFolder = cd.ConfigFolder
-	} else {
-		conf.ConfigFolder = *cf.ConfigFolder
-	}
-	if cf.SocketFolder == nil {
-		conf.SocketFolder = cd.SocketFolder
-	} else {
-		conf.SocketFolder = *cf.SocketFolder
-	}
-	if cf.ReadFolder == nil {
-		conf.ReadFolder = cd.ReadFolder
-	} else {
-		conf.ReadFolder = *cf.ReadFolder
-	}
-	if cf.EnableReadFolder == nil {
-		conf.EnableReadFolder = cd.EnableReadFolder
-	} else {
-		conf.EnableReadFolder = *cf.EnableReadFolder
-	}
-	if cf.TCPListener == nil {
-		conf.TCPListener = cd.TCPListener
-	} else {
-		conf.TCPListener = *cf.TCPListener
-	}
-	if cf.HTTPListener == nil {
-		conf.HTTPListener = cd.HTTPListener
-	} else {
-		conf.HTTPListener = *cf.HTTPListener
-	}
-	if cf.DatabaseFolder == nil {
-		conf.DatabaseFolder = cd.DatabaseFolder
-	} else {
-		conf.DatabaseFolder = *cf.DatabaseFolder
-	}
-	if cf.NodeName == nil {
-		conf.NodeName = cd.NodeName
-	} else {
-		conf.NodeName = *cf.NodeName
-	}
-	if cf.BrokerAddress == nil {
-		conf.BrokerAddress = cd.BrokerAddress
-	} else {
-		conf.BrokerAddress = *cf.BrokerAddress
-	}
-	if cf.NatsConnOptTimeout == nil {
-		conf.NatsConnOptTimeout = cd.NatsConnOptTimeout
-	} else {
-		conf.NatsConnOptTimeout = *cf.NatsConnOptTimeout
-	}
-	if cf.NatsConnectRetryInterval == nil {
-		conf.NatsConnectRetryInterval = cd.NatsConnectRetryInterval
-	} else {
-		conf.NatsConnectRetryInterval = *cf.NatsConnectRetryInterval
-	}
-	if cf.NatsReconnectJitter == nil {
-		conf.NatsReconnectJitter = cd.NatsReconnectJitter
-	} else {
-		conf.NatsReconnectJitter = *cf.NatsReconnectJitter
-	}
-	if cf.NatsReconnectJitterTLS == nil {
-		conf.NatsReconnectJitterTLS = cd.NatsReconnectJitterTLS
-	} else {
-		conf.NatsReconnectJitterTLS = *cf.NatsReconnectJitterTLS
-	}
-	if cf.REQKeysRequestUpdateInterval == nil {
-		conf.REQKeysRequestUpdateInterval = cd.REQKeysRequestUpdateInterval
-	} else {
-		conf.REQKeysRequestUpdateInterval = *cf.REQKeysRequestUpdateInterval
-	}
-	if cf.REQAclRequestUpdateInterval == nil {
-		conf.REQAclRequestUpdateInterval = cd.REQAclRequestUpdateInterval
-	} else {
-		conf.REQAclRequestUpdateInterval = *cf.REQAclRequestUpdateInterval
-	}
-	if cf.ProfilingPort == nil {
-		conf.ProfilingPort = cd.ProfilingPort
-	} else {
-		conf.ProfilingPort = *cf.ProfilingPort
-	}
-	if cf.PromHostAndPort == nil {
-		conf.PromHostAndPort = cd.PromHostAndPort
-	} else {
-		conf.PromHostAndPort = *cf.PromHostAndPort
-	}
-	if cf.DefaultMessageTimeout == nil {
-		conf.DefaultMessageTimeout = cd.DefaultMessageTimeout
-	} else {
-		conf.DefaultMessageTimeout = *cf.DefaultMessageTimeout
-	}
-	if cf.DefaultMessageRetries == nil {
-		conf.DefaultMessageRetries = cd.DefaultMessageRetries
-	} else {
-		conf.DefaultMessageRetries = *cf.DefaultMessageRetries
-	}
-	if cf.DefaultMethodTimeout == nil {
-		conf.DefaultMethodTimeout = cd.DefaultMethodTimeout
-	} else {
-		conf.DefaultMethodTimeout = *cf.DefaultMethodTimeout
-	}
-	if cf.SubscribersDataFolder == nil {
-		conf.SubscribersDataFolder = cd.SubscribersDataFolder
-	} else {
-		conf.SubscribersDataFolder = *cf.SubscribersDataFolder
-	}
-	if cf.CentralNodeName == nil {
-		conf.CentralNodeName = cd.CentralNodeName
-	} else {
-		conf.CentralNodeName = *cf.CentralNodeName
-	}
-	if cf.RootCAPath == nil {
-		conf.RootCAPath = cd.RootCAPath
-	} else {
-		conf.RootCAPath = *cf.RootCAPath
-	}
-	if cf.NkeySeedFile == nil {
-		conf.NkeySeedFile = cd.NkeySeedFile
-	} else {
-		conf.NkeySeedFile = *cf.NkeySeedFile
-	}
-	if cf.NkeyFromED25519SSHKeyFile == nil {
-		conf.NkeyFromED25519SSHKeyFile = cd.NkeyFromED25519SSHKeyFile
-	} else {
-		conf.NkeyFromED25519SSHKeyFile = *cf.NkeyFromED25519SSHKeyFile
-	}
-	if cf.NkeySeed == nil {
-		conf.NkeySeed = cd.NkeySeed
-	} else {
-		conf.NkeySeed = *cf.NkeySeed
-	}
-	if cf.ExposeDataFolder == nil {
-		conf.ExposeDataFolder = cd.ExposeDataFolder
-	} else {
-		conf.ExposeDataFolder = *cf.ExposeDataFolder
-	}
-	if cf.ErrorMessageTimeout == nil {
-		conf.ErrorMessageTimeout = cd.ErrorMessageTimeout
-	} else {
-		conf.ErrorMessageTimeout = *cf.ErrorMessageTimeout
-	}
-	if cf.ErrorMessageRetries == nil {
-		conf.ErrorMessageRetries = cd.ErrorMessageRetries
-	} else {
-		conf.ErrorMessageRetries = *cf.ErrorMessageRetries
-	}
-	if cf.Compression == nil {
-		conf.Compression = cd.Compression
-	} else {
-		conf.Compression = *cf.Compression
-	}
-	if cf.Serialization == nil {
-		conf.Serialization = cd.Serialization
-	} else {
-		conf.Serialization = *cf.Serialization
-	}
-	if cf.SetBlockProfileRate == nil {
-		conf.SetBlockProfileRate = cd.SetBlockProfileRate
-	} else {
-		conf.SetBlockProfileRate = *cf.SetBlockProfileRate
-	}
-	if cf.EnableSocket == nil {
-		conf.EnableSocket = cd.EnableSocket
-	} else {
-		conf.EnableSocket = *cf.EnableSocket
-	}
-	if cf.EnableSignatureCheck == nil {
-		conf.EnableSignatureCheck = cd.EnableSignatureCheck
-	} else {
-		conf.EnableSignatureCheck = *cf.EnableSignatureCheck
-	}
-	if cf.EnableAclCheck == nil {
-		conf.EnableAclCheck = cd.EnableAclCheck
-	} else {
-		conf.EnableAclCheck = *cf.EnableAclCheck
-	}
-	if cf.IsCentralAuth == nil {
-		conf.IsCentralAuth = cd.IsCentralAuth
-	} else {
-		conf.IsCentralAuth = *cf.IsCentralAuth
-	}
-	if cf.EnableDebug == nil {
-		conf.EnableDebug = cd.EnableDebug
-	} else {
-		conf.EnableDebug = *cf.EnableDebug
-	}
-	if cf.LogLevel == nil {
-		conf.LogLevel = cd.LogLevel
-	} else {
-		conf.LogLevel = *cf.LogLevel
-	}
-	if cf.LogConsoleTimestamps == nil {
-		conf.LogConsoleTimestamps = cd.LogConsoleTimestamps
-	} else {
-		conf.LogConsoleTimestamps = *cf.LogConsoleTimestamps
-	}
-	if cf.KeepPublishersAliveFor == nil {
-		conf.KeepPublishersAliveFor = cd.KeepPublishersAliveFor
-	} else {
-		conf.KeepPublishersAliveFor = *cf.KeepPublishersAliveFor
+func CheckEnv[T any](key string, v T) any {
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		return v
 	}
 
-	// --- Start pub/sub
-
-	if cf.StartPubREQHello == nil {
-		conf.StartPubREQHello = cd.StartPubREQHello
-	} else {
-		conf.StartPubREQHello = *cf.StartPubREQHello
-	}
-	if cf.EnableKeyUpdates == nil {
-		conf.EnableKeyUpdates = cd.EnableKeyUpdates
-	} else {
-		conf.EnableKeyUpdates = *cf.EnableKeyUpdates
-	}
-
-	if cf.EnableAclUpdates == nil {
-		conf.EnableAclUpdates = cd.EnableAclUpdates
-	} else {
-		conf.EnableAclUpdates = *cf.EnableAclUpdates
-	}
-
-	if cf.IsCentralErrorLogger == nil {
-		conf.IsCentralErrorLogger = cd.IsCentralErrorLogger
-	} else {
-		conf.IsCentralErrorLogger = *cf.IsCentralErrorLogger
-	}
-	if cf.StartSubREQHello == nil {
-		conf.StartSubREQHello = cd.StartSubREQHello
-	} else {
-		conf.StartSubREQHello = *cf.StartSubREQHello
-	}
-	if cf.StartSubREQToFileAppend == nil {
-		conf.StartSubREQToFileAppend = cd.StartSubREQToFileAppend
-	} else {
-		conf.StartSubREQToFileAppend = *cf.StartSubREQToFileAppend
-	}
-	if cf.StartSubREQToFile == nil {
-		conf.StartSubREQToFile = cd.StartSubREQToFile
-	} else {
-		conf.StartSubREQToFile = *cf.StartSubREQToFile
-	}
-	if cf.StartSubREQToFileNACK == nil {
-		conf.StartSubREQToFileNACK = cd.StartSubREQToFileNACK
-	} else {
-		conf.StartSubREQToFileNACK = *cf.StartSubREQToFileNACK
-	}
-	if cf.StartSubREQCopySrc == nil {
-		conf.StartSubREQCopySrc = cd.StartSubREQCopySrc
-	} else {
-		conf.StartSubREQCopySrc = *cf.StartSubREQCopySrc
-	}
-	if cf.StartSubREQCopyDst == nil {
-		conf.StartSubREQCopyDst = cd.StartSubREQCopyDst
-	} else {
-		conf.StartSubREQCopyDst = *cf.StartSubREQCopyDst
-	}
-	if cf.StartSubREQCliCommand == nil {
-		conf.StartSubREQCliCommand = cd.StartSubREQCliCommand
-	} else {
-		conf.StartSubREQCliCommand = *cf.StartSubREQCliCommand
-	}
-	if cf.StartSubREQToConsole == nil {
-		conf.StartSubREQToConsole = cd.StartSubREQToConsole
-	} else {
-		conf.StartSubREQToConsole = *cf.StartSubREQToConsole
-	}
-	if cf.StartSubREQHttpGet == nil {
-		conf.StartSubREQHttpGet = cd.StartSubREQHttpGet
-	} else {
-		conf.StartSubREQHttpGet = *cf.StartSubREQHttpGet
-	}
-	if cf.StartSubREQHttpGetScheduled == nil {
-		conf.StartSubREQHttpGetScheduled = cd.StartSubREQHttpGetScheduled
-	} else {
-		conf.StartSubREQHttpGetScheduled = *cf.StartSubREQHttpGetScheduled
-	}
-	if cf.StartSubREQTailFile == nil {
-		conf.StartSubREQTailFile = cd.StartSubREQTailFile
-	} else {
-		conf.StartSubREQTailFile = *cf.StartSubREQTailFile
-	}
-	if cf.StartSubREQCliCommandCont == nil {
-		conf.StartSubREQCliCommandCont = cd.StartSubREQCliCommandCont
-	} else {
-		conf.StartSubREQCliCommandCont = *cf.StartSubREQCliCommandCont
-	}
-
-	return conf
-}
-
-// CheckFlags will parse all flags
-func (c *Configuration) CheckFlags(version string) error {
-
-	// Create an empty default config
-	var fc Configuration
-
-	// Set default configfolder if no env was provided.
-	configFolder := os.Getenv("CONFIG_FOLDER")
-
-	if configFolder == "" {
-		configFolder = "./etc/"
-	}
-
-	// Read file config. Set system default if it can't find config file.
-	fc, err := c.ReadConfigFile(configFolder)
-	if err != nil {
-		log.Printf("%v\n", err)
-		fc = newConfigurationDefaults()
-	}
-
-	if configFolder == "" {
-		fc.ConfigFolder = "./etc/"
-	} else {
-		fc.ConfigFolder = configFolder
-	}
-
-	*c = fc
-
-	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/ctrl/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
-	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
-	flag.StringVar(&c.ReadFolder, "readFolder", fc.ReadFolder, "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
-	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
-	flag.StringVar(&c.HTTPListener, "httpListener", fc.HTTPListener, "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
-	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
-	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
-	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
-	flag.IntVar(&c.NatsConnOptTimeout, "natsConnOptTimeout", fc.NatsConnOptTimeout, "default nats client conn timeout in seconds")
-	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", fc.NatsConnectRetryInterval, "default nats retry connect interval in seconds.")
-	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", fc.NatsReconnectJitter, "default nats ReconnectJitter interval in milliseconds.")
-	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", fc.NatsReconnectJitterTLS, "default nats ReconnectJitterTLS interval in seconds.")
-	flag.IntVar(&c.REQKeysRequestUpdateInterval, "REQKeysRequestUpdateInterval", fc.REQKeysRequestUpdateInterval, "default interval in seconds for asking the central for public keys")
-	flag.IntVar(&c.REQAclRequestUpdateInterval, "REQAclRequestUpdateInterval", fc.REQAclRequestUpdateInterval, "default interval in seconds for asking the central for acl updates")
-	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
-	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
-	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
-	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
-	flag.IntVar(&c.DefaultMethodTimeout, "defaultMethodTimeout", fc.DefaultMethodTimeout, "default amount of seconds a request method max will be allowed to run")
-	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
-	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
-	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
-	flag.StringVar(&c.NkeyFromED25519SSHKeyFile, "nkeyFromED25519SSHKeyFile", fc.NkeyFromED25519SSHKeyFile, "The full path of the nkeys seed file")
-	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "Full path to the ED25519 SSH private key. Will generate the NKEY Seed from an SSH ED25519 private key file. NB: This option will take precedence over NkeySeedFile if specified")
-	flag.StringVar(&c.NkeySeed, "nkeySeed", fc.NkeySeed, "The actual nkey seed. To use if not stored in file")
-	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
-	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
-	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")
-	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
-	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
-	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
-	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false, for enabling the creation of ctrl.sock file")
-	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", fc.EnableSignatureCheck, "true/false *TESTING* enable signature checking.")
-	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
-	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
-	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
-	flag.StringVar(&c.LogLevel, "logLevel", fc.LogLevel, "error/info/warning/debug/none")
-	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", fc.LogConsoleTimestamps, "true/false for enabling or disabling timestamps when printing errors and information to stderr")
-	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", fc.KeepPublishersAliveFor, "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
-
-	// Start of Request publishers/subscribers
-
-	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
-
-	flag.BoolVar(&c.EnableKeyUpdates, "EnableKeyUpdates", fc.EnableKeyUpdates, "true/false")
-
-	flag.BoolVar(&c.EnableAclUpdates, "EnableAclUpdates", fc.EnableAclUpdates, "true/false")
-
-	flag.BoolVar(&c.IsCentralErrorLogger, "isCentralErrorLogger", fc.IsCentralErrorLogger, "true/false")
-	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
-	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
-	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
-	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", fc.StartSubREQToFileNACK, "true/false")
-	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", fc.StartSubREQCopySrc, "true/false")
-	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", fc.StartSubREQCopyDst, "true/false")
-	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
-	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", fc.StartSubREQToConsole, "true/false")
-	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")
-	flag.BoolVar(&c.StartSubREQHttpGetScheduled, "startSubREQHttpGetScheduled", fc.StartSubREQHttpGetScheduled, "true/false")
-	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
-	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
-
-	purgeBufferDB := flag.Bool("purgeBufferDB", false, "true/false, purge the incoming buffer db and all it's state")
-
-	ver := flag.Bool("version", false, "print version and exit")
-
-	flag.Parse()
-
-	if *ver {
-		fmt.Printf("version %v\n", version)
-		os.Exit(0)
-	}
-
-	// Check that mandatory flag values have been set.
-	switch {
-	case c.NodeName == "":
-		return fmt.Errorf("error: the nodeName config option or flag cannot be empty, check -help")
-	case c.CentralNodeName == "":
-		return fmt.Errorf("error: the centralNodeName config option or flag cannot be empty, check -help")
-	}
-
-	if err := c.WriteConfigFile(); err != nil {
-		log.Printf("error: checkFlags: failed writing config file: %v\n", err)
-		os.Exit(1)
-	}
-
-	if *purgeBufferDB {
-		fp := filepath.Join(c.DatabaseFolder, "incomingBuffer.db")
-		err := os.Remove(fp)
+	switch any(v).(type) {
+	case int:
+		n, err := strconv.Atoi(val)
 		if err != nil {
-			log.Printf("error: failed to purge buffer state database: %v\n", err)
+			log.Fatalf("error: failed to convert env to int: %v\n", n)
+		}
+		return n
+	case string:
+		return val
+	case bool:
+		switch {
+		case val == "true" || val == "1":
+			return true
+		case val == "false" || val == "0" || val == "":
+			return true
 		}
 
 	}
-
-	return nil
-}
-
-// Reads the current config file from disk.
-func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, error) {
-	fPath := filepath.Join(configFolder, "config.toml")
-
-	if _, err := os.Stat(fPath); os.IsNotExist(err) {
-		return Configuration{}, fmt.Errorf("error: no config file found %v: %v", fPath, err)
-	}
-
-	f, err := os.OpenFile(fPath, os.O_RDONLY, 0660)
-	if err != nil {
-		return Configuration{}, fmt.Errorf("error: ReadConfigFile: failed to open file: %v", err)
-	}
-	defer f.Close()
-
-	var cFile ConfigurationFromFile
-	dec := toml.NewDecoder(f)
-	err = dec.Decode(&cFile)
-	if err != nil {
-		log.Printf("error: decoding config.toml file. The program will automatically try to correct the problem, and use sane default where it kind find a value to use, but beware of this error in case the program start to behave in not expected ways: path=%v: err=%v", fPath, err)
-	}
-
-	// Check that all values read are ok.
-	conf := checkConfigValues(cFile)
-
-	return conf, nil
-}
-
-// WriteConfigFile will write the current config to file. If the file or the
-// directory for the config file does not exist it will be created.
-func (c *Configuration) WriteConfigFile() error {
-	if _, err := os.Stat(c.ConfigFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(c.ConfigFolder, 0770)
-		if err != nil {
-			return fmt.Errorf("error: failed to create config directory %v: %v", c.ConfigFolder, err)
-		}
-	}
-
-	fp := filepath.Join(c.ConfigFolder, "config.toml")
-
-	f, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
-	if err != nil {
-		return fmt.Errorf("error: WriteConfigFile: failed to open file: %v", err)
-	}
-	defer f.Close()
-
-	enc := toml.NewEncoder(f)
-	enc.Encode(c)
 
 	return nil
 }
