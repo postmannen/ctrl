@@ -335,7 +335,7 @@ func (s *server) Start() {
 	// Since all the logic to handle processes are tied to the process
 	// struct, we need to create an initial process to start the rest.
 	//
-	// NB: The context of the initial process are set in processes.Start.
+	// The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
 	s.processInitial = newProcess(context.TODO(), s, sub, "")
 	// Start all wanted subscriber processes.
@@ -351,8 +351,6 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
-	// NB: We might need to create a sub context for the ringbuffer here
-	// so we can cancel this context last, and not use the server.
 	s.routeMessagesToProcess()
 
 	// Start reading the channel for injecting direct messages that should

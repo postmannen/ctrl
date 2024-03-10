@@ -324,7 +324,7 @@ func methodREQCopyDst(proc process, message Message, node string) ([]byte, error
 		// the processName. If true, return here and don't start up another
 		// process for that file.
 		//
-		// NB: This check is put in here if a message for some reason are
+		// This check is put in here if a message for some reason are
 		// received more than once. The reason that this might happen can be
 		// that a message for the same copy request was received earlier, but
 		// was unable to start up within the timeout specified. The Sender of

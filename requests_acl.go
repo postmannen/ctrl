@@ -84,7 +84,7 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 		}
 	}()
 
-	// NB: We're not sending an ACK message for this request type.
+	// We're not sending an ACK message for this request type.
 	return nil, nil
 }
 

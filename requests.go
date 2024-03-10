@@ -403,7 +403,3 @@ func selectFileNaming(message Message, proc process) (string, string) {
 
 	return fileName, folderTree
 }
-
-// ------------------------------------------------------------
-// Subscriber method handlers
-// ------------------------------------------------------------

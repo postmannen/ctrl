@@ -152,7 +152,7 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 		ticker := time.NewTicker(time.Second * time.Duration(scheduleInterval))
 
 		// Prepare a context that will be for the schedule as a whole.
-		// NB: Individual http get's will create their own context's
+		// Individual http get's will create their own context's
 		// derived from this one.
 		ctxScheduler, cancel := context.WithTimeout(proc.ctx, time.Minute*time.Duration(schedulerTotalTime))
 

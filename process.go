@@ -48,7 +48,6 @@ type process struct {
 	// also one subject
 	subject Subject
 	// Put a node here to be able know the node a process is at.
-	// NB: Might not be needed later on.
 	node Node
 	// The processID for the current process
 	processID   int
@@ -684,13 +683,6 @@ func executeHandler(p process, message Message, thisNode string) {
 		totalTimeTicker := time.NewTicker(time.Second * time.Duration(totalTime))
 		defer intervalTicker.Stop()
 		defer totalTimeTicker.Stop()
-
-		// NB: Commented out this assignement of a specific message context
-		// to be used within handlers, since it will override the structure
-		// we have today. Keeping the code for a bit incase it makes sense
-		// to implement later.
-		//ctx, cancel := context.WithCancel(p.ctx)
-		//message.ctx = ctx
 
 		// Run the handler once, so we don't have to wait for the first ticker.
 		go func() {

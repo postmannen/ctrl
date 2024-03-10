@@ -115,7 +115,7 @@ func methodREQKeysRequestUpdate(proc process, message Message, node string) ([]b
 		}
 	}()
 
-	// NB: We're not sending an ACK message for this request type.
+	// We're not sending an ACK message for this request type.
 	return nil, nil
 }
 
@@ -264,7 +264,7 @@ func methodREQKeysAllow(proc process, message Message, node string) ([]byte, err
 
 			// If new keys were allowed into the main map, we should send out one
 			// single update to all the registered nodes to inform of an update.
-			// NB: If a node is not reachable at the time the update is sent it is
+			// If a node is not reachable at the time the update is sent it is
 			// not a problem since the nodes will periodically check for updates.
 			//
 			// If there are errors we will return from the function, and send no
