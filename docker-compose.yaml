@@ -1,0 +1,19 @@
+# Example docker compose file
+# Build image with:
+#  docker build -t ctrl:0.03 .
+# Or to push to docker hub:
+#  docker buildx build --platform linux/amd64 --tag ctrl:amd64-0.03 --load .
+#  docker tag ctrl:amd64-0.03 postmannen/ctrl:amd64-0.03
+#  docker push postmannen/ctrl:amd64-0.03
+version: "3"
+
+services:
+  ctrl:
+    build: .
+    env_file:
+      - tmp/env.file
+    image: ctrl:0.02
+    restart: always
+    ports:
+      - "2111:2111"
+      - "8090:8090"

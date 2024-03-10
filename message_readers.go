@@ -289,6 +289,9 @@ func (s *server) readFolder() {
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 						}
 
+						er := fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", sams)
+						s.errorKernel.errSend(s.processInitial, Message{}, er, logDebug)
+
 						// Send the SAM struct to be picked up by the ring buffer.
 						s.samToSendCh <- sams
 						s.auditLogCh <- sams

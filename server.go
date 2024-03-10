@@ -123,11 +123,14 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read temp nkey seed file: %v", err)
 		}
-		err = os.Remove(pth)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("error: failed to remove temp seed file: %v", err)
-		}
+
+		defer func() {
+			err = os.Remove(pth)
+			if err != nil {
+				cancel()
+				log.Fatalf("error: failed to remove temp seed file: %v\n", err)
+			}
+		}()
 
 	case configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "":
 		var err error
