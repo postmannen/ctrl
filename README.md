@@ -327,19 +327,7 @@ The flow will be like this:
 
 ### Flags and configuration file
 
-ctrl supports both the use of flags with values set at startup, and the use of a config file.
-
-- A default config file will be created at first startup if one does not exist
-  - The default config will contain default values.
-  - Any value also provided via a flag will also be written to the config file.
-- If **ctrl** is restarted, the current content of the config file will be used as the new defaults.
-  - If you restart ctrl without any flags specified, the values of the last run will be read from the config file.
-- If new values are provided via CLI flags, they will take **precedence** over the ones currently in the config file.
-  - The new CLI flag values will be written to the config, making it the default for the next restart.
-- The config file can be edited directly, removing the need for CLI flag use.
-- To create a default config, simply:
-    1. Remove the current config file (or move it).
-    2. Restart ctrl. A new default config file, with default values, will be created.
+ctrl supports both the use of flags with env variables. An .env file can also be used.
 
 ### Schema for the messages to send into ctrl via the API's
 

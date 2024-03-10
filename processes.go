@@ -105,10 +105,6 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, REQToFile, nil)
 	}
 
-	if proc.configuration.StartSubREQToFileNACK {
-		proc.startup.subscriber(proc, REQToFileNACK, nil)
-	}
-
 	if proc.configuration.StartSubREQCopySrc {
 		proc.startup.subscriber(proc, REQCopySrc, nil)
 	}

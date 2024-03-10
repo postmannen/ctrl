@@ -95,8 +95,6 @@ const (
 	// The data field is a slice of strings where the values of the
 	// slice will be written to the file.
 	REQToFile Method = "REQToFile"
-	// REQToFileNACK same as REQToFile but NACK.
-	REQToFileNACK Method = "REQToFileNACK"
 	// Initiated by the user.
 	REQCopySrc Method = "REQCopySrc"
 	// Initial request for file copying.
@@ -184,7 +182,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQToConsole:         HandlerFunc(methodREQToConsole),
 			REQToFileAppend:      HandlerFunc(methodREQToFileAppend),
 			REQToFile:            HandlerFunc(methodREQToFile),
-			REQToFileNACK:        HandlerFunc(methodREQToFile),
 			REQCopySrc:           HandlerFunc(methodREQCopySrc),
 			REQCopyDst:           HandlerFunc(methodREQCopyDst),
 			REQSUBCopySrc:        HandlerFunc(methodREQSUB),

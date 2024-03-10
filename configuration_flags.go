@@ -118,8 +118,6 @@ type Configuration struct {
 	StartSubREQToFileAppend bool `comment:"Start subscriber for text logging"`
 	// Start subscriber for writing to file
 	StartSubREQToFile bool `comment:"Start subscriber for writing to file"`
-	// Start subscriber for writing to file without ACK
-	StartSubREQToFileNACK bool `comment:"Start subscriber for writing to file without ACK"`
 	// Start subscriber for reading files to copy
 	StartSubREQCopySrc bool `comment:"Start subscriber for reading files to copy"`
 	// Start subscriber for writing copied files to disk
@@ -199,7 +197,6 @@ func NewConfiguration() *Configuration {
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", CheckEnv("START_SUB_REQ_HELLO", c.StartSubREQHello).(bool), "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", CheckEnv("START_SUB_REQ_TO_FILE_APPEND", c.StartSubREQToFileAppend).(bool), "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", CheckEnv("START_SUB_REQ_TO_FILE", c.StartSubREQToFile).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", CheckEnv("START_SUB_REQ_TO_FILE_NACK", c.StartSubREQToFileNACK).(bool), "true/false")
 	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", CheckEnv("START_SUB_REQ_COPY_SRC", c.StartSubREQCopySrc).(bool), "true/false")
 	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", CheckEnv("START_SUB_REQ_COPY_DST", c.StartSubREQCopyDst).(bool), "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", CheckEnv("START_SUB_REQ_CLI_COMMAND", c.StartSubREQCliCommand).(bool), "true/false")
@@ -273,7 +270,6 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
-		StartSubREQToFileNACK:       true,
 		StartSubREQCopySrc:          true,
 		StartSubREQCopyDst:          true,
 		StartSubREQCliCommand:       true,
