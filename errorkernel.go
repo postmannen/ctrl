@@ -240,6 +240,12 @@ func (e errorEvent) Error() string {
 }
 
 // errSend will just send an error message to the errorCentral.
+// As input arguments it takes:
+//
+//	The process where the error was generated.
+//	A message, where this can be an Message{} if you don't want to log the message
+//	or an actual message.
+//	The error, and a logLevel.
 func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel logLevel) {
 	ev := errorEvent{
 		err:       err,
