@@ -81,7 +81,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	db, err := bolt.Open(databaseFilepath, 0660, nil)
 	if err != nil {
 		er := fmt.Errorf("newPKI: error: failed to open db: %v", err)
-		errorKernel.logDebug(er, configuration)
+		errorKernel.logDebug(er)
 		return &p
 	}
 
@@ -91,7 +91,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	keys, err := p.dbDumpPublicKey()
 	if err != nil {
 		er := fmt.Errorf("newPKI: dbPublicKeyDump failed, probably empty db: %v", err)
-		errorKernel.logDebug(er, configuration)
+		errorKernel.logDebug(er)
 	}
 
 	// Only assign from storage to in memory map if the storage contained any values.
@@ -99,7 +99,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 		p.nodesAcked.keysAndHash.Keys = keys
 		for k, v := range keys {
 			er := fmt.Errorf("newPKI: public keys db contains: %v, %v", k, []byte(v))
-			errorKernel.logDebug(er, configuration)
+			errorKernel.logDebug(er)
 		}
 	}
 
@@ -128,7 +128,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
 		er := fmt.Errorf("info: public key value for REGISTERED node %v is the same, doing nothing", msg.FromNode)
-		proc.errorKernel.logDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er)
 		return
 	}
 
@@ -147,7 +147,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
 	c.pki.errorKernel.infoSend(proc, msg, er)
-	c.pki.errorKernel.logDebug(er, c.pki.configuration)
+	c.pki.errorKernel.logDebug(er)
 }
 
 // deletePublicKeys to the db if the node do not exist, or if it is a new value.
@@ -169,7 +169,7 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 	}
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
-	proc.errorKernel.logDebug(er, proc.configuration)
+	proc.errorKernel.logDebug(er)
 	c.pki.errorKernel.infoSend(proc, msg, er)
 }
 
@@ -230,7 +230,7 @@ func (p *pki) dbDeletePublicKeys(bucket string, nodes []string) error {
 			err := bu.Delete([]byte(n))
 			if err != nil {
 				er := fmt.Errorf("error: delete key in bucket %v failed: %v", bucket, err)
-				p.errorKernel.logDebug(er, p.configuration)
+				p.errorKernel.logDebug(er)
 				return er
 			}
 		}
@@ -324,14 +324,14 @@ func (p *pki) dbViewHash() ([]byte, error) {
 		bu := tx.Bucket([]byte("hash"))
 		if bu == nil {
 			er := fmt.Errorf("info: no db hash bucket exist")
-			p.errorKernel.logWarn(er, p.configuration)
+			p.errorKernel.logWarn(er)
 			return nil
 		}
 
 		v := bu.Get([]byte("hash"))
 		if len(v) == 0 {
 			er := fmt.Errorf("info: view: hash key not found")
-			p.errorKernel.logWarn(er, p.configuration)
+			p.errorKernel.logWarn(er)
 			return nil
 		}
 

@@ -26,7 +26,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	fi, err := os.Stat(file)
 	if err == nil && !os.IsNotExist(err) {
 		er := fmt.Errorf("info: reqWriteFileOrSocket: failed to stat file, but will continue: %v", folderTree)
-		proc.errorKernel.logDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er)
 	}
 
 	if fi != nil && fi.Mode().Type() == fs.ModeSocket {
@@ -56,7 +56,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er)
 	}
 
 	var fileFlag int
@@ -115,7 +115,7 @@ func methodREQToFile(proc process, message Message, node string) ([]byte, error)
 // as a new message.
 func methodREQTailFile(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf)
 
 	proc.processes.wg.Add(1)
 	go func() {

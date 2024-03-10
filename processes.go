@@ -137,7 +137,7 @@ func (p *processes) Start(proc process) {
 				case <-ctx.Done():
 					er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
 					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er, p.configuration)
+					p.errorKernel.logDebug(er)
 					return nil
 				}
 
@@ -202,7 +202,7 @@ func (p *processes) Start(proc process) {
 				case <-ctx.Done():
 					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er, p.configuration)
+					p.errorKernel.logDebug(er)
 					return nil
 				}
 			}
@@ -225,7 +225,7 @@ func (p *processes) Start(proc process) {
 
 				proc.nodeAuth.publicKeys.mu.Lock()
 				er := fmt.Errorf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
-				p.errorKernel.logDebug(er, p.configuration)
+				p.errorKernel.logDebug(er)
 
 				m := Message{
 					FileName:    "publickeysget.log",
@@ -252,7 +252,7 @@ func (p *processes) Start(proc process) {
 				case <-ctx.Done():
 					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er, p.configuration)
+					p.errorKernel.logDebug(er)
 					return nil
 				}
 			}
@@ -273,7 +273,7 @@ func (p *processes) Start(proc process) {
 
 				proc.nodeAuth.nodeAcl.mu.Lock()
 				er := fmt.Errorf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
-				p.errorKernel.logDebug(er, p.configuration)
+				p.errorKernel.logDebug(er)
 
 				m := Message{
 					FileName:    "aclRequestUpdate.log",
@@ -301,7 +301,7 @@ func (p *processes) Start(proc process) {
 				case <-ctx.Done():
 					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er, p.configuration)
+					p.errorKernel.logDebug(er)
 					return nil
 				}
 			}
@@ -379,7 +379,7 @@ func newStartup(server *server) *startup {
 // and a procFunc as it's input arguments. If a procFunc os not needed, use the value nil.
 func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
-	p.errorKernel.logDebug(er, p.configuration)
+	p.errorKernel.logDebug(er)
 
 	var sub Subject
 	switch {
@@ -398,7 +398,7 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 
 func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v publisher: %#v", m, p.node)
-	p.errorKernel.logDebug(er, p.configuration)
+	p.errorKernel.logDebug(er)
 	sub := newSubject(m, string(p.node))
 	proc := newProcess(p.ctx, p.processes.server, sub, processKindPublisher)
 	proc.procFunc = pf
@@ -412,14 +412,14 @@ func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, pr
 // Print the content of the processes map.
 func (p *processes) printProcessesMap() {
 	er := fmt.Errorf("output of processes map : ")
-	p.errorKernel.logDebug(er, p.configuration)
+	p.errorKernel.logDebug(er)
 
 	{
 		p.active.mu.Lock()
 
 		for pName, proc := range p.active.procNames {
 			er := fmt.Errorf("info: proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v", proc.processKind, pName, proc.processID, proc.subject.name())
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 		}
 
 		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))

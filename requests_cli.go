@@ -13,8 +13,8 @@ import (
 // return the output of the command run back to the calling publisher
 // as a new message.
 func methodREQCliCommand(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -128,8 +128,8 @@ func methodREQCliCommand(proc process, message Message, node string) ([]byte, er
 // longer time and you want to send the output of the command continually
 // back as it is generated, and not just when the command is finished.
 func methodREQCliCommandCont(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+	proc.errorKernel.logDebug(er)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
