@@ -180,8 +180,6 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 // process to the processes map in the server structure.
 func (p process) spawnWorker() {
 
-	// processName := processNameGet(p.subject.name(), p.processKind)
-
 	// Add prometheus metrics for the process.
 	if !p.isSubProcess {
 		p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(p.processName)})

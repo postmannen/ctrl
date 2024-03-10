@@ -376,7 +376,7 @@ func newStartup(server *server) *startup {
 }
 
 // subscriber will start a subscriber process. It takes the initial process, request method,
-// and a procFunc as it's input arguments. If a procFunc os not needed, use the value nil.
+// and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
 func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
 	p.errorKernel.logDebug(er)
