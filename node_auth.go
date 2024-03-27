@@ -55,7 +55,7 @@ func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAu
 	err := n.loadSigningKeys()
 	if err != nil {
 		er := fmt.Errorf("newNodeAuth: %v", err)
-		errorKernel.logError(er, configuration)
+		errorKernel.logError(er)
 		os.Exit(1)
 	}
 
@@ -97,7 +97,7 @@ func newNodeAcl(c *Configuration, errorKernel *errorKernel) *nodeAcl {
 	err := n.loadFromFile()
 	if err != nil {
 		er := fmt.Errorf("error: newNodeAcl: loading acl's from file: %v", err)
-		errorKernel.logError(er, c)
+		errorKernel.logError(er)
 		// os.Exit(1)
 	}
 
@@ -112,7 +112,7 @@ func (n *nodeAcl) loadFromFile() error {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
 		er := fmt.Errorf("acl: loadFromFile: no acl file found at %v", n.filePath)
-		n.errorKernel.logDebug(er, n.configuration)
+		n.errorKernel.logDebug(er)
 		return nil
 	}
 
@@ -135,7 +135,7 @@ func (n *nodeAcl) loadFromFile() error {
 	}
 
 	er := fmt.Errorf("nodeAcl: loadFromFile: Loaded existing acl's from file: %v", n.aclAndHash.Hash)
-	n.errorKernel.logDebug(er, n.configuration)
+	n.errorKernel.logDebug(er)
 
 	return nil
 }
@@ -203,7 +203,7 @@ func newPublicKeys(c *Configuration, errorKernel *errorKernel) *publicKeys {
 	err := p.loadFromFile()
 	if err != nil {
 		er := fmt.Errorf("error: newPublicKeys: loading public keys from file: %v", err)
-		errorKernel.logError(er, c)
+		errorKernel.logError(er)
 		// os.Exit(1)
 	}
 
@@ -218,7 +218,7 @@ func (p *publicKeys) loadFromFile() error {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
 		er := fmt.Errorf("no public keys file found at %v, new file will be created", p.filePath)
-		p.errorKernel.logInfo(er, p.configuration)
+		p.errorKernel.logInfo(er)
 		return nil
 	}
 
@@ -241,7 +241,7 @@ func (p *publicKeys) loadFromFile() error {
 	}
 
 	er := fmt.Errorf("nodeAuth: loadFromFile: Loaded existing keys from file: %v", p.keysAndHash.Hash)
-	p.errorKernel.logDebug(er, p.configuration)
+	p.errorKernel.logDebug(er)
 
 	return nil
 }
@@ -322,7 +322,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 		n.SignPrivateKey = priv
 
 		er := fmt.Errorf("info: no signing keys found, generating new keys")
-		n.errorKernel.logInfo(er, n.configuration)
+		n.errorKernel.logInfo(er)
 
 		// We got the new generated keys now, so we can return.
 		return nil
@@ -394,7 +394,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
 		er := fmt.Errorf("verifySignature: not REQCliCommand and will not do signature check, method: %v", m.Method)
-		n.errorKernel.logInfo(er, n.configuration)
+		n.errorKernel.logInfo(er)
 		return true
 	}
 
@@ -417,11 +417,11 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	}()
 
 	if err != nil {
-		n.errorKernel.logError(err, n.configuration)
+		n.errorKernel.logError(err)
 	}
 
 	er := fmt.Errorf("info: verifySignature, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
-	n.errorKernel.logInfo(er, n.configuration)
+	n.errorKernel.logInfo(er)
 
 	return ok
 }
@@ -431,7 +431,7 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
 		er := fmt.Errorf("verifyAcl: not REQCliCommand and will not do acl check, method: %v", m.Method)
-		n.errorKernel.logInfo(er, n.configuration)
+		n.errorKernel.logInfo(er)
 		return true
 	}
 
@@ -444,26 +444,26 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
 	if !ok {
 		er := fmt.Errorf("verifyAcl: The fromNode=%v was not found in the acl", m.FromNode)
-		n.errorKernel.logError(er, n.configuration)
+		n.errorKernel.logError(er)
 		return false
 	}
 
 	_, ok = cmdMap[command("*")]
 	if ok {
 		er := fmt.Errorf("verifyAcl: The acl said \"*\", all commands allowed from node=%v", m.FromNode)
-		n.errorKernel.logInfo(er, n.configuration)
+		n.errorKernel.logInfo(er)
 		return true
 	}
 
 	_, ok = cmdMap[command(argsStringified)]
 	if !ok {
 		er := fmt.Errorf("verifyAcl: The command=%v was NOT FOUND in the acl", m.MethodArgs)
-		n.errorKernel.logInfo(er, n.configuration)
+		n.errorKernel.logInfo(er)
 		return false
 	}
 
 	er := fmt.Errorf("verifyAcl: the command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
-	n.errorKernel.logInfo(er, n.configuration)
+	n.errorKernel.logInfo(er)
 
 	return true
 }

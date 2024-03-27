@@ -84,14 +84,6 @@ type Message struct {
 	PreviousMessage *Message
 	// Schedule
 	Schedule []int `json:"schedule" yaml:"schedule"`
-
-	// ctx for the specifix message. Used for for example canceling
-	// scheduled messages.
-	// NB: Commented out this field for specific message context
-	// to be used within handlers, since it will override the structure
-	// we have today. Keeping the code for a bit incase it makes sense
-	// to implement later.
-	//ctx context.Context
 }
 
 // --- Subject

@@ -11,8 +11,8 @@ import (
 
 // handler to do a Http Get.
 func methodREQHttpGet(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
+	proc.errorKernel.logDebug(er)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -112,8 +112,8 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 // handler to do a Http Get Scheduled.
 // The second element of the MethodArgs slice holds the timer defined in seconds.
 func methodREQHttpGetScheduled(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -152,7 +152,7 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 		ticker := time.NewTicker(time.Second * time.Duration(scheduleInterval))
 
 		// Prepare a context that will be for the schedule as a whole.
-		// NB: Individual http get's will create their own context's
+		// Individual http get's will create their own context's
 		// derived from this one.
 		ctxScheduler, cancel := context.WithTimeout(proc.ctx, time.Minute*time.Duration(schedulerTotalTime))
 

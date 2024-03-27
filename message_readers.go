@@ -41,12 +41,12 @@ func (s *server) readStartupFolder() {
 
 	for _, fp := range filePaths {
 		er := fmt.Errorf("info: ranging filepaths, current filePath contains: %v", fp)
-		s.errorKernel.logInfo(er, s.configuration)
+		s.errorKernel.logInfo(er)
 	}
 
 	for _, filePath := range filePaths {
 		er := fmt.Errorf("info: reading and working on file from startup folder %v", filePath)
-		s.errorKernel.logInfo(er, s.configuration)
+		s.errorKernel.logInfo(er)
 
 		// Read the content of each file.
 		readBytes, err := func(filePath string) ([]byte, error) {
@@ -225,7 +225,7 @@ func (s *server) readFolder() {
 		err := os.MkdirAll(s.configuration.ReadFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create readfolder folder: %v", err)
-			s.errorKernel.logError(er, s.configuration)
+			s.errorKernel.logError(er)
 			os.Exit(1)
 		}
 	}
@@ -233,7 +233,7 @@ func (s *server) readFolder() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		er := fmt.Errorf("main: failed to create new logWatcher: %v", err)
-		s.errorKernel.logError(er, s.configuration)
+		s.errorKernel.logError(er)
 		os.Exit(1)
 	}
 
@@ -248,7 +248,7 @@ func (s *server) readFolder() {
 
 				if event.Op == fsnotify.Create || event.Op == fsnotify.Chmod {
 					er := fmt.Errorf("readFolder: got file event, name: %v, op: %v", event.Name, event.Op)
-					s.errorKernel.logDebug(er, s.configuration)
+					s.errorKernel.logDebug(er)
 
 					func() {
 						fh, err := os.Open(event.Name)
@@ -290,7 +290,7 @@ func (s *server) readFolder() {
 						}
 
 						er := fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", sams)
-						s.errorKernel.errSend(s.processInitial, Message{}, er, logDebug)
+						s.errorKernel.logDebug(er)
 
 						// Send the SAM struct to be picked up by the ring buffer.
 						s.samToSendCh <- sams
@@ -321,7 +321,7 @@ func (s *server) readFolder() {
 	err = watcher.Add(s.configuration.ReadFolder)
 	if err != nil {
 		er := fmt.Errorf("startLogsWatcher: failed to add watcher: %v", err)
-		s.errorKernel.logError(er, s.configuration)
+		s.errorKernel.logError(er)
 		os.Exit(1)
 	}
 }
@@ -334,7 +334,7 @@ func (s *server) readTCPListener() {
 	ln, err := net.Listen("tcp", s.configuration.TCPListener)
 	if err != nil {
 		er := fmt.Errorf("error: readTCPListener: failed to start tcp listener: %v", err)
-		s.errorKernel.logError(er, s.configuration)
+		s.errorKernel.logError(er)
 		os.Exit(1)
 	}
 	// Loop, and wait for new connections.
@@ -441,7 +441,7 @@ func (s *server) readHttpListener() {
 		n, err := net.Listen("tcp", s.configuration.HTTPListener)
 		if err != nil {
 			er := fmt.Errorf("error: startMetrics: failed to open prometheus listen port: %v", err)
-			s.errorKernel.logError(er, s.configuration)
+			s.errorKernel.logError(er)
 			os.Exit(1)
 		}
 		mux := http.NewServeMux()
@@ -450,7 +450,7 @@ func (s *server) readHttpListener() {
 		err = http.Serve(n, mux)
 		if err != nil {
 			er := fmt.Errorf("error: startMetrics: failed to start http.Serve: %v", err)
-			s.errorKernel.logError(er, s.configuration)
+			s.errorKernel.logError(er)
 			os.Exit(1)
 		}
 	}()

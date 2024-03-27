@@ -64,7 +64,7 @@ fi
 cat >$systemctlFile <<EOF
 [Unit]
 Description=http->${progName} service
-Documentation=https://github.com/RaaLabs/steward
+Documentation=https://github.com/postmannen/ctrl
 After=network-online.target nss-lookup.target
 Requires=network-online.target nss-lookup.target
 

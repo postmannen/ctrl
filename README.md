@@ -20,16 +20,14 @@ As long as you can do something as an operator on in a shell on a system you can
 - [Ctrl](#ctrl)
   - [Intro](#intro)
   - [Example](#example)
-  - [Disclaimer](#disclaimer)
   - [Overview](#overview)
     - [Example of message flow](#example-of-message-flow)
   - [Inspiration](#inspiration)
-  - [Why](#why)
+  - [Why ctrl was created](#why-ctrl-was-created)
   - [Publishing and Subscribing processes](#publishing-and-subscribing-processes)
     - [Publisher](#publisher)
     - [Subscriber](#subscriber)
     - [Load balancing](#load-balancing)
-    - [Logical structure](#logical-structure)
   - [Terminology](#terminology)
   - [Features](#features)
     - [Input methods](#input-methods)
@@ -57,7 +55,6 @@ As long as you can do something as an operator on in a shell on a system you can
       - [REQCliCommandCont](#reqclicommandcont)
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
-      - [REQHttpGetScheduled](#reqhttpgetscheduled)
       - [REQHello](#reqhello)
       - [REQCopySrc](#reqcopysrc)
       - [REQErrorLog](#reqerrorlog)
@@ -117,6 +114,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [Subject](#subject)
         - [Complete subject example](#complete-subject-example)
   - [History](#history)
+  - [Disclaimer](#disclaimer)
 
 ## Example
 
@@ -144,23 +142,15 @@ If the receiver `toNode` is down when the message was sent, it will be **retried
 
 Since the initial connection from a ctrl node is outbound towards the central NATS message broker no inbound firewall openings are needed.
 
-## Disclaimer
-
-All code in this repository are to be concidered not-production-ready, and the use is at your own responsibility and risk. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
-
-Also read the license file for further details.
-
-Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
-
 ## Overview
 
-Send Commands with Request Methods to control your servers by passing a messages that will have guaranteed delivery  based on the criteries set, and when/if the receiving node is available. The result of the method executed will be delivered back to you from the node you sent it from.
+Send Commands with Request Methods to control your servers by passing a messages. If a receiving node is down, the message will be retried with the criterias set within the message body. The result of the method executed will be delivered back to you from the node you sent it from.
 
-ctrl uses **NATS** as message passing architecture for the commands back and forth from nodes. Delivery is guaranteed within the criterias set. All of the processes in the system are running concurrently, so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
+ctrl uses **NATS** as message passing architecture for the commands back and forth from nodes. Delivery is guaranteed within the criterias set. All of the processes in the system are running concurrently. If some process is slow or fails it will not affect the handling and delivery of the other messages in the system.
 
-A node can be a server running any host operating system, a container living in the cloud somewhere, a Rapsberry Pi, or something else that needs to be controlled that have an operating system installed.
+**ctrl** can be run on almost any host operating system, containers living in the cloud somewhere, a Rapsberry Pi, or something else that needs to be controlled that have an operating system installed.
 
-ctrl can be compiled to run on all major architectures like **x86**, **amd64**,**arm64**, **ppc64** and more, with for example operating systems like **Linux**, **OSX**, **Windows**.
+ctrl can be compiled to run on most major architectures like **x86**, **amd64**,**arm64**, **ppc64** and more, with for example operating systems like **Linux**, **OSX**, **Windows**.
 
 ### Example of message flow
 
@@ -176,7 +166,7 @@ I used those ideas as inspiration for building a fully concurrent system to cont
 
 ctrl is written in the programming language Go with NATS as the message broker.
 
-## Why
+## Why ctrl was created
 
 With existing solutions there is often either a push or a pull kind of setup to control the nodes.
 
@@ -194,7 +184,7 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Publisher
 
-1. A message in valid format is appended to one of the input methods. Available inputs are Unix Socket listener, TCP listener, and File Reader.
+1. A message in valid format is appended to one of the input methods. Available inputs are Unix Socket listener, TCP listener, and File Reader (**readfolder**).
 2. The message is picked up by the system.
 3. The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
 4. The message is then serialized to binary format, and sent to the subscriber on the receiving node.
@@ -210,21 +200,17 @@ If one process hangs on a long running message method it will not affect the res
 
 ctrl instances with the same **Nodename** will automatically load balance the handling of messages on a given subject, and any given message will only be handled once by one instance.
 
-### Logical structure
-
-TODO: Make a diagram here...
-
 ## Terminology
 
-- **Node**: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
+- **Node**: An instance of **ctrl** running on an operating system that have network available. This can be a server, a cloud instance, a container, or other.
 - **Process**: A message handler that knows how to handle messages of a given subject concurrently.
-- **Message**: A message sent from one ctrl node to another.
+- **Message**: A message sent from one **ctrl** node to another.
 
 ## Features
 
 ### Input methods
 
-New Request Messages in Json/Yaml format can be delivered by the user to ctrl in the following ways:
+New Request Messages in Json/Yaml format can be injected by the user to ctrl in the following ways:
 
 - **Unix Socket**. Use for example netcat or another tool to deliver new messages to a socket like `nc -U tmp/ctrl.sock < msg.yaml`.
 - **Read Folder**. Write/Copy messages to be delivered to the `readfolder` of ctrl.
@@ -242,13 +228,13 @@ The error logs can be read on the central server in the directory `<ctrl-home>/d
 
 ### Message handling and threads
 
-- The handling of all messages is done by spawning up a process for handling the message in it's own thread. This allows us to down on the **individual message level** keep the state for each message both in regards to ACK's, error handling, send retries, and rerun of a method for a message if the first run was not successful.
+- The handling of all messages is done by spawning up a process for handling the message in it's own thread. This allows us to keep the state of each **individual message level**  both in regards to ACK's, error handling, send retries, and reruns of methods for a message if the first run was not successful.
 
 - Processes for handling messages on a host can be **restarted** upon **failure**, or asked to just terminate and send a message back to the operator that something have gone seriously wrong. This is right now just partially implemented to test that the concept works, where the error action is  **action=no-action**.
 
 - Publisher Processes on a node for handling new messages for new nodes will automatically be spawned when needed if it does not already exist.
 
-- Messages not fully processed or not started yet will be automatically rehandled if the service is restarted since the current state of all the messages being processed are stored on the local node in a **key value store** until they are finished.
+- If enabled, messages not fully processed or not started yet will be automatically rehandled if the service is restarted since the current state of all the messages being processed are stored on the local node in a **key value store** until they are finished.
 
 - All messages processed by a publisher will be written to a log file after they are processed, with all the information needed to recreate the same message if needed, or it can be used for auditing.
 
@@ -259,7 +245,7 @@ Example: We probably want an **ACK** when sending some **REQCLICommand** to be e
 If a message are **ACK** or **NACK** type are defined by the value of the **ACKTimeout** for each individual message:
 
   1. **ACKTimeout** set to 0 will make the message become a **NACK** message.
-  1. **ACKTimeout** set to >=1 will make the message become an **ACK** message.
+  2. **ACKTimeout** set to >=1 will make the message become an **ACK** message.
 
 ### Timeouts and retries for requests
 
@@ -327,19 +313,7 @@ The flow will be like this:
 
 ### Flags and configuration file
 
-ctrl supports both the use of flags with values set at startup, and the use of a config file.
-
-- A default config file will be created at first startup if one does not exist
-  - The default config will contain default values.
-  - Any value also provided via a flag will also be written to the config file.
-- If **ctrl** is restarted, the current content of the config file will be used as the new defaults.
-  - If you restart ctrl without any flags specified, the values of the last run will be read from the config file.
-- If new values are provided via CLI flags, they will take **precedence** over the ones currently in the config file.
-  - The new CLI flag values will be written to the config, making it the default for the next restart.
-- The config file can be edited directly, removing the need for CLI flag use.
-- To create a default config, simply:
-    1. Remove the current config file (or move it).
-    2. Restart ctrl. A new default config file, with default values, will be created.
+ctrl supports both the use of flags with env variables. An .env file can also be used.
 
 ### Schema for the messages to send into ctrl via the API's
 
@@ -361,9 +335,9 @@ ctrl supports both the use of flags with values set at startup, and the use of a
 
 ### Nats messaging timeouts
 
-The various timeouts for the Nats messages can be controlled via the configuration file or flags.
+The various timeouts for the messages can be controlled via the configuration file or flags.
 
-If the network media is a high latency. satellite links it will make sense to adjust the client timeout to reflect the latency
+If the network media is a high latency like satellite links, it will make sense to adjust the client timeout to reflect the latency
 
 ```text
   -natsConnOptTimeout int
@@ -413,19 +387,13 @@ To enable **CBOR** serialization either start **ctrl** by setting the serializat
 ./ctrl -serialization="cbor" <other flags here...>
 ```
 
-Or edit the config file `<ctrl directory>/etc/config.toml` and set:
-
-```toml
-Serialization = "cbor"
-```
-
 ### startup folder
 
 #### General functionality
 
 Messages can be automatically scheduled to be read and executed at startup of ctrl.
 
-A folder named **startup** will be present in the working directory of ctrl, and you put the messages to be executed at startup here.
+A folder named **startup** will be present in the working directory of ctrl. To inject messages at startup, put them here.
 
 Messages put in the startup folder will not be sent to the broker but handled locally, and only (eventually) the reply message from the Request Method called will be sent to the broker.
 
@@ -657,35 +625,6 @@ Scrape web url, and get the html sent back in a reply message. Uses the methodTi
 ]
 ```
 
-#### REQHttpGetScheduled
-
-**REQ Method are DEPRECATED**
-Schedule scraping of a web web url, and get the html sent back in a reply message. Uses the methodTimeout for how long it will wait for the http get method to return result.
-
-The **methodArgs** also takes 3 arguments:
-
-  1. The URL to scrape.
-  2. The schedule interval given in **seconds**.
-  3. How long the scheduler should run in minutes.
-
-The example below will scrape the URL specified every 30 seconds for 10 minutes.
-
-```json
-[
-    {
-        "directory": "web",
-        "fileName": "web.html",
-        "toNode": "ship2",
-        "method":"REQHttpGet",
-        "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html","30","10"],
-        "replyMethod":"REQToFile",
-        "ACKTimeout":10,
-        "retries": 3,
-        "methodTimeout": 3
-    }
-]
-```
-
 #### REQHello
 
 Send Hello messages.
@@ -862,7 +801,7 @@ Or the same using bash's herestring:
 
 ### Errors reporting
 
-- Errors happening on **all** nodes will be reported back in to the node name defined with the `-centralNodeName` flag.
+- Errors happening on **all** nodes will be reported back to the node(s) started with the flag `-isCentralErrorLogger` set to true.
 
 ### Prometheus metrics
 
@@ -1372,3 +1311,11 @@ ctrl is the continuation of the code I earlier wrote for RaaLabs called Steward.
 This started out as an idea I had for how to control infrastructure.  This is the continuation of the same idea, and a project I'm working on free of charge in my own spare time, so please be gentle :)
 
 NB: Filing of issues and bug fixes are highly appreciated. Feature requests will genereally not be followed up simply because I don't have the time to review it at this time :
+
+## Disclaimer
+
+All code in this repository are to be concidered not-production-ready, and the use is at your own responsibility and risk. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
+
+Also read the license file for further details.
+
+Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.

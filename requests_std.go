@@ -25,7 +25,7 @@ func methodREQHello(proc process, message Message, node string) ([]byte, error) 
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er)
 	}
 
 	// Open file and write data.
@@ -74,7 +74,7 @@ func methodREQErrorLog(proc process, message Message, node string) ([]byte, erro
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er)
 	}
 
 	// Open file and write data.

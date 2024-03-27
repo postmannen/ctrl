@@ -123,7 +123,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 		folderPermission := uint64(0755)
 
 		er := fmt.Errorf("info: before switch: FolderPermission defined in message for socket: %04o", folderPermission)
-		proc.errorKernel.logDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er)
 		// Verify and check the methodArgs
 
 		if len(message.MethodArgs) < 3 {
@@ -158,11 +158,11 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
 			if err != nil {
 				er := fmt.Errorf("methodREQCopySrc: failed to parse uint, %v", err)
-				proc.errorKernel.logError(er, proc.configuration)
+				proc.errorKernel.logError(er)
 			}
 
 			er := fmt.Errorf("info: FolderPermission defined in message for socket: %v, converted = %v", message.MethodArgs[5], folderPermission)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCopySrc: unable to convert folderPermission into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
@@ -200,7 +200,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 		if err != nil {
 			// errCh <- fmt.Errorf("error: methodREQCopySrc: failed to open file: %v, %v", SrcFilePath, err)
 			er := fmt.Errorf("error: copySrcSubProcFunc: failed to stat file: %v", err)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 			return
 		}
 
@@ -324,7 +324,7 @@ func methodREQCopyDst(proc process, message Message, node string) ([]byte, error
 		// the processName. If true, return here and don't start up another
 		// process for that file.
 		//
-		// NB: This check is put in here if a message for some reason are
+		// This check is put in here if a message for some reason are
 		// received more than once. The reason that this might happen can be
 		// that a message for the same copy request was received earlier, but
 		// was unable to start up within the timeout specified. The Sender of
@@ -342,7 +342,7 @@ func methodREQCopyDst(proc process, message Message, node string) ([]byte, error
 
 		if ok {
 			er := fmt.Errorf("methodREQCopyDst: subprocesses already existed, will not start another subscriber for %v", pn)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 
 			// HERE!!!
 			// If the process name already existed we return here before any
@@ -384,10 +384,10 @@ func copySrcSubHandler() func(process, Message, string) ([]byte, error) {
 		select {
 		case <-proc.ctx.Done():
 			er := fmt.Errorf(" * copySrcHandler ended: %v", proc.processName)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 		case proc.procFuncCh <- message:
 			er := fmt.Errorf("copySrcHandler: passing message over to procFunc: %v", proc.processName)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 		}
 
 		return nil, nil
@@ -402,10 +402,10 @@ func copyDstSubHandler() func(process, Message, string) ([]byte, error) {
 		select {
 		case <-proc.ctx.Done():
 			er := fmt.Errorf(" * copyDstHandler ended: %v", proc.processName)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 		case proc.procFuncCh <- message:
 			er := fmt.Errorf("copyDstHandler: passing message over to procFunc: %v", proc.processName)
-			proc.errorKernel.logDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er)
 		}
 
 		return nil, nil
@@ -486,7 +486,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 			select {
 			case <-ctx.Done():
 				er := fmt.Errorf(" info: canceling copySrcProcFunc : %v", proc.processName)
-				proc.errorKernel.logDebug(er, proc.configuration)
+				proc.errorKernel.logDebug(er)
 				return nil
 
 			// Pick up the message recived by the copySrcSubHandler.
@@ -723,7 +723,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 			select {
 			case <-ctx.Done():
 				er := fmt.Errorf(" * copyDstProcFunc ended: %v", proc.processName)
-				proc.errorKernel.logDebug(er, proc.configuration)
+				proc.errorKernel.logDebug(er)
 				return nil
 			case message := <-procFuncCh:
 				var csa copySubData
@@ -739,7 +739,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				hash := sha256.Sum256(csa.CopyData)
 				if hash != csa.Hash {
 					er := fmt.Errorf("error: copyDstSubProcFunc: hash of received message is not correct for: %v", cia.DstMethod)
-					proc.errorKernel.logDebug(er, proc.configuration)
+					proc.errorKernel.logDebug(er)
 
 					csa.CopyStatus = copyResendLast
 				}
@@ -844,7 +844,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 
 						// HERE:
 						er := fmt.Errorf("info: Before creating folder: cia.FolderPermission: %04o", cia.FolderPermission)
-						proc.errorKernel.logDebug(er, proc.configuration)
+						proc.errorKernel.logDebug(er)
 
 						if _, err := os.Stat(cia.DstDir); os.IsNotExist(err) {
 							// TODO: Add option to set permission here ???
@@ -853,7 +853,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								return fmt.Errorf("error: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
 							}
 							er := fmt.Errorf("info: Created folder: with cia.FolderPermission: %04o", cia.FolderPermission)
-							proc.errorKernel.logDebug(er, proc.configuration)
+							proc.errorKernel.logDebug(er)
 						}
 
 						// Rename the file so we got a backup.
@@ -952,7 +952,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						}
 
 						er = fmt.Errorf("info: copy: successfully wrote all split chunk files into file=%v", filePath)
-						proc.errorKernel.logDebug(er, proc.configuration)
+						proc.errorKernel.logDebug(er)
 
 						// Signal back to src that we are done, so it can cancel the process.
 						{

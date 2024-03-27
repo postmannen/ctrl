@@ -242,7 +242,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		}
 
 		er := fmt.Errorf("info: creating subscribers data folder at %v", configuration.SubscribersDataFolder)
-		s.errorKernel.logDebug(er, s.configuration)
+		s.errorKernel.logDebug(er)
 	}
 
 	return &s, nil
@@ -335,7 +335,7 @@ func (s *server) Start() {
 	// Since all the logic to handle processes are tied to the process
 	// struct, we need to create an initial process to start the rest.
 	//
-	// NB: The context of the initial process are set in processes.Start.
+	// The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
 	s.processInitial = newProcess(context.TODO(), s, sub, "")
 	// Start all wanted subscriber processes.
@@ -351,8 +351,6 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
-	// NB: We might need to create a sub context for the ringbuffer here
-	// so we can cancel this context last, and not use the server.
 	s.routeMessagesToProcess()
 
 	// Start reading the channel for injecting direct messages that should
@@ -538,7 +536,7 @@ func (s *server) routeMessagesToProcess() {
 						}
 						if ok && ctxCanceled {
 							er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
-							s.errorKernel.logDebug(er, s.configuration)
+							s.errorKernel.logDebug(er)
 							delete(proc.processes.active.procNames, proc.processName)
 							return false
 						}
@@ -549,10 +547,10 @@ func (s *server) routeMessagesToProcess() {
 							select {
 							case proc.subject.messageCh <- m:
 								er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
-								s.errorKernel.logDebug(er, s.configuration)
+								s.errorKernel.logDebug(er)
 							case <-proc.ctx.Done():
 								er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-								s.errorKernel.logDebug(er, s.configuration)
+								s.errorKernel.logDebug(er)
 							}
 
 							return true
@@ -568,7 +566,7 @@ func (s *server) routeMessagesToProcess() {
 					}
 
 					er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
-					s.errorKernel.logDebug(er, s.configuration)
+					s.errorKernel.logDebug(er)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
 					var proc process
@@ -581,17 +579,17 @@ func (s *server) routeMessagesToProcess() {
 
 					proc.spawnWorker()
 					er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-					s.errorKernel.logDebug(er, s.configuration)
+					s.errorKernel.logDebug(er)
 
 					// Now when the process is spawned we continue,
 					// and send the message to that new process.
 					select {
 					case proc.subject.messageCh <- m:
 						er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
-						s.errorKernel.logDebug(er, s.configuration)
+						s.errorKernel.logDebug(er)
 					case <-proc.ctx.Done():
 						er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-						s.errorKernel.logDebug(er, s.configuration)
+						s.errorKernel.logDebug(er)
 					}
 
 				}(sam)

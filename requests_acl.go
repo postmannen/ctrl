@@ -12,8 +12,8 @@ import (
 
 // Handler to get all acl's from a central server.
 func methodREQAclRequestUpdate(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
+	proc.errorKernel.logDebug(er)
 
 	// fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message brought to handler : %+v\n", message)
 
@@ -45,22 +45,22 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
 				er := fmt.Errorf("info: subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v", message.FromNode, message.Data)
-				proc.errorKernel.logDebug(er, proc.configuration)
+				proc.errorKernel.logDebug(er)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
 				er = fmt.Errorf("info: subscriber methodREQAclRequestUpdate:  the central acl hash=%v", hash32)
-				proc.errorKernel.logDebug(er, proc.configuration)
+				proc.errorKernel.logDebug(er)
 				if bytes.Equal(hash, message.Data) {
 					er := fmt.Errorf("info: subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
-					proc.errorKernel.logDebug(er, proc.configuration)
+					proc.errorKernel.logDebug(er)
 					return
 				}
 
 				er = fmt.Errorf("info: subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
-				proc.errorKernel.logDebug(er, proc.configuration)
+				proc.errorKernel.logDebug(er)
 
 				// Generate JSON for Message.Data
 
@@ -77,14 +77,14 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 				}
 
 				er = fmt.Errorf("----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v", message.FromNode, hdh)
-				proc.errorKernel.logDebug(er, proc.configuration)
+				proc.errorKernel.logDebug(er)
 
 				newReplyMessage(proc, message, js)
 			}()
 		}
 	}()
 
-	// NB: We're not sending an ACK message for this request type.
+	// We're not sending an ACK message for this request type.
 	return nil, nil
 }
 
@@ -93,7 +93,7 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 // Handler to receive the acls from a central server.
 func methodREQAclDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- subscriber methodREQAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf)
 
 	// fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message received on handler : %+v\n\n", message)
 
@@ -169,8 +169,8 @@ func methodREQAclDeliverUpdate(proc process, message Message, node string) ([]by
 // ---
 
 func methodREQAclAddCommand(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -231,8 +231,8 @@ func methodREQAclAddCommand(proc process, message Message, node string) ([]byte,
 // ---
 
 func methodREQAclDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -293,8 +293,8 @@ func methodREQAclDeleteCommand(proc process, message Message, node string) ([]by
 // ---
 
 func methodREQAclDeleteSource(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclDeleteSource received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclDeleteSource received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -354,8 +354,8 @@ func methodREQAclDeleteSource(proc process, message Message, node string) ([]byt
 // ---
 
 func methodREQAclGroupNodesAddNode(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -415,8 +415,8 @@ func methodREQAclGroupNodesAddNode(proc process, message Message, node string) (
 // ---
 
 func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -476,8 +476,8 @@ func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string
 // ---
 
 func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclGroupNodesDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclGroupNodesDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -536,8 +536,8 @@ func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node strin
 // ---
 
 func methodREQAclGroupCommandsAddCommand(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclGroupCommandsAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclGroupCommandsAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -597,8 +597,8 @@ func methodREQAclGroupCommandsAddCommand(proc process, message Message, node str
 // ---
 
 func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -658,8 +658,8 @@ func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node 
 // ---
 
 func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -718,8 +718,8 @@ func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node st
 // ---
 
 func methodREQAclExport(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclExport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclExport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -774,8 +774,8 @@ func methodREQAclExport(proc process, message Message, node string) ([]byte, err
 // ---
 
 func methodREQAclImport(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclImport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(inf, proc.configuration)
+	er := fmt.Errorf("<--- methodREQAclImport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
 	go func() {
