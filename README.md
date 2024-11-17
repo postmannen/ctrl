@@ -1,10 +1,10 @@
 # Ctrl
 
-ctrl is a Command & Control (C2) backend system for Servers, IOT and Edge platforms. Simply put, control anything that runs an operating system.
+ctrl is a Command & Control (C2) backend system for Servers, IOT and Edge platforms. Simply put, control anything.
 
 Example use cases:
 
-- Send shell commands or scripts to one or many end nodes that will instruct to change config, restart services and control those systems.
+- Send shell commands or scripts to control one or many end nodes that will instruct to change config, restart services and control those systems.
 - Gather data from both secure and not secure devices and systems, and transfer them encrypted in a secure way over the internet to your central system for handling those data.
 - Collect metrics or monitor end nodes, then send and store the result to some ctrl instance, or pass those data's on to another ctrl instance for further handling of metrics or monitoring data.
 - Distribute certificates.
@@ -12,13 +12,16 @@ Example use cases:
 
 As long as you can do something as an operator in a shell on a system you can do the same with ctrl in a secure and encrypted way to one or all end nodes (servers) in one go with one single message/command.
 
-
 ## Features
 
 - Run bash commands or complete scripts of your prefered scripting language (bash, python, powershell and so on).
 - Read and write to files.
 - Copy files.
 - ACL's to restric who can do what.
+
+## Doc
+
+The complete documentation can be found here [https://postmannen.github.io/ctrl/introduction.html](https://postmannen.github.io/ctrl/introduction.html)
 
 ## Example
 
@@ -60,7 +63,7 @@ Start the ctrl container.
 docker run --env-file=".env" --rm -ti -v $(PWD)/readfolder:/app/readfolder ctrl:test1
 ```
 
-Send a message.
+Prepare and send a message.
 
 ```yaml
 cat << EOF > msg.yaml
@@ -121,7 +124,6 @@ ctrl supports both the use of flags with env variables. An .env file can also be
 |directory | `string` | The directory for where to store the data of the repply message |
 |fileName | `string` | The name of the file for where we store the data of the reply message |
 |schedule | [int type value for interval in seconds, int type value for total run time in seconds] | Schedule a message to re run at interval |
-
 
 ### Request Methods
 
