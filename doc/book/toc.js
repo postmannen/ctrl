@@ -8,7 +8,7 @@ class MDBookSidebarScrollbox extends HTMLElement {
         super();
     }
     connectedCallback() {
-        this.innerHTML = '<ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> introduction</a></li><li class="chapter-item expanded "><a href="user_guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user_guide_install_docker.html"><strong aria-hidden="true">2.1.</strong> Install docker</a></li><li class="chapter-item expanded "><a href="user_guide_install_host.html"><strong aria-hidden="true">2.2.</strong> Install host</a></li></ol></li></ol>';
+        this.innerHTML = '<ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">User Guide</li><li class="chapter-item expanded "><a href="user_guide_install_docker.html"><strong aria-hidden="true">2.</strong> Install docker</a></li><li class="chapter-item expanded "><a href="user_guide_install_host.html"><strong aria-hidden="true">3.</strong> Install host</a></li><li class="chapter-item expanded affix "><li class="part-title">Core ctrl</li><li class="chapter-item expanded "><a href="core_messaging_overview.html"><strong aria-hidden="true">4.</strong> Messaging</a></li><li class="chapter-item expanded "><a href="core_messaging_message_fields.html"><strong aria-hidden="true">5.</strong> Message fields</a></li></ol>';
         // Set the current, active page, and reveal it if it's hidden
         let current_page = document.location.href.toString();
         if (current_page.endsWith("/")) {

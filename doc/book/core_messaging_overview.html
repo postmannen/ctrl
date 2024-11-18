@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Install host - ctrl</title>
+        <title>Messaging - ctrl</title>
 
 
         <!-- Custom HTML head -->
@@ -152,95 +152,39 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="install-on-a-host"><a class="header" href="#install-on-a-host">Install on a host</a></h1>
-<p>Start up a local nats message broker if you don't already have one.</p>
-<pre><code class="language-bash">docker run -p 4444:4444 nats -p 4444
-</code></pre>
-<p>Build the ctrl binary from the source code.</p>
-<pre><code class="language-bash">git clone git@github.com:postmannen/ctrl.git
-cd cmd/ctrl
-go run build
-</code></pre>
-<p>Copy the binary to <code>/usr/local</code>.</p>
-<pre><code class="language-bash">mkdir -p /usr/local/ctrl
-cp ./ctrl /usr/local/ctrl
-</code></pre>
-<pre><code class="language-bash">
-For testing we create a folder for the node to store it's data.
-
-```bash
-cd /usr/local/ctrl
-mkdir node1
-cd node1
-</code></pre>
-<p>ctrl will create all the folders needed like etc, var and more in the current directory where it was started if they don't already exist. This behaviour can be changed with flags or env variables.</p>
-<p>Create a .env file for the startup options. Flags can also be used.</p>
-<pre><code class="language-bash">cat &lt;&lt; EOF &gt; .env
-NODE_NAME="node1"
-BROKER_ADDRESS="127.0.0,1:4444"
-ENABLE_DEBUG=1
-START_PUB_REQ_HELLO=60
-IS_CENTRAL_ERROR_LOGGER=0
-EOF
-</code></pre>
-<p>Start up ctrl. ctrl will automatically used the local .env file we created.</p>
-<pre><code class="language-bash">../usr/local/ctrl/ctrl
-</code></pre>
-<p>If you open another window, and go to the <code>/usr/local/ctrl/node1</code> you should see that ctrl have created the directory structure for you with ./etc, ./var, ./directoryfolder and so on.</p>
-<p>Prepare and send a message. We send messages by copying them into the ./readfolder where ctrl automatically will pick it up, and process it.</p>
-<pre><code class="language-yaml">cat &lt;&lt; EOF &gt; msg.yaml
----
-- toNodes:
-    - node1
-  method: REQCliCommand
-  methodArgs:
-    - "bash"
-    - "-c"
-    - |
-      echo "some config line" &gt; /etc/my-service-config.1
-      echo "some config line" &gt; /etc/my-service-config.2
-      echo "some config line" &gt; /etc/my-service-config.3
-      systemctl restart my-service
-
-  replyMethod: REQNone
-  ACKTimeout: 0
-EOF
-
-cp msg.yaml readfolder
-</code></pre>
-<p>With the above message we send to ourselves since we only got 1 node running. To start up more nodes repeat the above steps, replace.</p>
-<h2 id="run-as-service"><a class="header" href="#run-as-service">Run as service</a></h2>
-<p>Create a systemctl unit file to run ctrl as a service on the host</p>
-<pre><code class="language-bash">progName="ctrl"
-systemctlFile=/etc/systemd/system/$progName.service
-
-cat &gt;$systemctlFile &lt;&lt;EOF
-[Unit]
-Description=http-&gt;${progName} service
-Documentation=https://github.com/postmannen/ctrl
-After=network-online.target nss-lookup.target
-Requires=network-online.target nss-lookup.target
-
-[Service]
-ExecStart=env CONFIG_FOLDER=/usr/local/${progName}/etc /usr/local/${progName}/${progName}
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable $progName.service &amp;&amp;
-systemctl start $progName.service
-</code></pre>
+                        <h1 id="messaging"><a class="header" href="#messaging">Messaging</a></h1>
+<p>The handling of all messages is done by spawning up a process for handling the message in it's own thread. This allows us to keep the state of each <strong>individual message level</strong>  both in regards to ACK's, error handling, send retries, and reruns of methods for a message if the first run was not successful.</p>
+<p>All messages processed by a publisher will be written to a log file after they are processed, with all the information needed to recreate the same message if needed, or it can be used for auditing.</p>
+<p>All handling down to the process and message level are handled concurrently. So if there are problems handling one message sent to a node on a subject it will not affect the messages being sent to other nodes, or other messages sent on other subjects to the same host.</p>
+<p>Message types of both <strong>ACK</strong> and <strong>NACK</strong>, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
+Example: We probably want an <strong>ACK</strong> when sending some <strong>REQCLICommand</strong> to be executed, but we don't care for an acknowledge <strong>NACK</strong> when we send an <strong>REQHello</strong> event.
+If a message are <strong>ACK</strong> or <strong>NACK</strong> type are defined by the value of the <strong>ACKTimeout</strong> for each individual message:</p>
+<ul>
+<li><strong>ACKTimeout</strong> set to 0 will make the message become a <strong>NACK</strong> message.</li>
+<li><strong>ACKTimeout</strong> set to &gt;=1 will make the message become an <strong>ACK</strong> message.</li>
+</ul>
+<p>If ACK is expected, and not received, then the message will be retried the amount of time defined in the <strong>retries</strong> field of a message. If numer of retries are reached, and still no ACK received, the message will be discared, and a log message will be sent to the log server.</p>
+<p>To make things easier, all timeouts used for messages can be set with env variables or flags at startup of ctrl. Locally specified timeout directly in a message will override the startup values, and can be used for more granularity when needed.</p>
+<h2 id="example-of-message-flow"><a class="header" href="#example-of-message-flow">Example of message flow:</a></h2>
+<style>
+img {
+  background-color: #FFFFFF;
+}
+</style>
+</head>
+<body>
+<p align="center"><img src="https://github.com/postmannen/ctrl/blob/main/doc/message-flow.svg?raw=true" /></p>
+</body>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="user_guide_install_docker.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="user_guide_install_host.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="core_messaging_overview.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="core_messaging_message_fields.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -250,11 +194,11 @@ systemctl start $progName.service
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="user_guide_install_docker.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="user_guide_install_host.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="core_messaging_overview.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="core_messaging_message_fields.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

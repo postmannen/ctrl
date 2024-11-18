@@ -107,7 +107,7 @@ ctrl supports both the use of flags with env variables. An .env file can also be
 
 ### Schema for the messages to send into ctrl via the API's
 
-|Name | value | description|
+|Field Name | Value Type | Description|
 |-----|-------|------------|
 |toNode | `string` | A single node to send a message to|
 |toNodes | `string array` | A comma separated list of nodes to send a message to|

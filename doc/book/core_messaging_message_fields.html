@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>User Guide - ctrl</title>
+        <title>Message fields - ctrl</title>
 
 
         <!-- Custom HTML head -->
@@ -152,18 +152,86 @@
 
                 <div id="content" class="content">
                     <main>
-                        
+                        <h1 id="message-fields"><a class="header" href="#message-fields">Message fields</a></h1>
+<pre><code class="language-yaml">toNode : "some-node"
+</code></pre>
+<p>The node to send the message to.</p>
+<pre><code class="language-yaml">toNodes : node1,node2
+</code></pre>
+<p>ToNodes to specify several hosts to send message to in the form of an slice/array. When used, the message will be split up into one message for each node specified, so the sending to each node will be handled individually.</p>
+<pre><code class="language-yaml">data : data here in byte format
+</code></pre>
+<p>The actual data in the message. This is the field where we put the returned data in a reply message. The data field are of type []byte.</p>
+<pre><code class="language-yaml">method : REQCliCommand
+</code></pre>
+<p>What request method type to use, like REQCliCommand, REQHttpGet..</p>
+<pre><code class="language-yaml">  methodArgs :
+  - "bash"
+  - "-c"
+  - |
+      echo "this is a test"
+      echo "and some other test"
+</code></pre>
+<p>Additional arguments that might be needed when executing the method. Can be f.ex. an ip address if it is a tcp sender, or the actual shell command to execute in a cli.</p>
+<pre><code class="language-yaml">replyMethod : REQToFile
+</code></pre>
+<p>ReplyMethod, is the method to use for the reply message. By default the reply method will be set to log to file, but you can override it setting your own here.</p>
+<pre><code class="language-yaml">  methodArgs :
+  - "bash"
+  - "-c"
+  - |
+      echo "this is a test"
+</code></pre>
+<p>Additional arguments that might be needed when executing the reply method. Can be f.ex. an ip address if it is a tcp sender, or the shell command to execute in a cli session.
+replyMethodArgs :</p>
+<pre><code class="language-yaml">fromNode Node : "node2"
+</code></pre>
+<p>From what node the message originated. This field is automatically filled by ctrl when left blanc, so that when a message are sent from a node the user don't have to worry about getting eventual repply messages back.
+Setting a</p>
+<pre><code class="language-yaml">ACKTimeout: 10 
+</code></pre>
+<p>ACKTimeout for waiting for an Ack message in seconds.</p>
+<p>If the ACKTimeout value is set to 0 the message will become an No Ack message. With No Ack messages we will not wait for an Ack, nor will the receiver send an Ack, and we will never try to resend a message.</p>
+<pre><code class="language-yaml">retryWait : 60
+</code></pre>
+<p>RetryWait specifies the time in seconds to wait between retries. This value is added to the ACKTimeout and to make the total time before retrying to sending a message. A usecase can be when you want a low ACKTimeout, but you want to add more time between the retries to avoid spamming the receiving node.</p>
+<pre><code class="language-yaml">retries : 3
+</code></pre>
+<p>How many times we should try to resend the message if no ACK was received.</p>
+<pre><code class="language-yaml">replyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
+</code></pre>
+<p>The ACK timeout used with reply messages. If not specified the value of <code>ACKTimeout</code> will be used.</p>
+<pre><code class="language-yaml">replyRetries int `json:"replyRetries" yaml:"replyRetries"`
+</code></pre>
+<p>The number of retries for trying to resend a message for reply messages.</p>
+<pre><code class="language-yaml">methodTimeout : 10
+</code></pre>
+<p>Timeout for how long a method should be allowed to run before it is timed out.</p>
+<pre><code class="language-yaml">replyMethodTimeout : 10
+</code></pre>
+<p>Timeout for how long a method should be allowed to run before it is timed out, but for the reply message.</p>
+<pre><code class="language-yaml">directory string `json:"directory" yaml:"directory"`
+</code></pre>
+<p>Specify the directory structure to use when saving the result data for a repply message.</p>
+<ul>
+<li>When the values are comma separated like <code>"syslog","metrics"</code> a syslog folder with a subfolder metrics will be created in the directory specified with startup env variable <code>SUBSCRIBER_DATA_FOLDER</code>.</li>
+<li>Absolute paths can also be used if you want to save the result somewhere else on the system, like "/etc/myservice".</li>
+</ul>
+<pre><code class="language-yaml">fileName : myfile.conf
+</code></pre>
+<p>The fileName field are used together with the directory field mentioned earlier to create a full path for where to write the resulting data of a repply message.</p>
+<pre><code class="language-yaml">schedule : [2,5]
+</code></pre>
+<p>Schedule are used for scheduling the method of messages to be executed several times. The schedule is defined as an array of two values, where the first value defines how often the schedule should trigger a run in seconds, and the second value is for how long the schedule are allowed to run in seconds total. <code>[2,5]</code> will trigger the method to be executed again every 2 seconds, but when a total time of 5 seconds have passed it will stop scheduling.</p>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="core_messaging_overview.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="user_guide_install_docker.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -171,13 +239,10 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="core_messaging_overview.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="user_guide_install_docker.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>
