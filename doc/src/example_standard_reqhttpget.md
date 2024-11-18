@@ -1,4 +1,4 @@
-# REQHttpGet
+# httpGet
 
 In JSON.
 
@@ -8,9 +8,9 @@ In JSON.
         "directory": "httpget",
         "fileName": "finn.no.html",
         "toNodes": ["node1","node2"],
-        "method":"REQHttpGet",
+        "method":"httpGet",
         "methodArgs": ["https://finn.no"],
-        "replyMethod":"REQToFile",
+        "replyMethod":"file",
         "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 5
@@ -24,10 +24,10 @@ In YAML.
 ---
 - toNodes:
     - ["node1","node2"]
-  method: REQHttpGet
+  method: httpGet
   methodArgs:
     - "https://finn.no"
-  replyMethod: REQToFile
+  replyMethod: file
   ACKTimeout: 5
   retries: 3
   methodTimeout: 5

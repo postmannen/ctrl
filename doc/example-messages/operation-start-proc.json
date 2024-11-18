@@ -4,8 +4,8 @@
         "fileName": "startHttp.log",
         "toNode": "",
 	    "toNodes": ["central"],
-        "method":"REQOpProcessStart",
-        "methodArgs": ["REQHttpGet"],
-        "replyMethod":"REQToFile"
+        "method":"opProcessStart",
+        "methodArgs": ["httpGet"],
+        "replyMethod":"file"
     }
 ]

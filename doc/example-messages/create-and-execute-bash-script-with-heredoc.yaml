@@ -2,7 +2,7 @@
 - toNodes:
     - ship1
     - ship2
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - "bash"
     - "-c"
@@ -24,7 +24,7 @@
 
       ./test.sh WHOOPS.txt
 
-  replyMethod: REQToFile
+  replyMethod: file
   ACKTimeout: 5
   retries: 120
   replyACKTimeout: 5

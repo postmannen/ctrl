@@ -183,7 +183,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 
 		// Create a subject for one copy request
 		uid := uuid.New()
-		subProcessName = fmt.Sprintf("REQSUBCopySrc.%v", uid.String())
+		subProcessName = fmt.Sprintf("%v.%v", REQSUBCopySrc, uid.String())
 
 		dstDir := filepath.Dir(DstFilePath)
 		dstFile := filepath.Base(DstFilePath)
@@ -192,7 +192,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 		// Also choosing to create the naming for the dst method here so
 		// we can have all the information in the cia from the beginning
 		// at both ends.
-		dstSubProcessName := fmt.Sprintf("REQSUBCopyDst.%v", uid.String())
+		dstSubProcessName := fmt.Sprintf("%v.%v", REQSUBCopyDst, uid.String())
 		dstM := Method(dstSubProcessName)
 
 		// Get the file permissions

@@ -14,9 +14,9 @@ Example of usage:
         "directory":"cli_command_test",
         "fileName":"cli_command.result",
         "toNode": "node2",
-        "method":"REQCliCommand",
+        "method":"cliCommand",
         "methodArgs": ["bash","-c","tree"],
-        "replyMethod":"REQCliCommand",
+        "replyMethod":"cliCommand",
         "replyMethodArgs": ["bash", "-c","echo \"{{ctrl_DATA}}\" > apekatt.txt"],
         "replyMethodTimeOut": 10,
         "ACKTimeout":3,
@@ -28,7 +28,7 @@ Example of usage:
 
 The above example, with steps explained:
 
-- Send a message from **node1** to **node2** with a Request Method of type REQCliCommand.
+- Send a message from **node1** to **node2** with a Request Method of type cliCommand.
 - When received at **node2** we execute the Reqest Method with the arguments specified in the methodArgs.
 - When the method on **node2** is done the result data of the method run will be stored in the variable {{ctrl_DATA}}. We can then use this variable when we craft the reply message method by embedding it into a new bash command.
 - The reply message is then sent back to **node1**, the method will be executed, and all newlines in the result data will be removed, and all the data with the new lines removed will be stored in a file called `apekatt.txt`
@@ -41,9 +41,9 @@ The same using bash's herestring:
         "directory":"cli_command_test",
         "fileName":"cli_command.result",
         "toNode": "ship2",
-        "method":"REQCliCommand",
+        "method":"cliCommand",
         "methodArgs": ["bash","-c","tree"],
-        "replyMethod":"REQCliCommand",
+        "replyMethod":"cliCommand",
         "replyMethodArgs": ["bash", "-c","cat <<< {{ctrl_DATA}} > hest.txt"],
         "replyMethodTimeOut": 10,
         "ACKTimeout":3,

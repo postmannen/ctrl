@@ -19,10 +19,10 @@ data : data here in byte format
 The actual data in the message. This is the field where we put the returned data in a reply message. The data field are of type []byte.
 
 ```yaml
-method : REQCliCommand
+method : cliCommand
 ```
 
-What request method type to use, like REQCliCommand, REQHttpGet..
+What request method type to use, like cliCommand, httpGet..
 
 ```yaml
   methodArgs :
@@ -36,7 +36,7 @@ What request method type to use, like REQCliCommand, REQHttpGet..
 Additional arguments that might be needed when executing the method. Can be f.ex. an ip address if it is a tcp sender, or the actual shell command to execute in a cli.
 
 ```yaml
-replyMethod : REQToFile
+replyMethod : file
 ```
 
 ReplyMethod, is the method to use for the reply message. By default the reply method will be set to log to file, but you can override it setting your own here.

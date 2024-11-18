@@ -1,14 +1,14 @@
 ---
 - toNodes:
     - vbox1
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - "bash"
     - "-c"
     - |
       kubectl delete -f test.yaml
 
-  replyMethod: REQToConsole
+  replyMethod: console
   ACKTimeout: 5
   retries: 120
   replyACKTimeout: 5

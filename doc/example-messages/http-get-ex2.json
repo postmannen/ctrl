@@ -4,8 +4,8 @@
         "fileName": "somefile.html",
         "toNode": "ship2",
         "data": ["http://erter.org"],
-        "method":"REQHttpGet",
-        "replyMethod":"REQToFile",
+        "method":"httpGet",
+        "replyMethod":"file",
         "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 5

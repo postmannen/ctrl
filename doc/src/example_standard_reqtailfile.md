@@ -1,4 +1,4 @@
-# REQTailFile
+# tailFile
 
 In JSON.
 
@@ -8,7 +8,7 @@ In JSON.
         "directory": "tails",
         "fileName": "some.log",
         "toNodes": "node1","node2","node3",
-        "method":"REQTailFile",
+        "method":"tailFile",
         "methodArgs": ["/var/log/syslog"],
         "ACKTimeout":5,
         "retries":3,
@@ -17,7 +17,7 @@ In JSON.
 ]
 ```
 
-NB: If no replyMethod are specified, it will default to **REQToFile**
+NB: If no replyMethod are specified, it will default to **file**
 
 In YAML.
 
@@ -25,10 +25,10 @@ In YAML.
 ---
 - toNodes:
     - ["node1","node2","node3"]
-  method: REQTailFile
+  method: tailFile
   methodArgs:
     - "/var/log/syslog"
-  replyMethod: REQToFile
+  replyMethod: file
   ACKTimeout: 5
   retries: 3
   methodTimeout: 5

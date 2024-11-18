@@ -211,7 +211,7 @@ func (p *processes) Start(proc process) {
 		// to central server and ask for publics keys, and to get them deliver back with a request
 		// of type pubREQKeysDeliverUpdate.
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQKeysRequestUpdateInterval))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeysRequestUpdateInterval))
 			defer ticker.Stop()
 			for {
 
@@ -259,7 +259,7 @@ func (p *processes) Start(proc process) {
 
 	if proc.configuration.EnableAclUpdates {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQAclRequestUpdateInterval))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.AclRequestUpdateInterval))
 			defer ticker.Stop()
 			for {
 

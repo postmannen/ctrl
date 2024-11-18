@@ -4,8 +4,8 @@
         "fileName":"somefile.result",
         "toNode": "ship1",
         "data": ["bash","-c","tree ../"],
-        "replyMethod":"REQToFileAppend",
-        "method":"REQCliCommand",
+        "replyMethod":"fileAppend",
+        "method":"cliCommand",
         "ACKTimeout":3,
         "retries":3,
         "methodTimeout": 10

@@ -60,7 +60,7 @@ cat << EOF > msg.yaml
 ---
 - toNodes:
     - node1
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - "bash"
     - "-c"
@@ -70,7 +70,7 @@ cat << EOF > msg.yaml
       echo "some config line" > /etc/my-service-config.3
       systemctl restart my-service
 
-  replyMethod: REQNone
+  replyMethod: none
   ACKTimeout: 0
 EOF
 

@@ -52,7 +52,7 @@ cat << EOF > .env
 NODE_NAME="node1"
 BROKER_ADDRESS="127.0.0,1:4444"
 ENABLE_DEBUG=1
-START_PUB_REQ_HELLO=60
+START_PUB_HELLO=60
 IS_CENTRAL_ERROR_LOGGER=0
 EOF
 ```
@@ -70,7 +70,7 @@ cat << EOF > msg.yaml
 ---
 - toNodes:
     - node1
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - "bash"
     - "-c"
@@ -80,7 +80,7 @@ cat << EOF > msg.yaml
       echo "some config line" > /etc/my-service-config.3
       systemctl restart my-service
 
-  replyMethod: REQNone
+  replyMethod: none
   ACKTimeout: 0
 EOF
 
@@ -129,20 +129,20 @@ ctrl supports both the use of flags with env variables. An .env file can also be
 
 | Method name| Description|
 |------------|------------|
-|REQOpProcessList | Get a list of the running processes|
-|REQOpProcessStart | Start up a process|
-|REQOpProcessStop | Stop a process|
-|REQCliCommand | Will run the command given, and return the stdout output of the command when the command is done|
-|REQCliCommandCont | Will run the command given, and return the stdout output of the command continously while the command runs|
-|REQTailFile | Tail log files on some node, and get the result for each new line read sent back in a reply message|
-|REQHttpGet | Scrape web url, and get the html sent back in a reply message|
-|REQHello | Send Hello messages|
-|REQCopySrc| Copy a file from one node to another node|
-|REQErrorLog | Method for receiving error logs for Central error logger|
-|REQNone | Don't send a reply message|
-|REQToConsole | Print to stdout or stderr|
-|REQToFileAppend | Append to file, can also write to unix sockets|
-|REQToFile | Write to file, can also write to unix sockets|
+|opProcessList | Get a list of the running processes|
+|opProcessStart | Start up a process|
+|opProcessStop | Stop a process|
+|cliCommand | Will run the command given, and return the stdout output of the command when the command is done|
+|cliCommandCont | Will run the command given, and return the stdout output of the command continously while the command runs|
+|tailFile | Tail log files on some node, and get the result for each new line read sent back in a reply message|
+|httpGet | Scrape web url, and get the html sent back in a reply message|
+|hello | Send Hello messages|
+|copySrc| Copy a file from one node to another node|
+|errorLog | Method for receiving error logs for Central error logger|
+|none | Don't send a reply message|
+|console | Print to stdout or stderr|
+|fileAppend | Append to file, can also write to unix sockets|
+|file | Write to file, can also write to unix sockets|
 
 ## History
 

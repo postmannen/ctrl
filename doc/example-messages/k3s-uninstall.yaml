@@ -1,14 +1,14 @@
 ---
 - toNodes:
     - vbox1
-  method: REQCliCommandCont
+  method: cliCommandCont
   methodArgs:
     - "bash"
     - "-c"
     - |
       k3s-uninstall.sh
 
-  replyMethod: REQToConsole
+  replyMethod: console
   ACKTimeout: 5
   retries: 3
   replyACKTimeout: 5

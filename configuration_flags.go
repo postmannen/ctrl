@@ -42,10 +42,10 @@ type Configuration struct {
 	NatsReconnectJitter int `comment:"NatsReconnectJitter in milliseconds"`
 	// NatsReconnectJitterTLS in seconds
 	NatsReconnectJitterTLS int `comment:"NatsReconnectJitterTLS in seconds"`
-	// REQKeysRequestUpdateInterval in seconds
-	REQKeysRequestUpdateInterval int `comment:"REQKeysRequestUpdateInterval in seconds"`
-	// REQAclRequestUpdateInterval in seconds
-	REQAclRequestUpdateInterval int `comment:"REQAclRequestUpdateInterval in seconds"`
+	// KeysRequestUpdateInterval in seconds
+	KeysRequestUpdateInterval int `comment:"KeysRequestUpdateInterval in seconds"`
+	// AclRequestUpdateInterval in seconds
+	AclRequestUpdateInterval int `comment:"AclRequestUpdateInterval in seconds"`
 	// The number of the profiling port
 	ProfilingPort string `comment:"The number of the profiling port"`
 	// Host and port for prometheus listener, e.g. localhost:2112
@@ -157,8 +157,8 @@ func NewConfiguration() *Configuration {
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", CheckEnv("NATS_CONNECT_RETRY_INTERVAL", c.NatsConnectRetryInterval).(int), "default nats retry connect interval in seconds.")
 	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", CheckEnv("NATS_RECONNECT_JITTER", c.NatsReconnectJitter).(int), "default nats ReconnectJitter interval in milliseconds.")
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", CheckEnv("NATS_RECONNECT_JITTER_TLS", c.NatsReconnectJitterTLS).(int), "default nats ReconnectJitterTLS interval in seconds.")
-	flag.IntVar(&c.REQKeysRequestUpdateInterval, "REQKeysRequestUpdateInterval", CheckEnv("REQ_KEYS_UPDATE_INTERVAL", c.REQKeysRequestUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
-	flag.IntVar(&c.REQAclRequestUpdateInterval, "REQAclRequestUpdateInterval", CheckEnv("REQ_ACL_REQUEST_UPDATE_INTERVAL", c.REQAclRequestUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
+	flag.IntVar(&c.KeysRequestUpdateInterval, "keysRequestUpdateInterval", CheckEnv("KEYS_UPDATE_INTERVAL", c.KeysRequestUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
+	flag.IntVar(&c.AclRequestUpdateInterval, "aclRequestUpdateInterval", CheckEnv("ACL_REQUEST_UPDATE_INTERVAL", c.AclRequestUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", CheckEnv("PROFILING_PORT", c.ProfilingPort).(string), "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", CheckEnv("PROM_HOST_AND_PORT", c.PromHostAndPort).(string), "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", CheckEnv("DEFAULT_MESSAGE_TIMEOUT", c.DefaultMessageTimeout).(int), "default message timeout in seconds. This can be overridden on the message level")
@@ -187,7 +187,7 @@ func NewConfiguration() *Configuration {
 
 	// Start of Request publishers/subscribers
 
-	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", CheckEnv("START_PUB_REQ_HELLO", c.StartPubREQHello).(int), "Make the current node send hello messages to central at given interval in seconds")
+	flag.IntVar(&c.StartPubREQHello, "startPubHello", CheckEnv("START_PUB_HELLO", c.StartPubREQHello).(int), "Make the current node send hello messages to central at given interval in seconds")
 
 	flag.BoolVar(&c.EnableKeyUpdates, "EnableKeyUpdates", CheckEnv("ENABLE_KEY_UPDATES", c.EnableKeyUpdates).(bool), "true/false")
 
@@ -222,46 +222,46 @@ func NewConfiguration() *Configuration {
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:                 "./etc/",
-		SocketFolder:                 "./tmp",
-		ReadFolder:                   "./readfolder",
-		EnableReadFolder:             true,
-		TCPListener:                  "",
-		HTTPListener:                 "",
-		DatabaseFolder:               "./var/lib",
-		NodeName:                     "",
-		BrokerAddress:                "127.0.0.1:4222",
-		NatsConnOptTimeout:           20,
-		NatsConnectRetryInterval:     10,
-		NatsReconnectJitter:          100,
-		NatsReconnectJitterTLS:       1,
-		REQKeysRequestUpdateInterval: 60,
-		REQAclRequestUpdateInterval:  60,
-		ProfilingPort:                "",
-		PromHostAndPort:              "",
-		DefaultMessageTimeout:        10,
-		DefaultMessageRetries:        1,
-		DefaultMethodTimeout:         10,
-		SubscribersDataFolder:        "./data",
-		CentralNodeName:              "central",
-		RootCAPath:                   "",
-		NkeySeedFile:                 "",
-		NkeyFromED25519SSHKeyFile:    "",
-		NkeySeed:                     "",
-		ExposeDataFolder:             "",
-		ErrorMessageTimeout:          60,
-		ErrorMessageRetries:          10,
-		Compression:                  "z",
-		Serialization:                "cbor",
-		SetBlockProfileRate:          0,
-		EnableSocket:                 true,
-		EnableSignatureCheck:         false,
-		EnableAclCheck:               false,
-		IsCentralAuth:                false,
-		EnableDebug:                  false,
-		LogLevel:                     "debug",
-		LogConsoleTimestamps:         false,
-		KeepPublishersAliveFor:       10,
+		ConfigFolder:              "./etc/",
+		SocketFolder:              "./tmp",
+		ReadFolder:                "./readfolder",
+		EnableReadFolder:          true,
+		TCPListener:               "",
+		HTTPListener:              "",
+		DatabaseFolder:            "./var/lib",
+		NodeName:                  "",
+		BrokerAddress:             "127.0.0.1:4222",
+		NatsConnOptTimeout:        20,
+		NatsConnectRetryInterval:  10,
+		NatsReconnectJitter:       100,
+		NatsReconnectJitterTLS:    1,
+		KeysRequestUpdateInterval: 60,
+		AclRequestUpdateInterval:  60,
+		ProfilingPort:             "",
+		PromHostAndPort:           "",
+		DefaultMessageTimeout:     10,
+		DefaultMessageRetries:     1,
+		DefaultMethodTimeout:      10,
+		SubscribersDataFolder:     "./data",
+		CentralNodeName:           "central",
+		RootCAPath:                "",
+		NkeySeedFile:              "",
+		NkeyFromED25519SSHKeyFile: "",
+		NkeySeed:                  "",
+		ExposeDataFolder:          "",
+		ErrorMessageTimeout:       60,
+		ErrorMessageRetries:       10,
+		Compression:               "z",
+		Serialization:             "cbor",
+		SetBlockProfileRate:       0,
+		EnableSocket:              true,
+		EnableSignatureCheck:      false,
+		EnableAclCheck:            false,
+		IsCentralAuth:             false,
+		EnableDebug:               false,
+		LogLevel:                  "debug",
+		LogConsoleTimestamps:      false,
+		KeepPublishersAliveFor:    10,
 
 		StartPubREQHello:            30,
 		EnableKeyUpdates:            false,

@@ -24,14 +24,14 @@ function sendMessage() {
 [
     {
         "toNodes": ["${element}"],
-        "method": "REQCliCommand",
+        "method": "cliCommand",
         "methodArgs":
             [
                 "${shell}",
                 "-c",
                 'echo "--------------------${element}----------------------" && ${command}',
             ],
-        "replyMethod": "REQToFileAppend",
+        "replyMethod": "fileAppend",
         "retryWait": 5,
         "ACKTimeout": 30,
         "retries": 1,

@@ -1,4 +1,4 @@
-# REQCliCommand
+# cliCommand
 
 In JSON.
 
@@ -8,9 +8,9 @@ In JSON.
         "directory":"system",
         "fileName":"system.log",
         "toNodes": ["node2"],
-        "method":"REQCliCommand",
+        "method":"cliCommand",
         "methodArgs": ["bash","-c","rm -rf ./data & systemctl restart ctrl"],
-        "replyMethod":"REQToFileAppend",
+        "replyMethod":"fileAppend",
         "ACKTimeout":30,
         "retries":1,
         "methodTimeout": 30
@@ -24,14 +24,14 @@ In YAML.
 ---
 - toNodes:
     - node2
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - "bash"
     - "-c"
     - |
       rm -rf ./data & systemctl restart ctrl
 
-  replyMethod: REQToFileAppend
+  replyMethod: fileAppend
   ACKTimeout: 30
   retries: 1
   ACKTimeout: 30
@@ -49,13 +49,13 @@ Will send a message to node2 to delete the ctrl data folder, and then restart ct
 [
     {
         "toNode": "central",
-        "method": "REQCliCommand",
+        "method": "cliCommand",
         "methodArgs": [
             "bash",
             "-c",
             "curl localhost:2111/metrics"
         ],
-        "replyMethod": "REQToConsole",
+        "replyMethod": "console",
         "methodTimeout": 10
     }
 ]
@@ -68,13 +68,13 @@ Will send a message to node2 to delete the ctrl data folder, and then restart ct
 [
     {
         "toNode": "node1",
-        "method": "REQCliCommandCont",
+        "method": "cliCommandCont",
         "methodArgs": [
             "bash",
             "-c",
             "nc -lk localhost 8888"
         ],
-        "replyMethod": "REQToConsole",
+        "replyMethod": "toConsole",
         "methodTimeout": 10,
     }
 ]
@@ -90,9 +90,9 @@ The netcat tcp listener will run for 10 seconds before the method timeout kicks 
         "directory":"some/cli/command",
         "fileName":"cli.result",
         "toNode": "node2",
-        "method":"REQnCliCommand",
+        "method":"cliCommand",
         "methodArgs": ["bash","-c","docker ps -a"],
-        "replyMethod":"REQToFileAppend",
+        "replyMethod":"fileAppend",
     }
 ]
 ```

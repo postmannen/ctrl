@@ -7,7 +7,7 @@ All messages processed by a publisher will be written to a log file after they a
 All handling down to the process and message level are handled concurrently. So if there are problems handling one message sent to a node on a subject it will not affect the messages being sent to other nodes, or other messages sent on other subjects to the same host.
 
 Message types of both **ACK** and **NACK**, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
-Example: We probably want an **ACK** when sending some **REQCLICommand** to be executed, but we don't care for an acknowledge **NACK** when we send an **REQHello** event.
+Example: We probably want an **ACK** when sending some **cliCommand** to be executed, but we don't care for an acknowledge **NACK** when we send an **hello** event.
 If a message are **ACK** or **NACK** type are defined by the value of the **ACKTimeout** for each individual message:
 
   - **ACKTimeout** set to 0 will make the message become a **NACK** message.
