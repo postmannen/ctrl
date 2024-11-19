@@ -97,23 +97,23 @@ func (p *processes) Start(proc process) {
 	proc.startup.subscriber(proc, OpProcessStop, nil)
 	proc.startup.subscriber(proc, Test, nil)
 
-	if proc.configuration.StartSubFileAppend {
+	if proc.configuration.StartProcesses.StartSubFileAppend {
 		proc.startup.subscriber(proc, FileAppend, nil)
 	}
 
-	if proc.configuration.StartSubFile {
+	if proc.configuration.StartProcesses.StartSubFile {
 		proc.startup.subscriber(proc, File, nil)
 	}
 
-	if proc.configuration.StartSubCopySrc {
+	if proc.configuration.StartProcesses.StartSubCopySrc {
 		proc.startup.subscriber(proc, CopySrc, nil)
 	}
 
-	if proc.configuration.StartSubCopyDst {
+	if proc.configuration.StartProcesses.StartSubCopyDst {
 		proc.startup.subscriber(proc, CopyDst, nil)
 	}
 
-	if proc.configuration.StartSubHello {
+	if proc.configuration.StartProcesses.StartSubHello {
 		// subREQHello is the handler that is triggered when we are receiving a hello
 		// message. To keep the state of all the hello's received from nodes we need
 		// to also start a procFunc that will live as a go routine tied to this process,
@@ -152,21 +152,21 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, Hello, pf)
 	}
 
-	if proc.configuration.IsCentralErrorLogger {
+	if proc.configuration.StartProcesses.IsCentralErrorLogger {
 		proc.startup.subscriber(proc, ErrorLog, nil)
 	}
 
-	if proc.configuration.StartSubCliCommand {
+	if proc.configuration.StartProcesses.StartSubCliCommand {
 		proc.startup.subscriber(proc, CliCommand, nil)
 	}
 
-	if proc.configuration.StartSubConsole {
+	if proc.configuration.StartProcesses.StartSubConsole {
 		proc.startup.subscriber(proc, Console, nil)
 	}
 
-	if proc.configuration.StartPubHello != 0 {
+	if proc.configuration.StartProcesses.StartPubHello != 0 {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubHello))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartProcesses.StartPubHello))
 			defer ticker.Stop()
 			for {
 
@@ -191,7 +191,7 @@ func (p *processes) Start(proc process) {
 					er := fmt.Errorf("error: ProcessesStart: %v", err)
 					p.errorKernel.errSend(proc, m, er, logError)
 				}
-				proc.toRingbufferCh <- []subjectAndMessage{sam}
+				proc.newMessagesCh <- []subjectAndMessage{sam}
 
 				select {
 				case <-ticker.C:
@@ -206,7 +206,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.publisher(proc, Hello, pf)
 	}
 
-	if proc.configuration.EnableKeyUpdates {
+	if proc.configuration.StartProcesses.EnableKeyUpdates {
 		// Define the startup of a publisher that will send KeysRequestUpdate
 		// to central server and ask for publics keys, and to get them deliver back with a request
 		// of type KeysDeliverUpdate.
@@ -241,7 +241,7 @@ func (p *processes) Start(proc process) {
 					// In theory the system should drop the message before it reaches here.
 					p.errorKernel.errSend(proc, m, err, logError)
 				}
-				proc.toRingbufferCh <- []subjectAndMessage{sam}
+				proc.newMessagesCh <- []subjectAndMessage{sam}
 
 				select {
 				case <-ticker.C:
@@ -257,7 +257,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, KeysDeliverUpdate, nil)
 	}
 
-	if proc.configuration.EnableAclUpdates {
+	if proc.configuration.StartProcesses.EnableAclUpdates {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
 			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.AclUpdateInterval))
 			defer ticker.Stop()
@@ -290,7 +290,7 @@ func (p *processes) Start(proc process) {
 					p.errorKernel.errSend(proc, m, err, logError)
 					log.Printf("error: ProcessesStart: %v\n", err)
 				}
-				proc.toRingbufferCh <- []subjectAndMessage{sam}
+				proc.newMessagesCh <- []subjectAndMessage{sam}
 
 				select {
 				case <-ticker.C:
@@ -306,7 +306,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, AclDeliverUpdate, nil)
 	}
 
-	if proc.configuration.IsCentralAuth {
+	if proc.configuration.StartProcesses.IsCentralAuth {
 		proc.startup.subscriber(proc, KeysRequestUpdate, nil)
 		proc.startup.subscriber(proc, KeysAllow, nil)
 		proc.startup.subscriber(proc, KeysDelete, nil)
@@ -324,15 +324,15 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, AclImport, nil)
 	}
 
-	if proc.configuration.StartSubHttpGet {
+	if proc.configuration.StartProcesses.StartSubHttpGet {
 		proc.startup.subscriber(proc, HttpGet, nil)
 	}
 
-	if proc.configuration.StartSubTailFile {
+	if proc.configuration.StartProcesses.StartSubTailFile {
 		proc.startup.subscriber(proc, TailFile, nil)
 	}
 
-	if proc.configuration.StartSubCliCommandCont {
+	if proc.configuration.StartProcesses.StartSubCliCommandCont {
 		proc.startup.subscriber(proc, CliCommandCont, nil)
 	}
 
@@ -388,6 +388,8 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 	go proc.spawnWorker()
 }
 
+// publisher will start a publisher process. It takes the initial process, request method,
+// and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
 func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v publisher: %#v", m, p.node)
 	p.errorKernel.logDebug(er)

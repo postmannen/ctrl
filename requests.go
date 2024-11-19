@@ -359,7 +359,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		proc.errorKernel.errSend(proc, message, er, logError)
 	}
 
-	proc.toRingbufferCh <- []subjectAndMessage{sam}
+	proc.newMessagesCh <- []subjectAndMessage{sam}
 }
 
 // selectFileNaming will figure out the correct naming of the file

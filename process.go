@@ -88,7 +88,7 @@ type process struct {
 	// copy of the configuration from server
 	configuration *Configuration
 	// The new messages channel copied from *Server
-	toRingbufferCh chan<- []subjectAndMessage
+	newMessagesCh chan<- []subjectAndMessage
 	// The structure who holds all processes information
 	processes *processes
 	// nats connection
@@ -143,7 +143,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		processID:        pid,
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
-		toRingbufferCh:   server.samToSendCh,
+		newMessagesCh:    server.newMessagesCh,
 		configuration:    server.configuration,
 		processes:        server.processes,
 		natsConn:         server.natsConn,

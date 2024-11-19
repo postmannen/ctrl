@@ -48,7 +48,7 @@ type server struct {
 	//
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
-	samToSendCh chan []subjectAndMessage
+	newMessagesCh chan []subjectAndMessage
 	// directSAMSCh
 	samSendLocalCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
@@ -217,7 +217,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		nodeName:       configuration.NodeName,
 		natsConn:       conn,
 		ctrlSocket:     ctrlSocket,
-		samToSendCh:    make(chan []subjectAndMessage),
+		newMessagesCh:  make(chan []subjectAndMessage),
 		samSendLocalCh: make(chan []subjectAndMessage),
 		metrics:        metrics,
 		version:        version,
@@ -292,7 +292,7 @@ func (s *server) Start() {
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
 	go func() {
-		err := s.errorKernel.start(s.samToSendCh)
+		err := s.errorKernel.start(s.newMessagesCh)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -485,7 +485,7 @@ func (s *server) routeMessagesToProcess() {
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
-		for samSlice := range s.samToSendCh {
+		for samSlice := range s.newMessagesCh {
 			for _, sam := range samSlice {
 
 				go func(sam subjectAndMessage) {

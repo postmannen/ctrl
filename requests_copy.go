@@ -92,7 +92,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
-		proc.toRingbufferCh <- []subjectAndMessage{sam}
+		proc.newMessagesCh <- []subjectAndMessage{sam}
 
 		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
 	}
@@ -267,7 +267,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 			cancel()
 		}
 
-		proc.toRingbufferCh <- []subjectAndMessage{sam}
+		proc.newMessagesCh <- []subjectAndMessage{sam}
 
 		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
 
@@ -566,7 +566,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							return er
 						}
 
-						proc.toRingbufferCh <- []subjectAndMessage{sam}
+						proc.newMessagesCh <- []subjectAndMessage{sam}
 
 						resendRetries = 0
 
@@ -636,7 +636,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						return er
 					}
 
-					proc.toRingbufferCh <- []subjectAndMessage{sam}
+					proc.newMessagesCh <- []subjectAndMessage{sam}
 
 					resendRetries++
 
@@ -699,7 +699,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				return er
 			}
 
-			proc.toRingbufferCh <- []subjectAndMessage{sam}
+			proc.newMessagesCh <- []subjectAndMessage{sam}
 		}
 
 		// Open a tmp folder for where to write the received chunks
@@ -801,7 +801,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						return er
 					}
 
-					proc.toRingbufferCh <- []subjectAndMessage{sam}
+					proc.newMessagesCh <- []subjectAndMessage{sam}
 
 				case copyResendLast:
 					// The csa already contains copyStatus copyResendLast when reached here,
@@ -834,7 +834,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						return er
 					}
 
-					proc.toRingbufferCh <- []subjectAndMessage{sam}
+					proc.newMessagesCh <- []subjectAndMessage{sam}
 
 				case copySrcDone:
 					err := func() error {
@@ -988,7 +988,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								return er
 							}
 
-							proc.toRingbufferCh <- []subjectAndMessage{sam}
+							proc.newMessagesCh <- []subjectAndMessage{sam}
 						}
 
 						cancel()

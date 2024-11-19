@@ -76,8 +76,8 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	conf.SocketFolder = testFolder
 	conf.SubscribersDataFolder = testFolder
 	conf.DatabaseFolder = testFolder
-	conf.IsCentralErrorLogger = true
-	conf.IsCentralAuth = true
+	conf.StartProcesses.IsCentralErrorLogger = true
+	conf.StartProcesses.IsCentralAuth = true
 	conf.EnableDebug = false
 	conf.LogLevel = "none"
 
@@ -289,7 +289,7 @@ func TestRequest(t *testing.T) {
 				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
 			}
 
-			tstSrv.samToSendCh <- []subjectAndMessage{sam}
+			tstSrv.newMessagesCh <- []subjectAndMessage{sam}
 
 		case viaSocket:
 			msgs := []Message{tt.message}

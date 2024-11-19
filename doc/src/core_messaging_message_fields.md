@@ -24,6 +24,8 @@ method : cliCommand
 
 What request method type to use, like cliCommand, httpGet..
 
+All [methods](./core_request_methods.md).
+
 ```yaml
   methodArgs :
   - "bash"
@@ -96,6 +98,7 @@ methodTimeout : 10
 ```
 
 Timeout for how long a method should be allowed to run before it is timed out.
+If `methodTimeout : -1` the method will not time out.
 
 ```yaml
 replyMethodTimeout : 10

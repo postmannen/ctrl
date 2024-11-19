@@ -211,7 +211,7 @@ func (s *server) readSocket() {
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.samToSendCh <- sams
+			s.newMessagesCh <- sams
 			s.auditLogCh <- sams
 
 		}(conn)
@@ -293,7 +293,7 @@ func (s *server) readFolder() {
 						s.errorKernel.logDebug(er)
 
 						// Send the SAM struct to be picked up by the ring buffer.
-						s.samToSendCh <- sams
+						s.newMessagesCh <- sams
 						s.auditLogCh <- sams
 
 						// Delete the file.
@@ -386,7 +386,7 @@ func (s *server) readTCPListener() {
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.samToSendCh <- sams
+			s.newMessagesCh <- sams
 			s.auditLogCh <- sams
 
 		}(conn)
@@ -431,7 +431,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Send the SAM struct to be picked up by the ring buffer.
-	s.samToSendCh <- sams
+	s.newMessagesCh <- sams
 	s.auditLogCh <- sams
 
 }

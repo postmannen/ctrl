@@ -334,7 +334,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
-		proc.toRingbufferCh <- []subjectAndMessage{sam}
+		proc.newMessagesCh <- []subjectAndMessage{sam}
 
 		er = fmt.Errorf("----> methodKeysAllow: SENDING KEYS TO NODE=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
@@ -381,7 +381,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
-		proc.toRingbufferCh <- []subjectAndMessage{sam}
+		proc.newMessagesCh <- []subjectAndMessage{sam}
 
 		er = fmt.Errorf("----> methodKeysAllow: sending keys update to node=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
