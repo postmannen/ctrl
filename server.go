@@ -336,7 +336,7 @@ func (s *server) Start() {
 	// struct, we need to create an initial process to start the rest.
 	//
 	// The context of the initial process are set in processes.Start.
-	sub := newSubject(REQInitial, s.nodeName)
+	sub := newSubject(Initial, s.nodeName)
 	s.processInitial = newProcess(context.TODO(), s, sub, "")
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)

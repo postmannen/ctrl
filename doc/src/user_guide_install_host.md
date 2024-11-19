@@ -40,7 +40,7 @@ cat << EOF > .env
 NODE_NAME="node1"
 BROKER_ADDRESS="127.0.0,1:4444"
 ENABLE_DEBUG=1
-START_PUB_REQ_HELLO=60
+START_PUB_HELLO=60
 IS_CENTRAL_ERROR_LOGGER=0
 EOF
 ```
@@ -60,7 +60,7 @@ cat << EOF > msg.yaml
 ---
 - toNodes:
     - node1
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - "bash"
     - "-c"
@@ -70,7 +70,7 @@ cat << EOF > msg.yaml
       echo "some config line" > /etc/my-service-config.3
       systemctl restart my-service
 
-  replyMethod: REQNone
+  replyMethod: none
   ACKTimeout: 0
 EOF
 

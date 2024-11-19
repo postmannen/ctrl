@@ -72,9 +72,9 @@ spec:
               value: "100"
             - name: NATS_RECONNECT_JITTER_TLS
               value: "1"
-            - name: REQ_KEYS_REQUEST_UPDATE_INTERVAL
+            - name: KEYS_REQUEST_UPDATE_INTERVAL
               value: "60"
-            - name: REQ_ACL_REQUEST_UPDATE_INTERVAL
+            - name: ACL_REQUEST_UPDATE_INTERVAL
               value: "60"
             - name: PROFILING_PORT
               value: ""
@@ -118,7 +118,7 @@ spec:
               value: "0"
             - name: KEEP_PUBLISHERS_ALIVE_FOR
               value: "10"
-            - name: START_PUB_REQ_HELLO
+            - name: START_PUB_HELLO
               value: "60"
             - name: ENABLE_KEY_UPDATES
               value: "1"
@@ -126,33 +126,33 @@ spec:
               value: "1"
             - name: IS_CENTRAL_ERROR_LOGGER
               value: "1"
-            - name: START_SUB_REQ_HELLO
+            - name: START_SUB_HELLO
               value: "true"
-            - name: START_SUB_REQ_TO_FILE_APPEND
+            - name: START_SUB_FILE_APPEND
               value: "true"
-            - name: START_SUB_REQ_TO_FILE
+            - name: START_SUB_FILE
               value: "true"
-            - name: START_SUB_REQ_TO_FILE_NACK
+            - name: START_SUB_FILE_NACK
               value: "true"
-            - name: START_SUB_REQ_COPY_SRC
+            - name: START_SUB_COPY_SRC
               value: "true"
-            - name: START_SUB_REQ_COPY_DST
+            - name: START_SUB_COPY_DST
               value: "true"
-            - name: START_SUB_REQ_PING
+            - name: START_SUB_PING
               value: "true"
-            - name: START_SUB_REQ_PONG
+            - name: START_SUB_PONG
               value: "true"
-            - name: START_SUB_REQ_CLI_COMMAND
+            - name: START_SUB_CLI_COMMAND
               value: "true"
-            - name: START_SUB_REQ_TO_CONSOLE
+            - name: START_SUB_TO_CONSOLE
               value: "true"
-            - name: START_SUB_REQ_HTTP_GET
+            - name: START_SUB_HTTP_GET
               value: "true"
-            - name: START_SUB_REQ_HTTP_GET_SCHEDULED
+            - name: START_SUB_HTTP_GET_SCHEDULED
               value: "true"
-            - name: START_SUB_REQ_TAIL_FILE
+            - name: START_SUB_TAIL_FILE
               value: "true"
-            - name: START_SUB_REQ_CLI_COMMAND_CONT
+            - name: START_SUB_CLI_COMMAND_CONT
               value: "true"
 
         - image: localhost:5000/stewardwriter:0.1.1

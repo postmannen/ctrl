@@ -334,7 +334,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 					// We do not want to send errorLogs for REQErrorLog type since
 					// it will just cause an endless loop.
-					if message.Method != REQErrorLog {
+					if message.Method != ErrorLog {
 						p.errorKernel.infoSend(p, message, er)
 					}
 

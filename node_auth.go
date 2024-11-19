@@ -392,7 +392,7 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 // verifySignature
 func (n *nodeAuth) verifySignature(m Message) bool {
 	// NB: Only enable signature checking for REQCliCommand for now.
-	if m.Method != REQCliCommand {
+	if m.Method != CliCommand {
 		er := fmt.Errorf("verifySignature: not REQCliCommand and will not do signature check, method: %v", m.Method)
 		n.errorKernel.logInfo(er)
 		return true
@@ -429,7 +429,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 // verifyAcl
 func (n *nodeAuth) verifyAcl(m Message) bool {
 	// NB: Only enable acl checking for REQCliCommand for now.
-	if m.Method != REQCliCommand {
+	if m.Method != CliCommand {
 		er := fmt.Errorf("verifyAcl: not REQCliCommand and will not do acl check, method: %v", m.Method)
 		n.errorKernel.logInfo(er)
 		return true

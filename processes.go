@@ -92,28 +92,28 @@ func (p *processes) Start(proc process) {
 
 	// --- Subscriber services that can be started via flags
 
-	proc.startup.subscriber(proc, REQOpProcessList, nil)
-	proc.startup.subscriber(proc, REQOpProcessStart, nil)
-	proc.startup.subscriber(proc, REQOpProcessStop, nil)
-	proc.startup.subscriber(proc, REQTest, nil)
+	proc.startup.subscriber(proc, OpProcessList, nil)
+	proc.startup.subscriber(proc, OpProcessStart, nil)
+	proc.startup.subscriber(proc, OpProcessStop, nil)
+	proc.startup.subscriber(proc, Test, nil)
 
-	if proc.configuration.StartSubREQToFileAppend {
-		proc.startup.subscriber(proc, REQToFileAppend, nil)
+	if proc.configuration.StartSubFileAppend {
+		proc.startup.subscriber(proc, FileAppend, nil)
 	}
 
-	if proc.configuration.StartSubREQToFile {
-		proc.startup.subscriber(proc, REQToFile, nil)
+	if proc.configuration.StartSubFile {
+		proc.startup.subscriber(proc, File, nil)
 	}
 
-	if proc.configuration.StartSubREQCopySrc {
-		proc.startup.subscriber(proc, REQCopySrc, nil)
+	if proc.configuration.StartSubCopySrc {
+		proc.startup.subscriber(proc, CopySrc, nil)
 	}
 
-	if proc.configuration.StartSubREQCopyDst {
-		proc.startup.subscriber(proc, REQCopyDst, nil)
+	if proc.configuration.StartSubCopyDst {
+		proc.startup.subscriber(proc, CopyDst, nil)
 	}
 
-	if proc.configuration.StartSubREQHello {
+	if proc.configuration.StartSubHello {
 		// subREQHello is the handler that is triggered when we are receiving a hello
 		// message. To keep the state of all the hello's received from nodes we need
 		// to also start a procFunc that will live as a go routine tied to this process,
@@ -149,24 +149,24 @@ func (p *processes) Start(proc process) {
 
 			}
 		}
-		proc.startup.subscriber(proc, REQHello, pf)
+		proc.startup.subscriber(proc, Hello, pf)
 	}
 
 	if proc.configuration.IsCentralErrorLogger {
-		proc.startup.subscriber(proc, REQErrorLog, nil)
+		proc.startup.subscriber(proc, ErrorLog, nil)
 	}
 
-	if proc.configuration.StartSubREQCliCommand {
-		proc.startup.subscriber(proc, REQCliCommand, nil)
+	if proc.configuration.StartSubCliCommand {
+		proc.startup.subscriber(proc, CliCommand, nil)
 	}
 
-	if proc.configuration.StartSubREQToConsole {
-		proc.startup.subscriber(proc, REQToConsole, nil)
+	if proc.configuration.StartSubConsole {
+		proc.startup.subscriber(proc, Console, nil)
 	}
 
-	if proc.configuration.StartPubREQHello != 0 {
+	if proc.configuration.StartPubHello != 0 {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubREQHello))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubHello))
 			defer ticker.Stop()
 			for {
 
@@ -180,7 +180,7 @@ func (p *processes) Start(proc process) {
 					ToNode:     Node(p.configuration.CentralNodeName),
 					FromNode:   Node(proc.node),
 					Data:       []byte(d),
-					Method:     REQHello,
+					Method:     Hello,
 					ACKTimeout: proc.configuration.DefaultMessageTimeout,
 					Retries:    1,
 				}
@@ -203,15 +203,15 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.publisher(proc, REQHello, pf)
+		proc.startup.publisher(proc, Hello, pf)
 	}
 
 	if proc.configuration.EnableKeyUpdates {
-		// pubREQKeysRequestUpdate defines the startup of a publisher that will send REQREQKeysRequestUpdate
+		// Define the startup of a publisher that will send KeysRequestUpdate
 		// to central server and ask for publics keys, and to get them deliver back with a request
-		// of type pubREQKeysDeliverUpdate.
+		// of type KeysDeliverUpdate.
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQKeysRequestUpdateInterval))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeysUpdateInterval))
 			defer ticker.Stop()
 			for {
 
@@ -220,7 +220,7 @@ func (p *processes) Start(proc process) {
 				// and update with new keys back.
 
 				proc.nodeAuth.publicKeys.mu.Lock()
-				er := fmt.Errorf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+				er := fmt.Errorf(" ----> publisher KeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
 				p.errorKernel.logDebug(er)
 
 				m := Message{
@@ -229,8 +229,8 @@ func (p *processes) Start(proc process) {
 					ToNode:      Node(p.configuration.CentralNodeName),
 					FromNode:    Node(proc.node),
 					Data:        []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]),
-					Method:      REQKeysRequestUpdate,
-					ReplyMethod: REQKeysDeliverUpdate,
+					Method:      KeysRequestUpdate,
+					ReplyMethod: KeysDeliverUpdate,
 					ACKTimeout:  proc.configuration.DefaultMessageTimeout,
 					Retries:     1,
 				}
@@ -253,13 +253,13 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.publisher(proc, REQKeysRequestUpdate, pf)
-		proc.startup.subscriber(proc, REQKeysDeliverUpdate, nil)
+		proc.startup.publisher(proc, KeysRequestUpdate, pf)
+		proc.startup.subscriber(proc, KeysDeliverUpdate, nil)
 	}
 
 	if proc.configuration.EnableAclUpdates {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQAclRequestUpdateInterval))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.AclUpdateInterval))
 			defer ticker.Stop()
 			for {
 
@@ -268,7 +268,7 @@ func (p *processes) Start(proc process) {
 				// and update with new keys back.
 
 				proc.nodeAuth.nodeAcl.mu.Lock()
-				er := fmt.Errorf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+				er := fmt.Errorf(" ----> publisher AclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
 				p.errorKernel.logDebug(er)
 
 				m := Message{
@@ -277,8 +277,8 @@ func (p *processes) Start(proc process) {
 					ToNode:      Node(p.configuration.CentralNodeName),
 					FromNode:    Node(proc.node),
 					Data:        []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]),
-					Method:      REQAclRequestUpdate,
-					ReplyMethod: REQAclDeliverUpdate,
+					Method:      AclRequestUpdate,
+					ReplyMethod: AclDeliverUpdate,
 					ACKTimeout:  proc.configuration.DefaultMessageTimeout,
 					Retries:     1,
 				}
@@ -302,45 +302,41 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.publisher(proc, REQAclRequestUpdate, pf)
-		proc.startup.subscriber(proc, REQAclDeliverUpdate, nil)
+		proc.startup.publisher(proc, AclRequestUpdate, pf)
+		proc.startup.subscriber(proc, AclDeliverUpdate, nil)
 	}
 
 	if proc.configuration.IsCentralAuth {
-		proc.startup.subscriber(proc, REQKeysRequestUpdate, nil)
-		proc.startup.subscriber(proc, REQKeysAllow, nil)
-		proc.startup.subscriber(proc, REQKeysDelete, nil)
-		proc.startup.subscriber(proc, REQAclRequestUpdate, nil)
-		proc.startup.subscriber(proc, REQAclAddCommand, nil)
-		proc.startup.subscriber(proc, REQAclDeleteCommand, nil)
-		proc.startup.subscriber(proc, REQAclDeleteSource, nil)
-		proc.startup.subscriber(proc, REQAclGroupNodesAddNode, nil)
-		proc.startup.subscriber(proc, REQAclGroupNodesDeleteNode, nil)
-		proc.startup.subscriber(proc, REQAclGroupNodesDeleteGroup, nil)
-		proc.startup.subscriber(proc, REQAclGroupCommandsAddCommand, nil)
-		proc.startup.subscriber(proc, REQAclGroupCommandsDeleteCommand, nil)
-		proc.startup.subscriber(proc, REQAclGroupCommandsDeleteGroup, nil)
-		proc.startup.subscriber(proc, REQAclExport, nil)
-		proc.startup.subscriber(proc, REQAclImport, nil)
+		proc.startup.subscriber(proc, KeysRequestUpdate, nil)
+		proc.startup.subscriber(proc, KeysAllow, nil)
+		proc.startup.subscriber(proc, KeysDelete, nil)
+		proc.startup.subscriber(proc, AclRequestUpdate, nil)
+		proc.startup.subscriber(proc, AclAddCommand, nil)
+		proc.startup.subscriber(proc, AclDeleteCommand, nil)
+		proc.startup.subscriber(proc, AclDeleteSource, nil)
+		proc.startup.subscriber(proc, AclGroupNodesAddNode, nil)
+		proc.startup.subscriber(proc, AclGroupNodesDeleteNode, nil)
+		proc.startup.subscriber(proc, AclGroupNodesDeleteGroup, nil)
+		proc.startup.subscriber(proc, AclGroupCommandsAddCommand, nil)
+		proc.startup.subscriber(proc, AclGroupCommandsDeleteCommand, nil)
+		proc.startup.subscriber(proc, AclGroupCommandsDeleteGroup, nil)
+		proc.startup.subscriber(proc, AclExport, nil)
+		proc.startup.subscriber(proc, AclImport, nil)
 	}
 
-	if proc.configuration.StartSubREQHttpGet {
-		proc.startup.subscriber(proc, REQHttpGet, nil)
+	if proc.configuration.StartSubHttpGet {
+		proc.startup.subscriber(proc, HttpGet, nil)
 	}
 
-	if proc.configuration.StartSubREQHttpGetScheduled {
-		proc.startup.subscriber(proc, REQHttpGetScheduled, nil)
+	if proc.configuration.StartSubTailFile {
+		proc.startup.subscriber(proc, TailFile, nil)
 	}
 
-	if proc.configuration.StartSubREQTailFile {
-		proc.startup.subscriber(proc, REQTailFile, nil)
+	if proc.configuration.StartSubCliCommandCont {
+		proc.startup.subscriber(proc, CliCommandCont, nil)
 	}
 
-	if proc.configuration.StartSubREQCliCommandCont {
-		proc.startup.subscriber(proc, REQCliCommandCont, nil)
-	}
-
-	proc.startup.subscriber(proc, REQPublicKey, nil)
+	proc.startup.subscriber(proc, PublicKey, nil)
 }
 
 // Stop all subscriber processes.
@@ -379,7 +375,7 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 
 	var sub Subject
 	switch {
-	case m == REQErrorLog:
+	case m == ErrorLog:
 		sub = newSubject(m, "errorCentral")
 	default:
 		sub = newSubject(m, string(p.node))

@@ -42,10 +42,10 @@ type Configuration struct {
 	NatsReconnectJitter int `comment:"NatsReconnectJitter in milliseconds"`
 	// NatsReconnectJitterTLS in seconds
 	NatsReconnectJitterTLS int `comment:"NatsReconnectJitterTLS in seconds"`
-	// REQKeysRequestUpdateInterval in seconds
-	REQKeysRequestUpdateInterval int `comment:"REQKeysRequestUpdateInterval in seconds"`
-	// REQAclRequestUpdateInterval in seconds
-	REQAclRequestUpdateInterval int `comment:"REQAclRequestUpdateInterval in seconds"`
+	// KeysUpdateInterval in seconds
+	KeysUpdateInterval int `comment:"KeysUpdateInterval in seconds"`
+	// AclUpdateInterval in seconds
+	AclUpdateInterval int `comment:"AclUpdateInterval in seconds"`
 	// The number of the profiling port
 	ProfilingPort string `comment:"The number of the profiling port"`
 	// Host and port for prometheus listener, e.g. localhost:2112
@@ -102,8 +102,8 @@ type Configuration struct {
 	// it have not received any messages for the given amount of time.
 	KeepPublishersAliveFor int `comment:"KeepPublishersAliveFor number of seconds Timer that will be used for when to remove the sub process publisher. The timer is reset each time a message is published with the process, so the sub process publisher will not be removed until it have not received any messages for the given amount of time."`
 
-	// StartPubREQHello, sets the interval in seconds for how often we send hello messages to central server
-	StartPubREQHello int `comment:"StartPubREQHello, sets the interval in seconds for how often we send hello messages to central server"`
+	// StartPubHello, sets the interval in seconds for how often we send hello messages to central server
+	StartPubHello int `comment:"StartPubHello, sets the interval in seconds for how often we send hello messages to central server"`
 	// Enable the updates of public keys
 	EnableKeyUpdates bool `comment:"Enable the updates of public keys"`
 
@@ -113,27 +113,25 @@ type Configuration struct {
 	// Start the central error logger.
 	IsCentralErrorLogger bool `comment:"Start the central error logger."`
 	// Start subscriber for hello messages
-	StartSubREQHello bool `comment:"Start subscriber for hello messages"`
+	StartSubHello bool `comment:"Start subscriber for hello messages"`
 	// Start subscriber for text logging
-	StartSubREQToFileAppend bool `comment:"Start subscriber for text logging"`
+	StartSubFileAppend bool `comment:"Start subscriber for text logging"`
 	// Start subscriber for writing to file
-	StartSubREQToFile bool `comment:"Start subscriber for writing to file"`
+	StartSubFile bool `comment:"Start subscriber for writing to file"`
 	// Start subscriber for reading files to copy
-	StartSubREQCopySrc bool `comment:"Start subscriber for reading files to copy"`
+	StartSubCopySrc bool `comment:"Start subscriber for reading files to copy"`
 	// Start subscriber for writing copied files to disk
-	StartSubREQCopyDst bool `comment:"Start subscriber for writing copied files to disk"`
+	StartSubCopyDst bool `comment:"Start subscriber for writing copied files to disk"`
 	// Start subscriber for Echo Request
-	StartSubREQCliCommand bool `comment:"Start subscriber for CLICommandRequest"`
-	// Start subscriber for REQToConsole
-	StartSubREQToConsole bool `comment:"Start subscriber for REQToConsole"`
-	// Start subscriber for REQHttpGet
-	StartSubREQHttpGet bool `comment:"Start subscriber for REQHttpGet"`
-	// Start subscriber for REQHttpGetScheduled
-	StartSubREQHttpGetScheduled bool `comment:"Start subscriber for REQHttpGetScheduled"`
+	StartSubCliCommand bool `comment:"Start subscriber for CLICommand"`
+	// Start subscriber for Console
+	StartSubConsole bool `comment:"Start subscriber for Console"`
+	// Start subscriber for HttpGet
+	StartSubHttpGet bool `comment:"Start subscriber for HttpGet"`
 	// Start subscriber for tailing log files
-	StartSubREQTailFile bool `comment:"Start subscriber for tailing log files"`
+	StartSubTailFile bool `comment:"Start subscriber for tailing log files"`
 	// Start subscriber for continously delivery of output from cli commands.
-	StartSubREQCliCommandCont bool `comment:"Start subscriber for continously delivery of output from cli commands."`
+	StartSubCliCommandCont bool `comment:"Start subscriber for continously delivery of output from cli commands."`
 }
 
 // NewConfiguration will return a *Configuration.
@@ -157,8 +155,8 @@ func NewConfiguration() *Configuration {
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", CheckEnv("NATS_CONNECT_RETRY_INTERVAL", c.NatsConnectRetryInterval).(int), "default nats retry connect interval in seconds.")
 	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", CheckEnv("NATS_RECONNECT_JITTER", c.NatsReconnectJitter).(int), "default nats ReconnectJitter interval in milliseconds.")
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", CheckEnv("NATS_RECONNECT_JITTER_TLS", c.NatsReconnectJitterTLS).(int), "default nats ReconnectJitterTLS interval in seconds.")
-	flag.IntVar(&c.REQKeysRequestUpdateInterval, "REQKeysRequestUpdateInterval", CheckEnv("REQ_KEYS_UPDATE_INTERVAL", c.REQKeysRequestUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
-	flag.IntVar(&c.REQAclRequestUpdateInterval, "REQAclRequestUpdateInterval", CheckEnv("REQ_ACL_REQUEST_UPDATE_INTERVAL", c.REQAclRequestUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
+	flag.IntVar(&c.KeysUpdateInterval, "keysUpdateInterval", CheckEnv("KEYS_UPDATE_INTERVAL", c.KeysUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
+	flag.IntVar(&c.AclUpdateInterval, "aclUpdateInterval", CheckEnv("ACL_UPDATE_INTERVAL", c.AclUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", CheckEnv("PROFILING_PORT", c.ProfilingPort).(string), "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", CheckEnv("PROM_HOST_AND_PORT", c.PromHostAndPort).(string), "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", CheckEnv("DEFAULT_MESSAGE_TIMEOUT", c.DefaultMessageTimeout).(int), "default message timeout in seconds. This can be overridden on the message level")
@@ -187,24 +185,23 @@ func NewConfiguration() *Configuration {
 
 	// Start of Request publishers/subscribers
 
-	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", CheckEnv("START_PUB_REQ_HELLO", c.StartPubREQHello).(int), "Make the current node send hello messages to central at given interval in seconds")
+	flag.IntVar(&c.StartPubHello, "startPubHello", CheckEnv("START_PUB_HELLO", c.StartPubHello).(int), "Make the current node send hello messages to central at given interval in seconds")
 
 	flag.BoolVar(&c.EnableKeyUpdates, "EnableKeyUpdates", CheckEnv("ENABLE_KEY_UPDATES", c.EnableKeyUpdates).(bool), "true/false")
 
 	flag.BoolVar(&c.EnableAclUpdates, "EnableAclUpdates", CheckEnv("ENABLE_ACL_UPDATES", c.EnableAclUpdates).(bool), "true/false")
 
 	flag.BoolVar(&c.IsCentralErrorLogger, "isCentralErrorLogger", CheckEnv("IS_CENTRAL_ERROR_LOGGER", c.IsCentralErrorLogger).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", CheckEnv("START_SUB_REQ_HELLO", c.StartSubREQHello).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", CheckEnv("START_SUB_REQ_TO_FILE_APPEND", c.StartSubREQToFileAppend).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", CheckEnv("START_SUB_REQ_TO_FILE", c.StartSubREQToFile).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", CheckEnv("START_SUB_REQ_COPY_SRC", c.StartSubREQCopySrc).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", CheckEnv("START_SUB_REQ_COPY_DST", c.StartSubREQCopyDst).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", CheckEnv("START_SUB_REQ_CLI_COMMAND", c.StartSubREQCliCommand).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", CheckEnv("START_SUB_REQ_TO_CONSOLE", c.StartSubREQToConsole).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", CheckEnv("START_SUB_REQ_HTTP_GET", c.StartSubREQHttpGet).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQHttpGetScheduled, "startSubREQHttpGetScheduled", CheckEnv("START_SUB_REQ_HTTP_GET_SCHEDULED", c.StartSubREQHttpGetScheduled).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", CheckEnv("START_SUB_REQ_TAIL_FILE", c.StartSubREQTailFile).(bool), "true/false")
-	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", CheckEnv("START_SUB_REQ_CLI_COMMAND_CONT", c.StartSubREQCliCommandCont).(bool), "true/false")
+	flag.BoolVar(&c.StartSubHello, "startSubHello", CheckEnv("START_SUB_HELLO", c.StartSubHello).(bool), "true/false")
+	flag.BoolVar(&c.StartSubFileAppend, "startSubFileAppend", CheckEnv("START_SUB_FILE_APPEND", c.StartSubFileAppend).(bool), "true/false")
+	flag.BoolVar(&c.StartSubFile, "startSubFile", CheckEnv("START_SUB_FILE", c.StartSubFile).(bool), "true/false")
+	flag.BoolVar(&c.StartSubCopySrc, "startSubCopySrc", CheckEnv("START_SUB_COPY_SRC", c.StartSubCopySrc).(bool), "true/false")
+	flag.BoolVar(&c.StartSubCopyDst, "startSubCopyDst", CheckEnv("START_SUB_COPY_DST", c.StartSubCopyDst).(bool), "true/false")
+	flag.BoolVar(&c.StartSubCliCommand, "startSubCliCommand", CheckEnv("START_SUB_CLI_COMMAND", c.StartSubCliCommand).(bool), "true/false")
+	flag.BoolVar(&c.StartSubConsole, "startSubConsole", CheckEnv("START_SUB_CONSOLE", c.StartSubConsole).(bool), "true/false")
+	flag.BoolVar(&c.StartSubHttpGet, "startSubHttpGet", CheckEnv("START_SUB_HTTP_GET", c.StartSubHttpGet).(bool), "true/false")
+	flag.BoolVar(&c.StartSubTailFile, "startSubTailFile", CheckEnv("START_SUB_TAIL_FILE", c.StartSubTailFile).(bool), "true/false")
+	flag.BoolVar(&c.StartSubCliCommandCont, "startSubCliCommandCont", CheckEnv("START_SUB_CLI_COMMAND_CONT", c.StartSubCliCommandCont).(bool), "true/false")
 
 	// Check that mandatory flag values have been set.
 	switch {
@@ -222,62 +219,61 @@ func NewConfiguration() *Configuration {
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:                 "./etc/",
-		SocketFolder:                 "./tmp",
-		ReadFolder:                   "./readfolder",
-		EnableReadFolder:             true,
-		TCPListener:                  "",
-		HTTPListener:                 "",
-		DatabaseFolder:               "./var/lib",
-		NodeName:                     "",
-		BrokerAddress:                "127.0.0.1:4222",
-		NatsConnOptTimeout:           20,
-		NatsConnectRetryInterval:     10,
-		NatsReconnectJitter:          100,
-		NatsReconnectJitterTLS:       1,
-		REQKeysRequestUpdateInterval: 60,
-		REQAclRequestUpdateInterval:  60,
-		ProfilingPort:                "",
-		PromHostAndPort:              "",
-		DefaultMessageTimeout:        10,
-		DefaultMessageRetries:        1,
-		DefaultMethodTimeout:         10,
-		SubscribersDataFolder:        "./data",
-		CentralNodeName:              "central",
-		RootCAPath:                   "",
-		NkeySeedFile:                 "",
-		NkeyFromED25519SSHKeyFile:    "",
-		NkeySeed:                     "",
-		ExposeDataFolder:             "",
-		ErrorMessageTimeout:          60,
-		ErrorMessageRetries:          10,
-		Compression:                  "z",
-		Serialization:                "cbor",
-		SetBlockProfileRate:          0,
-		EnableSocket:                 true,
-		EnableSignatureCheck:         false,
-		EnableAclCheck:               false,
-		IsCentralAuth:                false,
-		EnableDebug:                  false,
-		LogLevel:                     "debug",
-		LogConsoleTimestamps:         false,
-		KeepPublishersAliveFor:       10,
+		ConfigFolder:              "./etc/",
+		SocketFolder:              "./tmp",
+		ReadFolder:                "./readfolder",
+		EnableReadFolder:          true,
+		TCPListener:               "",
+		HTTPListener:              "",
+		DatabaseFolder:            "./var/lib",
+		NodeName:                  "",
+		BrokerAddress:             "127.0.0.1:4222",
+		NatsConnOptTimeout:        20,
+		NatsConnectRetryInterval:  10,
+		NatsReconnectJitter:       100,
+		NatsReconnectJitterTLS:    1,
+		KeysUpdateInterval:        60,
+		AclUpdateInterval:         60,
+		ProfilingPort:             "",
+		PromHostAndPort:           "",
+		DefaultMessageTimeout:     10,
+		DefaultMessageRetries:     1,
+		DefaultMethodTimeout:      10,
+		SubscribersDataFolder:     "./data",
+		CentralNodeName:           "central",
+		RootCAPath:                "",
+		NkeySeedFile:              "",
+		NkeyFromED25519SSHKeyFile: "",
+		NkeySeed:                  "",
+		ExposeDataFolder:          "",
+		ErrorMessageTimeout:       60,
+		ErrorMessageRetries:       10,
+		Compression:               "z",
+		Serialization:             "cbor",
+		SetBlockProfileRate:       0,
+		EnableSocket:              true,
+		EnableSignatureCheck:      false,
+		EnableAclCheck:            false,
+		IsCentralAuth:             false,
+		EnableDebug:               false,
+		LogLevel:                  "debug",
+		LogConsoleTimestamps:      false,
+		KeepPublishersAliveFor:    10,
 
-		StartPubREQHello:            30,
-		EnableKeyUpdates:            false,
-		EnableAclUpdates:            false,
-		IsCentralErrorLogger:        false,
-		StartSubREQHello:            true,
-		StartSubREQToFileAppend:     true,
-		StartSubREQToFile:           true,
-		StartSubREQCopySrc:          true,
-		StartSubREQCopyDst:          true,
-		StartSubREQCliCommand:       true,
-		StartSubREQToConsole:        true,
-		StartSubREQHttpGet:          true,
-		StartSubREQHttpGetScheduled: true,
-		StartSubREQTailFile:         true,
-		StartSubREQCliCommandCont:   true,
+		StartPubHello:          30,
+		EnableKeyUpdates:       false,
+		EnableAclUpdates:       false,
+		IsCentralErrorLogger:   false,
+		StartSubHello:          true,
+		StartSubFileAppend:     true,
+		StartSubFile:           true,
+		StartSubCopySrc:        true,
+		StartSubCopyDst:        true,
+		StartSubCliCommand:     true,
+		StartSubConsole:        true,
+		StartSubHttpGet:        true,
+		StartSubTailFile:       true,
+		StartSubCliCommandCont: true,
 	}
 	return c
 }

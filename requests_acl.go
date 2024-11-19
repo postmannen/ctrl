@@ -11,11 +11,11 @@ import (
 // ----
 
 // Handler to get all acl's from a central server.
-func methodREQAclRequestUpdate(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
+func methodAclRequestUpdate(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- subscriber methodAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(er)
 
-	// fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message brought to handler : %+v\n", message)
+	// fmt.Printf("\n --- subscriber methodAclRequestUpdate: the message brought to handler : %+v\n", message)
 
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
@@ -44,22 +44,22 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				er := fmt.Errorf("info: subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v", message.FromNode, message.Data)
+				er := fmt.Errorf("info: subscriber methodAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v", message.FromNode, message.Data)
 				proc.errorKernel.logDebug(er)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
-				er = fmt.Errorf("info: subscriber methodREQAclRequestUpdate:  the central acl hash=%v", hash32)
+				er = fmt.Errorf("info: subscriber methodAclRequestUpdate:  the central acl hash=%v", hash32)
 				proc.errorKernel.logDebug(er)
 				if bytes.Equal(hash, message.Data) {
-					er := fmt.Errorf("info: subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
+					er := fmt.Errorf("info: subscriber methodAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
 					proc.errorKernel.logDebug(er)
 					return
 				}
 
-				er = fmt.Errorf("info: subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
+				er = fmt.Errorf("info: subscriber methodAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
 				proc.errorKernel.logDebug(er)
 
 				// Generate JSON for Message.Data
@@ -76,7 +76,7 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 					proc.errorKernel.errSend(proc, message, er, logWarning)
 				}
 
-				er = fmt.Errorf("----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v", message.FromNode, hdh)
+				er = fmt.Errorf("----> subscriber methodAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v", message.FromNode, hdh)
 				proc.errorKernel.logDebug(er)
 
 				newReplyMessage(proc, message, js)
@@ -91,11 +91,11 @@ func methodREQAclRequestUpdate(proc process, message Message, node string) ([]by
 // ----
 
 // Handler to receive the acls from a central server.
-func methodREQAclDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- subscriber methodREQAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
+func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- subscriber methodAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf)
 
-	// fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message received on handler : %+v\n\n", message)
+	// fmt.Printf("\n --- subscriber methodAclRequestUpdate: the message received on handler : %+v\n\n", message)
 
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
@@ -168,8 +168,8 @@ func methodREQAclDeliverUpdate(proc process, message Message, node string) ([]by
 
 // ---
 
-func methodREQAclAddCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclAddCommand(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -230,8 +230,8 @@ func methodREQAclAddCommand(proc process, message Message, node string) ([]byte,
 
 // ---
 
-func methodREQAclDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclDeleteCommand(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -249,7 +249,7 @@ func methodREQAclDeleteCommand(proc process, message Message, node string) ([]by
 
 			switch {
 			case len(message.MethodArgs) < 3:
-				errCh <- fmt.Errorf("error: methodREQAclDeleteCommand: got <3 number methodArgs, want 3")
+				errCh <- fmt.Errorf("error: methodAclDeleteCommand: got <3 number methodArgs, want 3")
 				return
 			}
 
@@ -275,7 +275,7 @@ func methodREQAclDeleteCommand(proc process, message Message, node string) ([]by
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclDeleteCommand: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclDeleteCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -292,8 +292,8 @@ func methodREQAclDeleteCommand(proc process, message Message, node string) ([]by
 
 // ---
 
-func methodREQAclDeleteSource(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclDeleteSource received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclDeleteSource(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclDeleteSource received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -311,7 +311,7 @@ func methodREQAclDeleteSource(proc process, message Message, node string) ([]byt
 
 			switch {
 			case len(message.MethodArgs) < 2:
-				errCh <- fmt.Errorf("error: methodREQAclDeleteSource: got <2 number methodArgs, want 2")
+				errCh <- fmt.Errorf("error: methodAclDeleteSource: got <2 number methodArgs, want 2")
 				return
 			}
 
@@ -336,7 +336,7 @@ func methodREQAclDeleteSource(proc process, message Message, node string) ([]byt
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclDeleteSource: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclDeleteSource: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -353,8 +353,8 @@ func methodREQAclDeleteSource(proc process, message Message, node string) ([]byt
 
 // ---
 
-func methodREQAclGroupNodesAddNode(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclGroupNodesAddNode(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -372,7 +372,7 @@ func methodREQAclGroupNodesAddNode(proc process, message Message, node string) (
 
 			switch {
 			case len(message.MethodArgs) < 2:
-				errCh <- fmt.Errorf("error: methodREQAclGroupNodesAddNode: got <2 number methodArgs, want 2")
+				errCh <- fmt.Errorf("error: methodAclGroupNodesAddNode: got <2 number methodArgs, want 2")
 				return
 			}
 
@@ -397,7 +397,7 @@ func methodREQAclGroupNodesAddNode(proc process, message Message, node string) (
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupNodesAddNode: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupNodesAddNode: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -414,8 +414,8 @@ func methodREQAclGroupNodesAddNode(proc process, message Message, node string) (
 
 // ---
 
-func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclGroupNodesDeleteNode(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -433,7 +433,7 @@ func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string
 
 			switch {
 			case len(message.MethodArgs) < 2:
-				errCh <- fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: got <2 number methodArgs, want 2")
+				errCh <- fmt.Errorf("error: methodAclGroupNodesDeleteNode: got <2 number methodArgs, want 2")
 				return
 			}
 
@@ -458,7 +458,7 @@ func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -475,8 +475,8 @@ func methodREQAclGroupNodesDeleteNode(proc process, message Message, node string
 
 // ---
 
-func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclGroupNodesDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclGroupNodesDeleteGroup(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclGroupNodesDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -494,7 +494,7 @@ func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node strin
 
 			switch {
 			case len(message.MethodArgs) < 1:
-				errCh <- fmt.Errorf("error: methodREQAclGroupNodesDeleteGroup: got <1 number methodArgs, want 1")
+				errCh <- fmt.Errorf("error: methodAclGroupNodesDeleteGroup: got <1 number methodArgs, want 1")
 				return
 			}
 
@@ -518,7 +518,7 @@ func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node strin
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteGroup: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupNodesDeleteGroup: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -535,8 +535,8 @@ func methodREQAclGroupNodesDeleteGroup(proc process, message Message, node strin
 
 // ---
 
-func methodREQAclGroupCommandsAddCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclGroupCommandsAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclGroupCommandsAddCommand(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclGroupCommandsAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -554,7 +554,7 @@ func methodREQAclGroupCommandsAddCommand(proc process, message Message, node str
 
 			switch {
 			case len(message.MethodArgs) < 2:
-				errCh <- fmt.Errorf("error: methodREQAclGroupCommandsAddCommand: got <2 number methodArgs, want 1")
+				errCh <- fmt.Errorf("error: methodAclGroupCommandsAddCommand: got <2 number methodArgs, want 1")
 				return
 			}
 
@@ -579,7 +579,7 @@ func methodREQAclGroupCommandsAddCommand(proc process, message Message, node str
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupCommandsAddCommand: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupCommandsAddCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -596,8 +596,8 @@ func methodREQAclGroupCommandsAddCommand(proc process, message Message, node str
 
 // ---
 
-func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclGroupCommandsDeleteCommand(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclGroupCommandsDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -615,7 +615,7 @@ func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node 
 
 			switch {
 			case len(message.MethodArgs) < 1:
-				errCh <- fmt.Errorf("error: methodREQAclGroupCommandsDeleteCommand: got <1 number methodArgs, want 1")
+				errCh <- fmt.Errorf("error: methodAclGroupCommandsDeleteCommand: got <1 number methodArgs, want 1")
 				return
 			}
 
@@ -640,7 +640,7 @@ func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node 
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteCommand: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupCommandsDeleteCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -657,8 +657,8 @@ func methodREQAclGroupCommandsDeleteCommand(proc process, message Message, node 
 
 // ---
 
-func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclGroupCommandsDeleteGroup(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -676,7 +676,7 @@ func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node st
 
 			switch {
 			case len(message.MethodArgs) < 1:
-				errCh <- fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: got <1 number methodArgs, want 1")
+				errCh <- fmt.Errorf("error: methodAclGroupCommandsDeleteGroup: got <1 number methodArgs, want 1")
 				return
 			}
 
@@ -700,7 +700,7 @@ func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node st
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupCommandsDeleteGroup: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -717,8 +717,8 @@ func methodREQAclGroupCommandsDeleteGroup(proc process, message Message, node st
 
 // ---
 
-func methodREQAclExport(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclExport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclExport(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclExport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -736,7 +736,7 @@ func methodREQAclExport(proc process, message Message, node string) ([]byte, err
 
 			out, err := proc.centralAuth.exportACLs()
 			if err != nil {
-				errCh <- fmt.Errorf("error: methodREQAclExport failed: %v", err)
+				errCh <- fmt.Errorf("error: methodAclExport failed: %v", err)
 				return
 			}
 
@@ -756,7 +756,7 @@ func methodREQAclExport(proc process, message Message, node string) ([]byte, err
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclExport: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclExport: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
@@ -773,8 +773,8 @@ func methodREQAclExport(proc process, message Message, node string) ([]byte, err
 
 // ---
 
-func methodREQAclImport(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodREQAclImport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodAclImport(proc process, message Message, node string) ([]byte, error) {
+	er := fmt.Errorf("<--- methodAclImport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(er)
 
 	proc.processes.wg.Add(1)
@@ -793,14 +793,14 @@ func methodREQAclImport(proc process, message Message, node string) ([]byte, err
 
 			switch {
 			case len(message.MethodArgs) < 1:
-				errCh <- fmt.Errorf("error: methodREQAclImport: got <1 number methodArgs, want 1")
+				errCh <- fmt.Errorf("error: methodAclImport: got <1 number methodArgs, want 1")
 				return
 			}
 
 			js := []byte(message.MethodArgs[0])
 			err := proc.centralAuth.importACLs(js)
 			if err != nil {
-				errCh <- fmt.Errorf("error: methodREQAclImport failed: %v", err)
+				errCh <- fmt.Errorf("error: methodAclImport failed: %v", err)
 				return
 			}
 
@@ -820,7 +820,7 @@ func methodREQAclImport(proc process, message Message, node string) ([]byte, err
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclImport: method timed out")
+			er := fmt.Errorf("error: methodAclImport: method timed out")
 			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:

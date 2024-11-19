@@ -32,14 +32,14 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	if fi != nil && fi.Mode().Type() == fs.ModeSocket {
 		socket, err := net.Dial("unix", file)
 		if err != nil {
-			er := fmt.Errorf("error: methodREQToFile/Append could to open socket file for writing: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			er := fmt.Errorf("error: methodToFile/Append could to open socket file for writing: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
 			return er
 		}
 		defer socket.Close()
 
 		_, err = socket.Write([]byte(message.Data))
 		if err != nil {
-			er := fmt.Errorf("error: methodREQToFile/Append could not write to socket: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			er := fmt.Errorf("error: methodToFile/Append could not write to socket: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
 			return er
 		}
 
@@ -50,7 +50,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
-			er := fmt.Errorf("error: methodREQToFile/Append failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			er := fmt.Errorf("error: methodToFile/Append failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
 
 			return er
 		}
@@ -70,7 +70,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	// Open file and write data.
 	f, err := os.OpenFile(file, fileFlag, 0755)
 	if err != nil {
-		er := fmt.Errorf("error: methodREQToFile/Append: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
+		er := fmt.Errorf("error: methodToFile/Append: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
 
 		return er
 	}
@@ -79,7 +79,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	_, err = f.Write(message.Data)
 	f.Sync()
 	if err != nil {
-		er := fmt.Errorf("error: methodREQToFile/Append: failed to write to file: file: %v, %v", file, err)
+		er := fmt.Errorf("error: methodToFile/Append: failed to write to file: file: %v, %v", file, err)
 
 		return er
 	}
@@ -88,7 +88,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 }
 
 // Handle appending data to file.
-func methodREQToFileAppend(proc process, message Message, node string) ([]byte, error) {
+func methodFileAppend(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(true, proc, message)
 	proc.errorKernel.errSend(proc, message, err, logWarning)
 
@@ -100,7 +100,7 @@ func methodREQToFileAppend(proc process, message Message, node string) ([]byte, 
 
 // Handle writing to a file. Will truncate any existing data if the file did already
 // exist.
-func methodREQToFile(proc process, message Message, node string) ([]byte, error) {
+func methodToFile(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(false, proc, message)
 	proc.errorKernel.errSend(proc, message, err, logWarning)
 
@@ -108,12 +108,12 @@ func methodREQToFile(proc process, message Message, node string) ([]byte, error)
 	return ackMsg, nil
 }
 
-// --- methodREQTailFile
+// --- methodTailFile
 
 // handler to run a tailing of files with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // as a new message.
-func methodREQTailFile(proc process, message Message, node string) ([]byte, error) {
+func methodTailFile(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(inf)
 
@@ -123,7 +123,7 @@ func methodREQTailFile(proc process, message Message, node string) ([]byte, erro
 
 		switch {
 		case len(message.MethodArgs) < 1:
-			er := fmt.Errorf("error: methodREQTailFile: got <1 number methodArgs")
+			er := fmt.Errorf("error: methodTailFile: got <1 number methodArgs")
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return

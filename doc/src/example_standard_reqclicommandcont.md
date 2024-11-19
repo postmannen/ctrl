@@ -1,6 +1,6 @@
-# REQCliCommandCont
+# cliCommandCont
 
-The **REQCliCommand** and the **REQCliCommandCont** are the same, except for one thing. **REQCliCommand** will wait until wether the method is finished or the methodTimeout kicks in to send the result as one single message. **REQCliCommand** will when a line is given to  either stdout or stderr create messages with that single line in the data field, and send it back to the node where the message originated.
+The **cliCommand** and the **cliCommandCont** are the same, except for one thing. **cliCommand** will wait until wether the method is finished or the methodTimeout kicks in to send the result as one single message. **cliCommand** will when a line is given to  either stdout or stderr create messages with that single line in the data field, and send it back to the node where the message originated.
 
 ```json
 [
@@ -8,9 +8,9 @@ The **REQCliCommand** and the **REQCliCommandCont** are the same, except for one
         "directory":"some/cli/command",
         "fileName":"cli.result",
         "toNode": "node2",
-        "method":"REQCliCommandCont",
+        "method":"cliCommandCont",
         "methodArgs": ["bash","-c","tcpdump -nni any port 8080"],
-        "replyMethod":"REQToFileAppend",
+        "replyMethod":"fileAppend",
         "methodTimeout":10,
     }
 ]

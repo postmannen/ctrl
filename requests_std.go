@@ -11,7 +11,7 @@ import (
 // -----
 
 // Handler for receiving hello messages.
-func methodREQHello(proc process, message Message, node string) ([]byte, error) {
+func methodHello(proc process, message Message, node string) ([]byte, error) {
 	data := fmt.Sprintf("%v, Received hello from %#v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), message.FromNode)
 
 	fileName := message.FileName
@@ -34,7 +34,7 @@ func methodREQHello(proc process, message Message, node string) ([]byte, error) 
 	f, err := os.OpenFile(file, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 
 	if err != nil {
-		er := fmt.Errorf("error: methodREQHello.handler: failed to open file: %v", err)
+		er := fmt.Errorf("error: methodHello.handler: failed to open file: %v", err)
 		return nil, er
 	}
 	defer f.Close()
@@ -59,7 +59,7 @@ func methodREQHello(proc process, message Message, node string) ([]byte, error) 
 // ---
 
 // Handle the writing of error logs.
-func methodREQErrorLog(proc process, message Message, node string) ([]byte, error) {
+func methodErrorLog(proc process, message Message, node string) ([]byte, error) {
 	proc.metrics.promErrorMessagesReceivedTotal.Inc()
 
 	// If it was a request type message we want to check what the initial messages
@@ -81,7 +81,7 @@ func methodREQErrorLog(proc process, message Message, node string) ([]byte, erro
 	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 	if err != nil {
-		er := fmt.Errorf("error: methodREQErrorLog.handler: failed to open file: %v", err)
+		er := fmt.Errorf("error: methodErrorLog.handler: failed to open file: %v", err)
 		return nil, er
 	}
 	defer f.Close()
@@ -101,7 +101,7 @@ func methodREQErrorLog(proc process, message Message, node string) ([]byte, erro
 
 // Handler to write directly to console.
 // This handler handles the writing to console.
-func methodREQToConsole(proc process, message Message, node string) ([]byte, error) {
+func methodConsole(proc process, message Message, node string) ([]byte, error) {
 
 	switch {
 	case len(message.MethodArgs) > 0 && message.MethodArgs[0] == "stderr":
@@ -123,7 +123,7 @@ func methodREQToConsole(proc process, message Message, node string) ([]byte, err
 // We can then within the test listen on the testCh for received
 // data and validate it.
 // If no test is listening the data will be dropped.
-func methodREQTest(proc process, message Message, node string) ([]byte, error) {
+func methodTest(proc process, message Message, node string) ([]byte, error) {
 
 	go func() {
 		// Try to send the received message data on the test channel. If we

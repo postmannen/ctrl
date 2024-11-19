@@ -3,11 +3,11 @@
         "directory": "copy",
         "fileName": "copy.log",
         "toNodes": ["central"],
-        "method":"REQCopySrc",
+        "method":"copySrc",
         "methodArgs": ["./testbinary","ship1","./apekatt/testbinary-copied","900000","60","0700"],
     	"methodTimeout": 10,
 	    "retryWait" : 5,
 	    "retries" : 3,
-        "replyMethod":"REQToConsole"
+        "replyMethod":"console"
     }
 ]

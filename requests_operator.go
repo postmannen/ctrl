@@ -10,7 +10,7 @@ import (
 // --- OpProcessList
 
 // Handle Op Process List
-func methodREQOpProcessList(proc process, message Message, node string) ([]byte, error) {
+func methodOpProcessList(proc process, message Message, node string) ([]byte, error) {
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -40,7 +40,7 @@ func methodREQOpProcessList(proc process, message Message, node string) ([]byte,
 // --- OpProcessStart
 
 // Handle Op Process Start
-func methodREQOpProcessStart(proc process, message Message, node string) ([]byte, error) {
+func methodOpProcessStart(proc process, message Message, node string) ([]byte, error) {
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
@@ -52,7 +52,7 @@ func methodREQOpProcessStart(proc process, message Message, node string) ([]byte
 
 		switch {
 		case len(message.MethodArgs) < 1:
-			er := fmt.Errorf("error: methodREQOpProcessStart: got <1 number methodArgs")
+			er := fmt.Errorf("error: methodOpProcessStart: got <1 number methodArgs")
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
@@ -72,7 +72,7 @@ func methodREQOpProcessStart(proc process, message Message, node string) ([]byte
 		go procNew.spawnWorker()
 
 		txt := fmt.Sprintf("info: OpProcessStart: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
-		er := fmt.Errorf(txt)
+		er := fmt.Errorf("%v", txt)
 		proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		out = []byte(txt + "\n")
@@ -92,7 +92,7 @@ func methodREQOpProcessStart(proc process, message Message, node string) ([]byte
 // ID           int         `json:"id"`
 
 // Handle Op Process Start
-func methodREQOpProcessStop(proc process, message Message, node string) ([]byte, error) {
+func methodOpProcessStop(proc process, message Message, node string) ([]byte, error) {
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
@@ -109,7 +109,7 @@ func methodREQOpProcessStop(proc process, message Message, node string) ([]byte,
 		// they are running on.
 
 		if v := len(message.MethodArgs); v != 3 {
-			er := fmt.Errorf("error: methodREQOpProcessStop: got <4 number methodArgs, want: method,node,kind")
+			er := fmt.Errorf("error: methodOpProcessStop: got <4 number methodArgs, want: method,node,kind")
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
@@ -154,7 +154,7 @@ func methodREQOpProcessStop(proc process, message Message, node string) ([]byte,
 			proc.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
 
 			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", toStopProc.processID, sub, message.ToNode)
-			er := fmt.Errorf(txt)
+			er := fmt.Errorf("%v", txt)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			out = []byte(txt + "\n")
@@ -162,7 +162,7 @@ func methodREQOpProcessStop(proc process, message Message, node string) ([]byte,
 
 		} else {
 			txt := fmt.Sprintf("error: OpProcessStop: did not find process to stop: %v on %v", sub, message.ToNode)
-			er := fmt.Errorf(txt)
+			er := fmt.Errorf("%v", txt)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			out = []byte(txt + "\n")

@@ -22,12 +22,12 @@ function createTemplate() {
     cat >"$PWD"/template.yaml <<EOF
 - toNodes:
     - \${node}
-  method: REQCliCommand
+  method: cliCommand
   methodArgs:
     - ${shell}
     - -c
     - echo "--------------------\${node}----------------------" && ${command}
-  replyMethod: REQToFileAppend
+  replyMethod: fileAppend
   retryWait: 5
   ACKTimeout: 10
   retries: 1

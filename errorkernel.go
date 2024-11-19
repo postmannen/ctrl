@@ -126,13 +126,13 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 				FromNode:   errEvent.process.node,
 				FileName:   "error.log",
 				Data:       []byte(er),
-				Method:     REQErrorLog,
+				Method:     ErrorLog,
 				ACKTimeout: errEvent.process.configuration.ErrorMessageTimeout,
 				Retries:    errEvent.process.configuration.ErrorMessageRetries,
 			}
 
 			sam := subjectAndMessage{
-				Subject: newSubject(REQErrorLog, "errorCentral"),
+				Subject: newSubject(ErrorLog, "errorCentral"),
 				Message: m,
 			}
 

@@ -10,7 +10,7 @@ import (
 )
 
 // handler to do a Http Get.
-func methodREQHttpGet(proc process, message Message, node string) ([]byte, error) {
+func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 	er := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(er)
 
@@ -23,7 +23,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 
 		switch {
 		case len(message.MethodArgs) < 1:
-			er := fmt.Errorf("error: methodREQHttpGet: got <1 number methodArgs")
+			er := fmt.Errorf("error: methodHttpGet: got <1 number methodArgs")
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
@@ -41,7 +41,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			er := fmt.Errorf("error: methodREQHttpGet: NewRequest failed: %v, bailing out: %v", err, message.MethodArgs)
+			er := fmt.Errorf("error: methodHttpGet: NewRequest failed: %v, bailing out: %v", err, message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			cancel()
@@ -56,7 +56,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 
 			resp, err := client.Do(req)
 			if err != nil {
-				er := fmt.Errorf("error: methodREQHttpGet: client.Do failed: %v, bailing out: %v", err, message.MethodArgs)
+				er := fmt.Errorf("error: methodHttpGet: client.Do failed: %v, bailing out: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
@@ -65,7 +65,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 
 			if resp.StatusCode != 200 {
 				cancel()
-				er := fmt.Errorf("error: methodREQHttpGet: not 200, were %#v, bailing out: %v", resp.StatusCode, message)
+				er := fmt.Errorf("error: methodHttpGet: not 200, were %#v, bailing out: %v", resp.StatusCode, message)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
@@ -73,7 +73,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
+				er := fmt.Errorf("error: methodHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
@@ -90,7 +90,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 		select {
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQHttpGet: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodHttpGet: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 		case out := <-outCh:
@@ -111,7 +111,7 @@ func methodREQHttpGet(proc process, message Message, node string) ([]byte, error
 
 // handler to do a Http Get Scheduled.
 // The second element of the MethodArgs slice holds the timer defined in seconds.
-func methodREQHttpGetScheduled(proc process, message Message, node string) ([]byte, error) {
+func methodHttpGetScheduled(proc process, message Message, node string) ([]byte, error) {
 	er := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logDebug(er)
 
@@ -123,7 +123,7 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 
 		switch {
 		case len(message.MethodArgs) < 3:
-			er := fmt.Errorf("error: methodREQHttpGet: got <3 number methodArgs. Want URL, Schedule Interval in seconds, and the total time in minutes the scheduler should run for")
+			er := fmt.Errorf("error: methodHttpGet: got <3 number methodArgs. Want URL, Schedule Interval in seconds, and the total time in minutes the scheduler should run for")
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return
@@ -133,14 +133,14 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 
 		scheduleInterval, err := strconv.Atoi(message.MethodArgs[1])
 		if err != nil {
-			er := fmt.Errorf("error: methodREQHttpGetScheduled: schedule interval value is not a valid int number defined as a string value seconds: %v, bailing out: %v", err, message.MethodArgs)
+			er := fmt.Errorf("error: methodHttpGetScheduled: schedule interval value is not a valid int number defined as a string value seconds: %v, bailing out: %v", err, message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
 
 		schedulerTotalTime, err := strconv.Atoi(message.MethodArgs[2])
 		if err != nil {
-			er := fmt.Errorf("error: methodREQHttpGetScheduled: scheduler total time value is not a valid int number defined as a string value minutes: %v, bailing out: %v", err, message.MethodArgs)
+			er := fmt.Errorf("error: methodHttpGetScheduled: scheduler total time value is not a valid int number defined as a string value minutes: %v, bailing out: %v", err, message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
@@ -174,7 +174,7 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 
 					req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 					if err != nil {
-						er := fmt.Errorf("error: methodREQHttpGet: NewRequest failed: %v, error: %v", err, message.MethodArgs)
+						er := fmt.Errorf("error: methodHttpGet: NewRequest failed: %v, error: %v", err, message.MethodArgs)
 						proc.errorKernel.errSend(proc, message, er, logWarning)
 						cancel()
 						return
@@ -187,7 +187,7 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 
 						resp, err := client.Do(req)
 						if err != nil {
-							er := fmt.Errorf("error: methodREQHttpGet: client.Do failed: %v, error: %v", err, message.MethodArgs)
+							er := fmt.Errorf("error: methodHttpGet: client.Do failed: %v, error: %v", err, message.MethodArgs)
 							proc.errorKernel.errSend(proc, message, er, logWarning)
 							return
 						}
@@ -195,14 +195,14 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 
 						if resp.StatusCode != 200 {
 							cancel()
-							er := fmt.Errorf("error: methodREQHttpGet: not 200, were %#v, error: %v", resp.StatusCode, message)
+							er := fmt.Errorf("error: methodHttpGet: not 200, were %#v, error: %v", resp.StatusCode, message)
 							proc.errorKernel.errSend(proc, message, er, logWarning)
 							return
 						}
 
 						body, err := io.ReadAll(resp.Body)
 						if err != nil {
-							er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
+							er := fmt.Errorf("error: methodHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
 							proc.errorKernel.errSend(proc, message, er, logWarning)
 						}
 
@@ -233,7 +233,7 @@ func methodREQHttpGetScheduled(proc process, message Message, node string) ([]by
 			case <-ctxScheduler.Done():
 				// fmt.Printf(" * DEBUG: <-ctxScheduler.Done()\n")
 				cancel()
-				er := fmt.Errorf("error: methodREQHttpGet: schedule context timed out: %v", message.MethodArgs)
+				er := fmt.Errorf("error: methodHttpGet: schedule context timed out: %v", message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 				return
 			case out := <-outCh:

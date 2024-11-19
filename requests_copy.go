@@ -32,7 +32,7 @@ type copyInitialData struct {
 	FolderPermission uint64
 }
 
-// methodREQCopySrc are handles the initial and first part of
+// methodCopySrc are handles the initial and first part of
 // the message flow for a copy to destination request.
 // It's main role is to start up a sub process for the destination
 // in which all the actual file copying is done.
@@ -80,7 +80,7 @@ type copyInitialData struct {
 // -----------------------------------------------------
 // Handle writing to a file. Will truncate any existing data if the file did already
 // exist.
-func methodREQCopySrc(proc process, message Message, node string) ([]byte, error) {
+func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 	// If the toNode field is not the same as nodeName of the receiving node
 	// we should forward the message to that specified toNode. This will allow
@@ -127,7 +127,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 		// Verify and check the methodArgs
 
 		if len(message.MethodArgs) < 3 {
-			er := fmt.Errorf("error: methodREQCopySrc: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
+			er := fmt.Errorf("error: methodCopySrc: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
@@ -137,7 +137,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 			var err error
 			splitChunkSize, err = strconv.Atoi(message.MethodArgs[3])
 			if err != nil {
-				er := fmt.Errorf("error: methodREQCopySrc: unble to convert splitChunkSize into int value: %v", err)
+				er := fmt.Errorf("error: methodCopySrc: unble to convert splitChunkSize into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 		}
@@ -147,7 +147,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 			var err error
 			maxTotalCopyTime, err = strconv.Atoi(message.MethodArgs[4])
 			if err != nil {
-				er := fmt.Errorf("error: methodREQCopySrc: unble to convert maxTotalCopyTime into int value: %v", err)
+				er := fmt.Errorf("error: methodCopySrc: unble to convert maxTotalCopyTime into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 		}
@@ -157,14 +157,14 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 			var err error
 			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
 			if err != nil {
-				er := fmt.Errorf("methodREQCopySrc: failed to parse uint, %v", err)
+				er := fmt.Errorf("methodCopySrc: failed to parse uint, %v", err)
 				proc.errorKernel.logError(er)
 			}
 
 			er := fmt.Errorf("info: FolderPermission defined in message for socket: %v, converted = %v", message.MethodArgs[5], folderPermission)
 			proc.errorKernel.logDebug(er)
 			if err != nil {
-				er := fmt.Errorf("error: methodREQCopySrc: unable to convert folderPermission into int value: %v", err)
+				er := fmt.Errorf("error: methodCopySrc: unable to convert folderPermission into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 		}
@@ -183,7 +183,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 
 		// Create a subject for one copy request
 		uid := uuid.New()
-		subProcessName = fmt.Sprintf("REQSUBCopySrc.%v", uid.String())
+		subProcessName = fmt.Sprintf("%v.%v", SUBCopySrc, uid.String())
 
 		dstDir := filepath.Dir(DstFilePath)
 		dstFile := filepath.Base(DstFilePath)
@@ -192,13 +192,13 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 		// Also choosing to create the naming for the dst method here so
 		// we can have all the information in the cia from the beginning
 		// at both ends.
-		dstSubProcessName := fmt.Sprintf("REQSUBCopyDst.%v", uid.String())
+		dstSubProcessName := fmt.Sprintf("%v.%v", SUBCopyDst, uid.String())
 		dstM := Method(dstSubProcessName)
 
 		// Get the file permissions
 		fileInfo, err := os.Stat(SrcFilePath)
 		if err != nil {
-			// errCh <- fmt.Errorf("error: methodREQCopySrc: failed to open file: %v, %v", SrcFilePath, err)
+			// errCh <- fmt.Errorf("error: methodCopySrc: failed to open file: %v, %v", SrcFilePath, err)
 			er := fmt.Errorf("error: copySrcSubProcFunc: failed to stat file: %v", err)
 			proc.errorKernel.logDebug(er)
 			return
@@ -251,7 +251,7 @@ func methodREQCopySrc(proc process, message Message, node string) ([]byte, error
 		msg := message
 		msg.ToNode = Node(DstNode)
 		//msg.Method = REQToFile
-		msg.Method = REQCopyDst
+		msg.Method = CopyDst
 		msg.Data = cb
 		msg.ACKTimeout = message.ACKTimeout
 		msg.Retries = message.Retries
@@ -289,11 +289,11 @@ func newSubProcess(ctx context.Context, server *server, subject Subject, process
 
 // ----
 
-// methodREQCopyDst are handles the initial and first part of
+// methodCopyDst are handles the initial and first part of
 // the message flow for a copy to destination request.
 // It's main role is to start up a sub process for the destination
 // in which all the actual file copying is done.
-func methodREQCopyDst(proc process, message Message, node string) ([]byte, error) {
+func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 	var subProcessName string
 
 	proc.processes.wg.Add(1)
@@ -304,7 +304,7 @@ func methodREQCopyDst(proc process, message Message, node string) ([]byte, error
 		var cia copyInitialData
 		err := cbor.Unmarshal(message.Data, &cia)
 		if err != nil {
-			er := fmt.Errorf("error: methodREQCopyDst: failed to cbor Unmarshal data: %v, message=%v", err, message)
+			er := fmt.Errorf("error: methodCopyDst: failed to cbor Unmarshal data: %v, message=%v", err, message)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
@@ -341,7 +341,7 @@ func methodREQCopyDst(proc process, message Message, node string) ([]byte, error
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			er := fmt.Errorf("methodREQCopyDst: subprocesses already existed, will not start another subscriber for %v", pn)
+			er := fmt.Errorf("methodCopyDst: subprocesses already existed, will not start another subscriber for %v", pn)
 			proc.errorKernel.logDebug(er)
 
 			// HERE!!!
@@ -549,7 +549,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							ToNode:            cia.DstNode,
 							FromNode:          cia.SrcNode,
 							Method:            cia.DstMethod,
-							ReplyMethod:       REQNone,
+							ReplyMethod:       None,
 							Data:              csaSerialized,
 							IsSubPublishedMsg: true,
 							ACKTimeout:        initialMessage.ACKTimeout,
@@ -619,7 +619,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						ToNode:            cia.DstNode,
 						FromNode:          cia.SrcNode,
 						Method:            cia.DstMethod,
-						ReplyMethod:       REQNone,
+						ReplyMethod:       None,
 						Data:              csaSerialized,
 						IsSubPublishedMsg: true,
 						ACKTimeout:        initialMessage.ACKTimeout,
@@ -683,7 +683,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				ToNode:            cia.SrcNode,
 				FromNode:          cia.DstNode,
 				Method:            cia.SrcMethod,
-				ReplyMethod:       REQNone,
+				ReplyMethod:       None,
 				Data:              csaSerialized,
 				IsSubPublishedMsg: true,
 				ACKTimeout:        message.ACKTimeout,
@@ -785,7 +785,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ToNode:            cia.SrcNode,
 						FromNode:          cia.DstNode,
 						Method:            cia.SrcMethod,
-						ReplyMethod:       REQNone,
+						ReplyMethod:       None,
 						Data:              csaSer,
 						IsSubPublishedMsg: true,
 						ACKTimeout:        message.ACKTimeout,
@@ -818,7 +818,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ToNode:            cia.SrcNode,
 						FromNode:          cia.DstNode,
 						Method:            cia.SrcMethod,
-						ReplyMethod:       REQNone,
+						ReplyMethod:       None,
 						Data:              csaSer,
 						IsSubPublishedMsg: true,
 						ACKTimeout:        message.ACKTimeout,
@@ -972,7 +972,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								ToNode:            cia.SrcNode,
 								FromNode:          cia.DstNode,
 								Method:            cia.SrcMethod,
-								ReplyMethod:       REQNone,
+								ReplyMethod:       None,
 								Data:              csaSerialized,
 								IsSubPublishedMsg: true,
 								ACKTimeout:        message.ACKTimeout,

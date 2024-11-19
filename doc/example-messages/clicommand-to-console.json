@@ -1,13 +1,13 @@
 [
     {
         "toNodes": ["ship1"],
-        "method": "REQCliCommand",
+        "method": "cliCommand",
         "methodArgs": [
             "bash",
             "-c",
             "hostname && curl -v http://debian.org"
         ],
-        "replyMethod": "REQToConsole",
+        "replyMethod": "console",
         "ACKTimeout": 5,
         "retries": 3,
         "replyACKTimeout": 5,

@@ -294,7 +294,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 
 	b, err := cbor.Marshal(sortedNodesAndKeys)
 	if err != nil {
-		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
+		er := fmt.Errorf("error: methodKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
 		c.pki.errorKernel.errSend(proc, message, er, logError)
 
 		return
@@ -307,7 +307,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	// Store the key to the db for persistence.
 	err = c.pki.dbUpdateHash(hash[:])
 	if err != nil {
-		er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
+		er := fmt.Errorf("error: methodKeysAllow, failed to store the hash into the db:  %v", err)
 		c.pki.errorKernel.errSend(proc, message, er, logError)
 
 		return

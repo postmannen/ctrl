@@ -4,7 +4,7 @@
         "fileName": "somefile.log",
         "toNode": "ship2",
         "data": ["/var/log/system.log"],
-        "method":"REQTailFile",
+        "method":"tailFile",
         "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 10

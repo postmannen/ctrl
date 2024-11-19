@@ -25,13 +25,13 @@ Since messages used in startup folder are ment to be delivered locally we can si
     {
         "toNode": "local",
         "fromNode": "central",
-        "method": "REQCliCommand",
+        "method": "cliCommand",
         "methodArgs": [
             "bash",
             "-c",
             "curl localhost:2111/metrics"
         ],
-        "replyMethod": "REQToConsole",
+        "replyMethod": "console",
         "methodTimeout": 10
     }
 ]

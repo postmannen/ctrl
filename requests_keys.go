@@ -9,7 +9,7 @@ import (
 // ---
 
 // Handler to get the public ed25519 key from a node.
-func methodREQPublicKey(proc process, message Message, node string) ([]byte, error) {
+func methodPublicKey(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -48,7 +48,7 @@ func methodREQPublicKey(proc process, message Message, node string) ([]byte, err
 // ----
 
 // Handler to get all the public ed25519 keys from a central server.
-func methodREQKeysRequestUpdate(proc process, message Message, node string) ([]byte, error) {
+func methodKeysRequestUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -85,30 +85,30 @@ func methodREQKeysRequestUpdate(proc process, message Message, node string) ([]b
 				proc.centralAuth.pki.nodesAcked.mu.Lock()
 				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
 
-				er := fmt.Errorf(" <---- methodREQKeysRequestUpdate: received hash from NODE=%v, HASH=%v", message.FromNode, message.Data)
+				er := fmt.Errorf(" <---- methodKeysRequestUpdate: received hash from NODE=%v, HASH=%v", message.FromNode, message.Data)
 				proc.errorKernel.logDebug(er)
 
 				// Check if the received hash is the same as the one currently active,
 				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
-					er := fmt.Errorf("info: methodREQKeysRequestUpdate:  node %v and central have equal keys, nothing to do, exiting key update handler", message.FromNode)
+					er := fmt.Errorf("info: methodKeysRequestUpdate:  node %v and central have equal keys, nothing to do, exiting key update handler", message.FromNode)
 					// proc.errorKernel.infoSend(proc, message, er)
 					proc.errorKernel.logDebug(er)
 					return
 				}
 
-				er = fmt.Errorf("info: methodREQKeysRequestUpdate: node %v and central had not equal keys, preparing to send new version of keys", message.FromNode)
+				er = fmt.Errorf("info: methodKeysRequestUpdate: node %v and central had not equal keys, preparing to send new version of keys", message.FromNode)
 				proc.errorKernel.logDebug(er)
 
-				er = fmt.Errorf("info: methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
+				er = fmt.Errorf("info: methodKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
 				proc.errorKernel.logDebug(er)
 
 				b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
 
 				if err != nil {
-					er := fmt.Errorf("error: methodREQKeysRequestUpdate, failed to marshal keys map: %v", err)
+					er := fmt.Errorf("error: methodKeysRequestUpdate, failed to marshal keys map: %v", err)
 					proc.errorKernel.errSend(proc, message, er, logWarning)
 				}
-				er = fmt.Errorf("----> methodREQKeysRequestUpdate: SENDING KEYS TO NODE=%v", message.FromNode)
+				er = fmt.Errorf("----> methodKeysRequestUpdate: SENDING KEYS TO NODE=%v", message.FromNode)
 				proc.errorKernel.logDebug(er)
 				newReplyMessage(proc, message, b)
 			}()
@@ -122,7 +122,7 @@ func methodREQKeysRequestUpdate(proc process, message Message, node string) ([]b
 // ----
 
 // Handler to receive the public keys from a central server.
-func methodREQKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
+func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -207,7 +207,7 @@ func methodREQKeysDeliverUpdate(proc process, message Message, node string) ([]b
 // are recived on the central server they will be put into a temp key
 // map, and we need to acknowledge them before they are moved into the
 // main key map, and then allowed to be sent out to other nodes.
-func methodREQKeysAllow(proc process, message Message, node string) ([]byte, error) {
+func methodKeysAllow(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -300,7 +300,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 		b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
 		if err != nil {
-			er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
+			er := fmt.Errorf("error: methodKeysAllow, failed to marshal keys map: %v", err)
 			return er
 		}
 
@@ -322,8 +322,8 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		proc.errorKernel.logDebug(er)
 		msg := Message{
 			ToNode:      n,
-			Method:      REQKeysDeliverUpdate,
-			ReplyMethod: REQNone,
+			Method:      KeysDeliverUpdate,
+			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
 
@@ -336,7 +336,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-		er = fmt.Errorf("----> methodREQKeysAllow: SENDING KEYS TO NODE=%v", message.FromNode)
+		er = fmt.Errorf("----> methodKeysAllow: SENDING KEYS TO NODE=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
 	}
 
@@ -344,7 +344,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 	b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
 
 	if err != nil {
-		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
+		er := fmt.Errorf("error: methodKeysAllow, failed to marshal keys map: %v", err)
 		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
@@ -368,9 +368,9 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		proc.errorKernel.logDebug(er)
 		msg := Message{
 			ToNode:      n,
-			Method:      REQKeysDeliverUpdate,
+			Method:      KeysDeliverUpdate,
 			Data:        b,
-			ReplyMethod: REQNone,
+			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
 
@@ -383,7 +383,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-		er = fmt.Errorf("----> methodREQKeysAllow: sending keys update to node=%v", message.FromNode)
+		er = fmt.Errorf("----> methodKeysAllow: sending keys update to node=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
 	}
 
@@ -391,8 +391,8 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 }
 
-func methodREQKeysDelete(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQKeysDelete received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+func methodKeysDelete(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- methodKeysDelete received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logDebug(inf)
 
 	proc.processes.wg.Add(1)
@@ -410,7 +410,7 @@ func methodREQKeysDelete(proc process, message Message, node string) ([]byte, er
 
 			switch {
 			case len(message.MethodArgs) < 1:
-				errCh <- fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: got <1 number methodArgs, want >0")
+				errCh <- fmt.Errorf("error: methodAclGroupNodesDeleteNode: got <1 number methodArgs, want >0")
 				return
 			}
 
@@ -460,7 +460,7 @@ func methodREQKeysDelete(proc process, message Message, node string) ([]byte, er
 
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
+			er := fmt.Errorf("error: methodAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		case out := <-outCh:
