@@ -76,10 +76,6 @@ type Configuration struct {
 	ErrorMessageTimeout int `comment:"Timeout in seconds for error messages"`
 	// Retries for error messages
 	ErrorMessageRetries int `comment:"Retries for error messages"`
-	// Compression z for zstd or g for gzip
-	Compression string `comment:"Compression z for zstd or g for gzip"`
-	// Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor
-	Serialization string `comment:"Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor"`
 	// SetBlockProfileRate for block profiling
 	SetBlockProfileRate int `comment:"SetBlockProfileRate for block profiling"`
 	// EnableSocket for enabling the creation of a ctrl.sock file
@@ -177,8 +173,6 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", CheckEnv("EXPOSE_DATA_FOLDER", c.ExposeDataFolder).(string), "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", CheckEnv("ERROR_MESSAGE_TIMEOUT", c.ErrorMessageTimeout).(int), "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", CheckEnv("ERROR_MESSAGE_RETRIES", c.ErrorMessageRetries).(int), "The number of if times to retry an error message before we drop it")
-	flag.StringVar(&c.Compression, "compression", CheckEnv("COMPRESSION", c.Compression).(string), "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
-	flag.StringVar(&c.Serialization, "serialization", CheckEnv("SERIALIZATION", c.Serialization).(string), "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", CheckEnv("BLOCK_PROFILE_RATE", c.SetBlockProfileRate).(int), "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
 	flag.BoolVar(&c.EnableSocket, "enableSocket", CheckEnv("ENABLE_SOCKET", c.EnableSocket).(bool), "true/false, for enabling the creation of ctrl.sock file")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", CheckEnv("ENABLE_SIGNATURE_CHECK", c.EnableSignatureCheck).(bool), "true/false *TESTING* enable signature checking.")
@@ -254,8 +248,6 @@ func newConfigurationDefaults() Configuration {
 		ExposeDataFolder:          "",
 		ErrorMessageTimeout:       60,
 		ErrorMessageRetries:       10,
-		Compression:               "z",
-		Serialization:             "cbor",
 		SetBlockProfileRate:       0,
 		EnableSocket:              true,
 		EnableSignatureCheck:      false,

@@ -1,16 +1,11 @@
 package ctrl
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	"crypto/ed25519"
-	"encoding/gob"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -447,14 +442,12 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg, subject string) {
+func (p process) messageSubscriberHandlerNats(natsConn *nats.Conn, thisNode string, msg *nats.Msg, subject string) {
 
 	// Variable to hold a copy of the message data, so we don't mess with
 	// the original data since the original is a pointer value.
 	msgData := make([]byte, len(msg.Data))
 	copy(msgData, msg.Data)
-
-	// fmt.Printf(" * DEBUG: header value on subscriberHandler: %v\n", msg.Header)
 
 	// If debugging is enabled, print the source node name of the nats messages received.
 	if val, ok := msg.Header["fromNode"]; ok {
@@ -462,87 +455,29 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		p.errorKernel.logDebug(er)
 	}
 
-	// If compression is used, decompress it to get the gob data. If
-	// compression is not used it is the gob encoded data we already
-	// got in msgData so we do nothing with it.
-	if val, ok := msg.Header["cmp"]; ok {
-		switch val[0] {
-		case "z":
-			zr, err := zstd.NewReader(nil)
-			if err != nil {
-				er := fmt.Errorf("error: zstd NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logWarning)
-				return
-			}
-			msgData, err = zr.DecodeAll(msg.Data, nil)
-			if err != nil {
-				er := fmt.Errorf("error: zstd decoding failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logWarning)
-				zr.Close()
-				return
-			}
-
-			zr.Close()
-
-		case "g":
-			r := bytes.NewReader(msgData)
-			gr, err := gzip.NewReader(r)
-			if err != nil {
-				er := fmt.Errorf("error: gzip NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logError)
-				return
-			}
-
-			b, err := io.ReadAll(gr)
-			if err != nil {
-				er := fmt.Errorf("error: gzip ReadAll failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logWarning)
-				return
-			}
-
-			gr.Close()
-
-			msgData = b
-		}
+	zr, err := zstd.NewReader(nil)
+	if err != nil {
+		er := fmt.Errorf("error: zstd NewReader failed: %v", err)
+		p.errorKernel.errSend(p, Message{}, er, logWarning)
+		return
 	}
+	msgData, err = zr.DecodeAll(msg.Data, nil)
+	if err != nil {
+		er := fmt.Errorf("error: zstd decoding failed: %v", err)
+		p.errorKernel.errSend(p, Message{}, er, logWarning)
+		zr.Close()
+		return
+	}
+
+	zr.Close()
 
 	message := Message{}
 
-	// Check if serialization is specified.
-	// Will default to gob serialization if nothing or non existing value is specified.
-	if val, ok := msg.Header["serial"]; ok {
-		// fmt.Printf(" * DEBUG: ok = %v, map = %v, len of val = %v\n", ok, msg.Header, len(val))
-		switch val[0] {
-		case "cbor":
-			err := cbor.Unmarshal(msgData, &message)
-			if err != nil {
-				er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er, logError)
-				return
-			}
-		default: // Deaults to gob if no match was found.
-			r := bytes.NewReader(msgData)
-			gobDec := gob.NewDecoder(r)
-
-			err := gobDec.Decode(&message)
-			if err != nil {
-				er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er, logError)
-				return
-			}
-		}
-
-	} else {
-		// Default to gob if serialization flag was not specified.
-		r := bytes.NewReader(msgData)
-		gobDec := gob.NewDecoder(r)
-
-		err := gobDec.Decode(&message)
-		if err != nil {
-			er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-			p.errorKernel.errSend(p, message, er, logError)
-			return
-		}
+	err = cbor.Unmarshal(msgData, &message)
+	if err != nil {
+		er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
+		p.errorKernel.errSend(p, message, er, logError)
+		return
 	}
 
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
@@ -782,7 +717,7 @@ func (p process) subscribeMessages() *nats.Subscription {
 		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// Start up the subscriber handler.
-		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
+		go p.messageSubscriberHandlerNats(p.natsConn, p.configuration.NodeName, msg, subject)
 	})
 	if err != nil {
 		er := fmt.Errorf("error: Subscribe failed: %v", err)
@@ -797,25 +732,18 @@ func (p process) subscribeMessages() *nats.Subscription {
 // process. The function should be run as a goroutine, and will run
 // as long as the process it belongs to is running.
 func (p process) publishMessages(natsConn *nats.Conn) {
-	var once sync.Once
 
 	var zEnc *zstd.Encoder
-	// Prepare a zstd encoder if enabled. By enabling it here before
-	// looping over the messages to send below, we can reuse the zstd
-	// encoder for all messages.
-	switch p.configuration.Compression {
-	case "z": // zstd
-		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-		enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
-		if err != nil {
-			er := fmt.Errorf("error: zstd new encoder failed: %v", err)
-			p.errorKernel.logError(er)
-			os.Exit(1)
-		}
-		zEnc = enc
-		defer zEnc.Close()
+	// Prepare a zstd encoder so we can reuse the zstd encoder for all messages.
 
+	enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
+	if err != nil {
+		er := fmt.Errorf("error: zstd new encoder failed: %v", err)
+		p.errorKernel.logError(er)
+		os.Exit(1)
 	}
+	zEnc = enc
+	defer zEnc.Close()
 
 	// Adding a timer that will be used for when to remove the sub process
 	// publisher. The timer is reset each time a message is published with
@@ -859,7 +787,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			m.ArgSignature = p.addMethodArgSignature(m)
 			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
-			go p.publishAMessage(m, zEnc, &once, natsConn)
+			go p.publishAMessage(m, zEnc, natsConn)
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
@@ -876,7 +804,7 @@ func (p process) addMethodArgSignature(m Message) []byte {
 	return sign
 }
 
-func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once, natsConn *nats.Conn) {
+func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, natsConn *nats.Conn) {
 	// Create the initial header, and set values below depending on the
 	// various configuration options chosen.
 	natsMsgHeader := make(nats.Header)
@@ -885,94 +813,25 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once,
 	// The serialized value of the nats message payload
 	var natsMsgPayloadSerialized []byte
 
-	// encode the message structure into gob binary format before putting
-	// it into a nats message.
-	// Prepare a gob encoder with a buffer before we start the loop
-	switch p.configuration.Serialization {
-	case "cbor":
-		b, err := cbor.Marshal(m)
-		if err != nil {
-			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			p.errorKernel.logDebug(er)
-			return
-		}
-
-		natsMsgPayloadSerialized = b
-		natsMsgHeader["serial"] = []string{p.configuration.Serialization}
-
-	default:
-		var bufGob bytes.Buffer
-		gobEnc := gob.NewEncoder(&bufGob)
-		err := gobEnc.Encode(m)
-		if err != nil {
-			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			p.errorKernel.logDebug(er)
-			return
-		}
-
-		natsMsgPayloadSerialized = bufGob.Bytes()
-		natsMsgHeader["serial"] = []string{"gob"}
+	// encode the message structure into cbor
+	b, err := cbor.Marshal(m)
+	if err != nil {
+		er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
+		p.errorKernel.logDebug(er)
+		return
 	}
+
+	natsMsgPayloadSerialized = b
 
 	// Get the process name so we can look up the process in the
 	// processes map, and increment the message counter.
 	pn := processNameGet(p.subject.name(), processKindPublisher)
 
-	// The compressed value of the nats message payload. The content
-	// can either be compressed or in it's original form depening on
-	// the outcome of the switch below, and if compression were chosen
-	// or not.
-	var natsMsgPayloadCompressed []byte
-
 	// Compress the data payload if selected with configuration flag.
 	// The compression chosen is later set in the nats msg header when
 	// calling p.messageDeliverNats below.
-	switch p.configuration.Compression {
-	case "z": // zstd
-		natsMsgPayloadCompressed = zEnc.EncodeAll(natsMsgPayloadSerialized, nil)
-		natsMsgHeader["cmp"] = []string{p.configuration.Compression}
 
-		// p.zEncMutex.Lock()
-		// zEnc.Reset(nil)
-		// p.zEncMutex.Unlock()
-
-	case "g": // gzip
-		var buf bytes.Buffer
-		func() {
-			gzipW := gzip.NewWriter(&buf)
-			defer gzipW.Close()
-			defer gzipW.Flush()
-			_, err := gzipW.Write(natsMsgPayloadSerialized)
-			if err != nil {
-				er := fmt.Errorf("error: failed to write gzip: %v", err)
-				p.errorKernel.logDebug(er)
-				return
-			}
-
-		}()
-
-		natsMsgPayloadCompressed = buf.Bytes()
-		natsMsgHeader["cmp"] = []string{p.configuration.Compression}
-
-	case "": // no compression
-		natsMsgPayloadCompressed = natsMsgPayloadSerialized
-		natsMsgHeader["cmp"] = []string{"none"}
-
-	default: // no compression
-		// Allways log the error to console.
-		er := fmt.Errorf("error: publishing: compression type not defined, setting default to no compression")
-		p.errorKernel.logDebug(er)
-
-		// We only wan't to send the error message to errorCentral once.
-		once.Do(func() {
-			p.errorKernel.logDebug(er)
-		})
-
-		// No compression, so we just assign the value of the serialized
-		// data directly to the variable used with messageDeliverNats.
-		natsMsgPayloadCompressed = natsMsgPayloadSerialized
-		natsMsgHeader["cmp"] = []string{"none"}
-	}
+	natsMsgPayloadCompressed := zEnc.EncodeAll(natsMsgPayloadSerialized, nil)
 
 	// Create the Nats message with headers and payload, and do the
 	// sending of the message.
@@ -986,34 +845,4 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once,
 		p.processes.active.procNames[pn] = p
 		p.processes.active.mu.Unlock()
 	}
-
-	// // Handle the error.
-	// //
-	// // NOTE: None of the processes above generate an error, so the the
-	// // if clause will never be triggered. But keeping it here as an example
-	// // for now for how to handle errors.
-	// if err != nil {
-	// 	// Create an error type which also creates a channel which the
-	// 	// errorKernel will send back the action about what to do.
-	// 	ep := errorEvent{
-	// 		//errorType:     logOnly,
-	// 		process:       p,
-	// 		message:       m,
-	// 		errorActionCh: make(chan errorAction),
-	// 	}
-	// 	p.errorCh <- ep
-	//
-	// 	// Wait for the response action back from the error kernel, and
-	// 	// decide what to do. Should we continue, quit, or .... ?
-	// 	switch <-ep.errorActionCh {
-	// 	case errActionContinue:
-	// 		// Just log and continue
-	// 		log.Printf("The errAction was continue...so we're continuing\n")
-	// 	case errActionKill:
-	// 		log.Printf("The errAction was kill...so we're killing\n")
-	// 		// ....
-	// 	default:
-	// 		log.Printf("Info: publishMessages: The errAction was not defined, so we're doing nothing\n")
-	// 	}
-	// }
 }
