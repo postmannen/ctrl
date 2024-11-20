@@ -84,9 +84,6 @@ type Configuration struct {
 	EnableSignatureCheck bool `comment:"EnableSignatureCheck to enable signature checking"`
 	// EnableAclCheck to enable ACL checking
 	EnableAclCheck bool `comment:"EnableAclCheck to enable ACL checking"`
-
-	// EnableDebug will also enable printing all the messages received in the errorKernel to STDERR.
-	EnableDebug bool `comment:"EnableDebug will also enable printing all the messages received in the errorKernel to STDERR."`
 	// LogLevel
 	LogLevel             string `comment:"LogLevel error/info/warning/debug/none."`
 	LogConsoleTimestamps bool   `comment:"LogConsoleTimestamps true/false for enabling or disabling timestamps when printing errors and information to stderr"`
@@ -178,7 +175,6 @@ func NewConfiguration() *Configuration {
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", CheckEnv("ENABLE_SIGNATURE_CHECK", c.EnableSignatureCheck).(bool), "true/false *TESTING* enable signature checking.")
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", CheckEnv("ENABLE_ACL_CHECK", c.EnableAclCheck).(bool), "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.StartProcesses.IsCentralAuth, "isCentralAuth", CheckEnv("IS_CENTRAL_AUTH", c.StartProcesses.IsCentralAuth).(bool), "true/false, *TESTING* is this the central auth server")
-	flag.BoolVar(&c.EnableDebug, "enableDebug", CheckEnv("ENABLE_DEBUG", c.EnableDebug).(bool), "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
 	flag.StringVar(&c.LogLevel, "logLevel", CheckEnv("LOG_LEVEL", c.LogLevel).(string), "error/info/warning/debug/none")
 	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", CheckEnv("LOG_CONSOLE_TIMESTAMPS", c.LogConsoleTimestamps).(bool), "true/false for enabling or disabling timestamps when printing errors and information to stderr")
 	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", CheckEnv("KEEP_PUBLISHERS_ALIVE_FOR", c.KeepPublishersAliveFor).(int), "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
@@ -252,7 +248,6 @@ func newConfigurationDefaults() Configuration {
 		EnableSocket:              true,
 		EnableSignatureCheck:      false,
 		EnableAclCheck:            false,
-		EnableDebug:               false,
 		LogLevel:                  "debug",
 		LogConsoleTimestamps:      false,
 		KeepPublishersAliveFor:    10,
