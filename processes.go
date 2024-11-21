@@ -347,9 +347,9 @@ func (p *processes) Start(proc process) {
 		}
 
 		_, err = js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
-			Name:        "orders",
-			Description: "orders stream",
-			Subjects:    []string{"orders.>"},
+			Name:        "nodes",
+			Description: "nodes stream",
+			Subjects:    []string{"nodes.>"},
 			// Discard older messages and keep only the last one.
 			MaxMsgsPerSubject: 1,
 		})
@@ -361,7 +361,7 @@ func (p *processes) Start(proc process) {
 		i := 0
 		for {
 			// TODO:
-			_, err := js.Publish(proc.ctx, "orders.shop1", []byte(fmt.Sprintf("order nr. %v", i)))
+			_, err := js.Publish(proc.ctx, "nodes.btdev1", []byte(fmt.Sprintf("message nr. %v", i)))
 			if err != nil {
 				log.Fatalf("error: js failed to publish message: %v\n", err)
 			}
@@ -380,7 +380,7 @@ func (p *processes) Start(proc process) {
 			log.Fatalf("error: jetstream new failed: %v\n", err)
 		}
 
-		stream, err := js.Stream(proc.ctx, "orders")
+		stream, err := js.Stream(proc.ctx, "nodes")
 		if err != nil {
 			log.Fatalf("error: js.Stream failed: %v\n", err)
 		}
