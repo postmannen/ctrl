@@ -385,7 +385,7 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 	proc := newProcess(p.ctx, p.processes.server, sub, processKindSubscriber)
 	proc.procFunc = pf
 
-	go proc.spawnWorker()
+	go proc.Start()
 }
 
 // publisher will start a publisher process. It takes the initial process, request method,
@@ -398,7 +398,7 @@ func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, pr
 	proc.procFunc = pf
 	proc.isLongRunningPublisher = true
 
-	go proc.spawnWorker()
+	go proc.Start()
 }
 
 // ---------------------------------------------------------------

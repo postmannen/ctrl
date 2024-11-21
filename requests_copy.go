@@ -235,7 +235,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		copySrcSubProc.handler = copySrcSubHandler()
 
 		// The process will be killed when the context expires.
-		go copySrcSubProc.spawnWorker()
+		go copySrcSubProc.Start()
 
 		// Send a message over the the node where the destination file will be written,
 		// to also start up a sub process on the destination node.
@@ -362,7 +362,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		copyDstSubProc.handler = copyDstSubHandler()
 
 		// The process will be killed when the context expires.
-		go copyDstSubProc.spawnWorker()
+		go copyDstSubProc.Start()
 
 		fp := filepath.Join(cia.DstDir, cia.DstFile)
 		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copyDstSubProc.processName, node, fp, subProcessName)

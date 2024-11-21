@@ -577,7 +577,7 @@ func (s *server) routeMessagesToProcess() {
 						proc = newProcess(s.ctx, s, sub, processKindPublisher)
 					}
 
-					proc.spawnWorker()
+					proc.Start()
 					er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
 					s.errorKernel.logDebug(er)
 
