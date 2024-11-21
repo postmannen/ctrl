@@ -415,7 +415,7 @@ func (s *server) directSAMSChRead() {
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
 				for i := range sams {
-					processName := processNameGet(sams[i].Subject.name(), processKindSubscriber)
+					processName := processNameGet(sams[i].Subject.name(), processKindSubscriberNats)
 
 					s.processes.active.mu.Lock()
 					p := s.processes.active.procNames[processName]
@@ -516,7 +516,7 @@ func (s *server) routeMessagesToProcess() {
 					m := sam.Message
 
 					subjName := sam.Subject.name()
-					pn := processNameGet(subjName, processKindPublisher)
+					pn := processNameGet(subjName, processKindPublisherNats)
 
 					sendOK := func() bool {
 						var ctxCanceled bool
@@ -572,9 +572,9 @@ func (s *server) routeMessagesToProcess() {
 					var proc process
 					switch {
 					case m.IsSubPublishedMsg:
-						proc = newSubProcess(s.ctx, s, sub, processKindPublisher)
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisherNats)
 					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisher)
+						proc = newProcess(s.ctx, s, sub, processKindPublisherNats)
 					}
 
 					proc.Start()

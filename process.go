@@ -23,8 +23,10 @@ import (
 type processKind string
 
 const (
-	processKindSubscriber processKind = "subscriber"
-	processKindPublisher  processKind = "publisher"
+	processKindSubscriberNats     processKind = "subscriberNats"
+	processKindPublisherNats      processKind = "publisherNats"
+	processKindConsumerJetstream  processKind = "consumerJetstream"
+	processKindPublisherJetstream processKind = "publisherJetstream"
 )
 
 // process holds all the logic to handle a message type and it's
@@ -165,11 +167,11 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 	// process. We can do that since a process can only handle
 	// one message queue.
 
-	if proc.processKind == processKindPublisher {
-		proc.processName = processNameGet(proc.subject.name(), processKindPublisher)
+	if proc.processKind == processKindPublisherNats {
+		proc.processName = processNameGet(proc.subject.name(), processKindPublisherNats)
 	}
-	if proc.processKind == processKindSubscriber {
-		proc.processName = processNameGet(proc.subject.name(), processKindSubscriber)
+	if proc.processKind == processKindSubscriberNats {
+		proc.processName = processNameGet(proc.subject.name(), processKindSubscriberNats)
 	}
 
 	return proc
@@ -191,13 +193,13 @@ func (p process) Start() {
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
-	if p.processKind == processKindPublisher {
-		p.startPublisher()
+	if p.processKind == processKindPublisherNats {
+		p.startPublisherNats()
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
-	if p.processKind == processKindSubscriber {
+	if p.processKind == processKindSubscriberNats {
 		p.startSubscriberNats()
 	}
 
@@ -210,7 +212,7 @@ func (p process) Start() {
 	p.errorKernel.logDebug(er)
 }
 
-func (p process) startPublisher() {
+func (p process) startPublisherNats() {
 	// If there is a procFunc for the process, start it.
 	if p.procFunc != nil {
 		// Initialize the channel for communication between the proc and
@@ -228,7 +230,7 @@ func (p process) startPublisher() {
 		}()
 	}
 
-	go p.publishMessages(p.natsConn)
+	go p.publishMessagesNats(p.natsConn)
 }
 
 func (p process) startSubscriberNats() {
@@ -741,7 +743,7 @@ func (p process) subscribeMessagesNats() *nats.Subscription {
 // publishMessages will do the publishing of messages for one single
 // process. The function should be run as a goroutine, and will run
 // as long as the process it belongs to is running.
-func (p process) publishMessages(natsConn *nats.Conn) {
+func (p process) publishMessagesNats(natsConn *nats.Conn) {
 
 	var zEnc *zstd.Encoder
 	// Prepare a zstd encoder so we can reuse the zstd encoder for all messages.
@@ -797,7 +799,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			m.ArgSignature = p.addMethodArgSignature(m)
 			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
-			go p.publishAMessage(m, zEnc, natsConn)
+			go p.publishAMessageNats(m, zEnc, natsConn)
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
@@ -814,7 +816,7 @@ func (p process) addMethodArgSignature(m Message) []byte {
 	return sign
 }
 
-func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, natsConn *nats.Conn) {
+func (p process) publishAMessageNats(m Message, zEnc *zstd.Encoder, natsConn *nats.Conn) {
 	// Create the initial header, and set values below depending on the
 	// various configuration options chosen.
 	natsMsgHeader := make(nats.Header)
@@ -835,7 +837,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, natsConn *nats.C
 
 	// Get the process name so we can look up the process in the
 	// processes map, and increment the message counter.
-	pn := processNameGet(p.subject.name(), processKindPublisher)
+	pn := processNameGet(p.subject.name(), processKindPublisherNats)
 
 	// Compress the data payload if selected with configuration flag.
 	// The compression chosen is later set in the nats msg header when
