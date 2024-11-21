@@ -95,6 +95,8 @@ type Configuration struct {
 	KeepPublishersAliveFor int `comment:"KeepPublishersAliveFor number of seconds Timer that will be used for when to remove the sub process publisher. The timer is reset each time a message is published with the process, so the sub process publisher will not be removed until it have not received any messages for the given amount of time."`
 
 	StartProcesses StartProcesses
+
+	Jetstreams string `comment:"Comma separated list of streams to consume messages from"`
 }
 
 type StartProcesses struct {
@@ -178,6 +180,7 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.LogLevel, "logLevel", CheckEnv("LOG_LEVEL", c.LogLevel).(string), "error/info/warning/debug/none")
 	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", CheckEnv("LOG_CONSOLE_TIMESTAMPS", c.LogConsoleTimestamps).(bool), "true/false for enabling or disabling timestamps when printing errors and information to stderr")
 	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", CheckEnv("KEEP_PUBLISHERS_ALIVE_FOR", c.KeepPublishersAliveFor).(int), "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
+	flag.StringVar(&c.Jetstreams, "jetstreams", CheckEnv("JETSTREAMS", c.Jetstreams).(string), "Comma separated list of Jetstrams to consume")
 
 	// Start of Request publishers/subscribers
 
@@ -204,6 +207,7 @@ func NewConfiguration() *Configuration {
 	case c.NodeName == "":
 		log.Fatalf("error: the nodeName config option or flag cannot be empty, check -help\n")
 	case c.CentralNodeName == "":
+		// TODO: Check out if we should drop to have this as a mandatory flag?
 		log.Fatalf("error: the centralNodeName config option or flag cannot be empty, check -help\n")
 	}
 
@@ -251,6 +255,7 @@ func newConfigurationDefaults() Configuration {
 		LogLevel:                  "debug",
 		LogConsoleTimestamps:      false,
 		KeepPublishersAliveFor:    10,
+		Jetstreams:                "",
 
 		StartProcesses: StartProcesses{
 			StartPubHello:          30,
