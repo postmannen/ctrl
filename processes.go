@@ -386,8 +386,9 @@ func (p *processes) Start(proc process) {
 		}
 
 		consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
-			Name:    "order_processor",
-			Durable: "order_processor",
+			Name:           "order_processor",
+			Durable:        "order_processor",
+			FilterSubjects: []string{fmt.Sprintf("nodes.%v", proc.server.nodeName), "nodes.all"},
 		})
 		if err != nil {
 			log.Fatalf("error: create or update consumer failed: %v\n", err)
