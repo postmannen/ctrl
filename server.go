@@ -337,7 +337,7 @@ func (s *server) Start() {
 	//
 	// The context of the initial process are set in processes.Start.
 	sub := newSubject(Initial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s, sub, "")
+	s.processInitial = newProcess(context.TODO(), s, sub, streamInfo{}, "")
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -574,7 +574,7 @@ func (s *server) routeMessagesToProcess() {
 					case m.IsSubPublishedMsg:
 						proc = newSubProcess(s.ctx, s, sub, processKindPublisherNats)
 					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisherNats)
+						proc = newProcess(s.ctx, s, sub, streamInfo{}, processKindPublisherNats)
 					}
 
 					proc.Start()

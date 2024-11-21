@@ -149,3 +149,16 @@ type subjectName string
 func (s Subject) name() subjectName {
 	return subjectName(fmt.Sprintf("%s.%s", s.ToNode, s.Method))
 }
+
+type streamInfo struct {
+	name     string
+	subjects []string
+}
+
+func newStreamInfo(name string, subjects []string) streamInfo {
+	s := streamInfo{
+		name:     name,
+		subjects: subjects,
+	}
+	return s
+}

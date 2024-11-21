@@ -44,8 +44,10 @@ type process struct {
 	messageID int
 	// the subject used for the specific process. One process
 	// can contain only one sender on a message bus, hence
-	// also one subject
+	// also one subject.
 	subject Subject
+	// The jetstram stream.
+	streamInfo streamInfo
 	// Put a node here to be able know the node a process is at.
 	node Node
 	// The processID for the current process
@@ -125,7 +127,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
+func newProcess(ctx context.Context, server *server, subject Subject, stream streamInfo, processKind processKind) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	server.processes.mu.Lock()
 	server.processes.lastProcessID++
@@ -163,24 +165,24 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		js:               js,
 	}
 
-	// We use the full name of the subject to identify a unique
-	// process. We can do that since a process can only handle
-	// one message queue.
+	// We use the  name of the subject to identify a unique process.
 
-	if proc.processKind == processKindPublisherNats {
+	switch proc.processKind {
+	case processKindPublisherNats:
 		proc.processName = processNameGet(proc.subject.name(), processKindPublisherNats)
-	}
-	if proc.processKind == processKindSubscriberNats {
+	case processKindSubscriberNats:
 		proc.processName = processNameGet(proc.subject.name(), processKindSubscriberNats)
+	case processKindConsumerJetstream:
+		proc.processName = processNameGet(subjectName(proc.streamInfo.name), processKindConsumerJetstream)
+	case processKindPublisherJetstream:
+		proc.processName = processNameGet(subjectName(proc.streamInfo.name), processKindPublisherJetstream)
 	}
 
 	return proc
 }
 
-// The purpose of this function is to check if we should start a
-// publisher or subscriber process, where a process is a go routine
-// that will handle either sending or receiving messages on one
-// subject.
+// Start a publisher or subscriber process, where a process is a go routine
+// that will handle either sending or receiving messages on one subject.
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.

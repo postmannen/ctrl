@@ -281,7 +281,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 // newSubProcess is a wrapper around newProcess which sets the isSubProcess value to true.
 func newSubProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
-	p := newProcess(ctx, server, subject, processKind)
+	p := newProcess(ctx, server, subject, streamInfo{}, processKind)
 	p.isSubProcess = true
 
 	return p

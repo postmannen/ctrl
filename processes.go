@@ -382,7 +382,7 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 	}
 
 	fmt.Printf("DEBUG:::startup subscriber, subject: %v\n", sub)
-	proc := newProcess(p.ctx, p.processes.server, sub, processKindSubscriberNats)
+	proc := newProcess(p.ctx, p.processes.server, sub, streamInfo{}, processKindSubscriberNats)
 	proc.procFunc = pf
 
 	go proc.Start()
@@ -394,7 +394,7 @@ func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, pr
 	er := fmt.Errorf("starting %v publisher: %#v", m, p.node)
 	p.errorKernel.logDebug(er)
 	sub := newSubject(m, string(p.node))
-	proc := newProcess(p.ctx, p.processes.server, sub, processKindPublisherNats)
+	proc := newProcess(p.ctx, p.processes.server, sub, streamInfo{}, processKindPublisherNats)
 	proc.procFunc = pf
 	proc.isLongRunningPublisher = true
 
