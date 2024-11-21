@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -337,6 +338,78 @@ func (p *processes) Start(proc process) {
 	}
 
 	proc.startup.subscriber(proc, PublicKey, nil)
+
+	// ProcFunc for Jetstream publishers.
+	pfJetstreamPublishers := func(ctx context.Context, procFuncCh chan Message) error {
+		js, err := jetstream.New(proc.natsConn)
+		if err != nil {
+			log.Fatalf("error: jetstream new failed: %v\n", err)
+		}
+
+		_, err = js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
+			Name:        "orders",
+			Description: "orders stream",
+			Subjects:    []string{"orders.>"},
+			// Discard older messages and keep only the last one.
+			MaxMsgsPerSubject: 1,
+		})
+
+		if err != nil {
+			log.Fatalf("error: jetstream create or update failed: %v\n", err)
+		}
+
+		i := 0
+		for {
+			// TODO:
+			_, err := js.Publish(proc.ctx, "orders.shop1", []byte(fmt.Sprintf("order nr. %v", i)))
+			if err != nil {
+				log.Fatalf("error: js failed to publish message: %v\n", err)
+			}
+
+			log.Printf("published message: %v\n", i)
+			time.Sleep(time.Second * 1)
+			i++
+		}
+	}
+	proc.startup.publisher(proc, JetStreamPublishers, pfJetstreamPublishers)
+
+	// Procfunc for Jetstream consumers.
+	pfJetstreamConsumers := func(ctx context.Context, procFuncCh chan Message) error {
+		js, err := jetstream.New(proc.natsConn)
+		if err != nil {
+			log.Fatalf("error: jetstream new failed: %v\n", err)
+		}
+
+		stream, err := js.Stream(proc.ctx, "orders")
+		if err != nil {
+			log.Fatalf("error: js.Stream failed: %v\n", err)
+		}
+
+		consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
+			Name:    "order_processor",
+			Durable: "order_processor",
+		})
+		if err != nil {
+			log.Fatalf("error: create or update consumer failed: %v\n", err)
+		}
+
+		cctx, err := consumer.Consume(func(msg jetstream.Msg) {
+			log.Printf("Received message: %v, with data: %v\n", string(msg.Subject()), string(msg.Data()))
+			msg.Ack()
+		})
+		if err != nil {
+			log.Fatalf("error: create or update consumer failed: %v\n", err)
+		}
+
+		defer cctx.Stop()
+
+		<-proc.ctx.Done()
+
+		return nil
+	}
+
+	proc.startup.subscriber(proc, JetstreamConsumers, pfJetstreamConsumers)
+
 }
 
 // Stop all subscriber processes.

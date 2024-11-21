@@ -159,6 +159,10 @@ const (
 	AclExport = "aclExport"
 	// REQAclImport
 	AclImport = "aclImport"
+	// Jetstreams Consumers
+	JetstreamConsumers = "jetstreamConsumers"
+	// JetstreamPublishers
+	JetStreamPublishers = "jetstreamPublishers"
 )
 
 type HandlerFunc func(proc process, message Message, node string) ([]byte, error)
@@ -212,6 +216,8 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			AclExport:                     HandlerFunc(methodAclExport),
 			AclImport:                     HandlerFunc(methodAclImport),
 			Test:                          HandlerFunc(methodTest),
+			JetstreamConsumers:            HandlerFunc(jetstreamsConsumers),
+			JetStreamPublishers:           HandlerFunc(jetstreamPublishers),
 		},
 	}
 

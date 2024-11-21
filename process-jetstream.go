@@ -12,12 +12,6 @@ import (
 // received, check the MessageType field in the message to decide what
 // kind of message it is and then it will check how to handle that message type,
 // and then call the correct method handler for it.
-//
-// This handler function should be started in it's own go routine,so
-// one individual handler is started per message received so we can keep
-// the state of the message being processed, and then reply back to the
-// correct sending process's reply, meaning so we ACK back to the correct
-// publisher.
 func (p process) messageSubscriberHandlerJetstream(thisNode string, msg jetstream.Msg, subject string) {
 
 	// Variable to hold a copy of the message data.
