@@ -343,65 +343,69 @@ func (p *processes) Start(proc process) {
 	// --------------------------------------------------
 	// ProcFunc for Jetstream publishers.
 	// --------------------------------------------------
-	pfJetstreamPublishers := func(ctx context.Context, procFuncCh chan Message) error {
-		js, err := jetstream.New(proc.natsConn)
-		if err != nil {
-			log.Fatalf("error: jetstream new failed: %v\n", err)
-		}
+	if proc.configuration.StartProcesses.StartJetstreamPublisher {
+		pfJetstreamPublishers := func(ctx context.Context, procFuncCh chan Message) error {
+			js, err := jetstream.New(proc.natsConn)
+			if err != nil {
+				log.Fatalf("error: jetstream new failed: %v\n", err)
+			}
 
-		_, err = js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
-			Name:        "nodes",
-			Description: "nodes stream",
-			Subjects:    []string{"nodes.>"},
-			// Discard older messages and keep only the last one.
-			MaxMsgsPerSubject: 1,
-		})
+			_, err = js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
+				Name:        "nodes",
+				Description: "nodes stream",
+				Subjects:    []string{"nodes.>"},
+				// Discard older messages and keep only the last one.
+				MaxMsgsPerSubject: 1,
+			})
 
-		if err != nil {
-			log.Fatalf("error: jetstream create or update failed: %v\n", err)
-		}
+			if err != nil {
+				log.Fatalf("error: jetstream create or update failed: %v\n", err)
+			}
 
-		// REMOVE: Go routine for injecting messages for testing
-		go func() {
-			i := 0
+			// REMOVE: Go routine for injecting messages for testing
+			// go func() {
+			// 	i := 0
+			// 	for {
+			// 		m := Message{
+			// 			ToNode:          "btdev1",
+			// 			FromNode:        proc.node,
+			// 			JetstreamToNode: "btdev1",
+			// 			Method:          CliCommand,
+			// 			MethodArgs:      []string{"/bin/ash", "-c", "tree"},
+			// 			ReplyMethod:     Console,
+			// 			MethodTimeout:   3,
+			// 			//Data:   []byte("some text in here............"),
+			// 		}
+			// 		proc.jetstreamOut <- m
+			//
+			// 		log.Printf("published message: %v\n", i)
+			// 		time.Sleep(time.Second * 1)
+			// 		i++
+			// 	}
+			//
+			// }()
+
 			for {
-				m := Message{
-					ToNode:        "btdev1",
-					FromNode:      proc.node,
-					Method:        CliCommand,
-					MethodArgs:    []string{"/bin/ash", "-c", "tree"},
-					ReplyMethod:   Console,
-					MethodTimeout: 3,
-					//Data:   []byte("some text in here............"),
+				// TODO:
+				select {
+				case msg := <-proc.jetstreamOut:
+					b, err := json.Marshal(msg)
+					if err != nil {
+						log.Fatalf("error: pfJetstreamPublishers: js failed to marshal message: %v\n", err)
+					}
+
+					subject := fmt.Sprintf("nodes.%v", msg.JetstreamToNode)
+					_, err = js.Publish(proc.ctx, subject, b)
+					if err != nil {
+						log.Fatalf("error: pfJetstreamPublishers:js failed to publish message: %v\n", err)
+					}
+				case <-ctx.Done():
+					return fmt.Errorf("%v", "info: pfJetstreamPublishers: got <-ctx.done")
 				}
-				proc.jetstreamOut <- m
-
-				log.Printf("published message: %v\n", i)
-				time.Sleep(time.Second * 1)
-				i++
-			}
-
-		}()
-
-		for {
-			// TODO:
-			select {
-			case msgJS := <-proc.jetstreamOut:
-				b, err := json.Marshal(msgJS)
-				if err != nil {
-					log.Fatalf("error: pfJetstreamPublishers: js failed to marshal message: %v\n", err)
-				}
-
-				_, err = js.Publish(proc.ctx, "nodes.btdev1", b)
-				if err != nil {
-					log.Fatalf("error: pfJetstreamPublishers:js failed to publish message: %v\n", err)
-				}
-			case <-ctx.Done():
-				return fmt.Errorf("%v", "info: pfJetstreamPublishers: got <-ctx.done")
 			}
 		}
+		proc.startup.publisher(proc, JetStreamPublishers, pfJetstreamPublishers)
 	}
-	proc.startup.publisher(proc, JetStreamPublishers, pfJetstreamPublishers)
 
 	// --------------------------------------------------
 	// Procfunc for Jetstream consumers.
@@ -412,57 +416,59 @@ func (p *processes) Start(proc process) {
 	// After a jetstream message is picked up from the stream, the steward message
 	// will be extracted from the data field, and the ctrl message will be put
 	// on the local delivery channel, and handled as a normal ctrl message.
-	pfJetstreamConsumers := func(ctx context.Context, procFuncCh chan Message) error {
-		js, err := jetstream.New(proc.natsConn)
-		if err != nil {
-			log.Fatalf("error: jetstream new failed: %v\n", err)
-		}
-
-		stream, err := js.Stream(proc.ctx, "nodes")
-		if err != nil {
-			log.Fatalf("error: js.Stream failed: %v\n", err)
-		}
-
-		consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
-			Name:           "nodes_processor",
-			Durable:        "nodes_processor",
-			FilterSubjects: []string{fmt.Sprintf("nodes.%v", proc.server.nodeName), "nodes.all"},
-		})
-		if err != nil {
-			log.Fatalf("error: create or update consumer failed: %v\n", err)
-		}
-
-		cctx, err := consumer.Consume(func(msg jetstream.Msg) {
-			stewardMessage := Message{}
-			err := json.Unmarshal(msg.Data(), &stewardMessage)
+	if proc.configuration.StartProcesses.StartJetstreamConsumer {
+		pfJetstreamConsumers := func(ctx context.Context, procFuncCh chan Message) error {
+			js, err := jetstream.New(proc.natsConn)
 			if err != nil {
-				log.Fatalf("error: pfJetstreamConsumers: json.Unmarshal failed: %v\n", err)
+				log.Fatalf("error: jetstream new failed: %v\n", err)
 			}
 
-			log.Printf("Received jetstream message to convert and handle as normal nats message: %v, with ctrl method: %v\n", string(msg.Subject()), string(stewardMessage.Method))
-
-			msg.Ack()
-
-			// Messages received here via jetstream are for this node. Put the message into
-			// a SubjectAndMessage structure, and we use the deliver local from here.
-			sam, err := newSubjectAndMessage(stewardMessage)
+			stream, err := js.Stream(proc.ctx, "nodes")
 			if err != nil {
-				log.Fatalf("error: pfJetstreamConsumers: newSubjectAndMessage failed: %v\n", err)
+				log.Fatalf("error: js.Stream failed: %v\n", err)
 			}
-			proc.server.samSendLocalCh <- []subjectAndMessage{sam}
-		})
-		if err != nil {
-			log.Fatalf("error: create or update consumer failed: %v\n", err)
+
+			consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
+				Name:           "nodes_processor",
+				Durable:        "nodes_processor",
+				FilterSubjects: []string{fmt.Sprintf("nodes.%v", proc.server.nodeName), "nodes.all"},
+			})
+			if err != nil {
+				log.Fatalf("error: create or update consumer failed: %v\n", err)
+			}
+
+			cctx, err := consumer.Consume(func(msg jetstream.Msg) {
+				stewardMessage := Message{}
+				err := json.Unmarshal(msg.Data(), &stewardMessage)
+				if err != nil {
+					log.Fatalf("error: pfJetstreamConsumers: json.Unmarshal failed: %v\n", err)
+				}
+
+				log.Printf("Received jetstream message to convert and handle as normal nats message: %v, with ctrl method: %v\n", string(msg.Subject()), string(stewardMessage.Method))
+
+				msg.Ack()
+
+				// Messages received here via jetstream are for this node. Put the message into
+				// a SubjectAndMessage structure, and we use the deliver local from here.
+				sam, err := newSubjectAndMessage(stewardMessage)
+				if err != nil {
+					log.Fatalf("error: pfJetstreamConsumers: newSubjectAndMessage failed: %v\n", err)
+				}
+				proc.server.samSendLocalCh <- []subjectAndMessage{sam}
+			})
+			if err != nil {
+				log.Fatalf("error: create or update consumer failed: %v\n", err)
+			}
+
+			defer cctx.Stop()
+
+			<-proc.ctx.Done()
+
+			return nil
 		}
 
-		defer cctx.Stop()
-
-		<-proc.ctx.Done()
-
-		return nil
+		proc.startup.subscriber(proc, JetstreamConsumers, pfJetstreamConsumers)
 	}
-
-	proc.startup.subscriber(proc, JetstreamConsumers, pfJetstreamConsumers)
 
 }
 

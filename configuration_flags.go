@@ -95,44 +95,33 @@ type Configuration struct {
 	KeepPublishersAliveFor int `comment:"KeepPublishersAliveFor number of seconds Timer that will be used for when to remove the sub process publisher. The timer is reset each time a message is published with the process, so the sub process publisher will not be removed until it have not received any messages for the given amount of time."`
 
 	StartProcesses StartProcesses
-
-	Jetstreams string `comment:"Comma separated list of streams to consume messages from"`
+	// Comma separated list of additional streams to listen on.
+	Jetstreams string
 }
 
 type StartProcesses struct {
-	// StartPubHello, sets the interval in seconds for how often we send hello messages to central server
-	StartPubHello int `comment:"StartPubHello, sets the interval in seconds for how often we send hello messages to central server"`
-	// Enable the updates of public keys
+	StartPubHello    int  `comment:"StartPubHello, sets the interval in seconds for how often we send hello messages to central server"`
 	EnableKeyUpdates bool `comment:"Enable the updates of public keys"`
 
-	// Enable the updates of acl's
 	EnableAclUpdates bool `comment:"Enable the updates of acl's"`
 
-	// Start the central error logger.
-	IsCentralErrorLogger bool `comment:"Start the central error logger."`
-	// Start subscriber for hello messages
-	StartSubHello bool `comment:"Start subscriber for hello messages"`
-	// Start subscriber for text logging
-	StartSubFileAppend bool `comment:"Start subscriber for text logging"`
-	// Start subscriber for writing to file
-	StartSubFile bool `comment:"Start subscriber for writing to file"`
-	// Start subscriber for reading files to copy
-	StartSubCopySrc bool `comment:"Start subscriber for reading files to copy"`
-	// Start subscriber for writing copied files to disk
-	StartSubCopyDst bool `comment:"Start subscriber for writing copied files to disk"`
-	// Start subscriber for Echo Request
-	StartSubCliCommand bool `comment:"Start subscriber for CLICommand"`
-	// Start subscriber for Console
-	StartSubConsole bool `comment:"Start subscriber for Console"`
-	// Start subscriber for HttpGet
-	StartSubHttpGet bool `comment:"Start subscriber for HttpGet"`
-	// Start subscriber for tailing log files
-	StartSubTailFile bool `comment:"Start subscriber for tailing log files"`
-	// Start subscriber for continously delivery of output from cli commands.
-	StartSubCliCommandCont bool `comment:"Start subscriber for continously delivery of output from cli commands."`
+	IsCentralErrorLogger    bool `comment:"Start the central error logger."`
+	StartSubHello           bool `comment:"Start subscriber for hello messages"`
+	StartSubFileAppend      bool `comment:"Start subscriber for text logging"`
+	StartSubFile            bool `comment:"Start subscriber for writing to file"`
+	StartSubCopySrc         bool `comment:"Start subscriber for reading files to copy"`
+	StartSubCopyDst         bool `comment:"Start subscriber for writing copied files to disk"`
+	StartSubCliCommand      bool `comment:"Start subscriber for CLICommand"`
+	StartSubConsole         bool `comment:"Start subscriber for Console"`
+	StartSubHttpGet         bool `comment:"Start subscriber for HttpGet"`
+	StartSubTailFile        bool `comment:"Start subscriber for tailing log files"`
+	StartSubCliCommandCont  bool `comment:"Start subscriber for continously delivery of output from cli commands."`
+	StartJetstreamPublisher bool `comment:"Start the nats jetstream publisher"`
+	StartJetstreamConsumer  bool `comment:"Start the nats jetstream consumer"`
 
 	// IsCentralAuth, enable to make this instance take the role as the central auth server
-	IsCentralAuth bool `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
+	IsCentralAuth bool   `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
+	Jetstreams    string `comment: "Comma separated list of additional streams to listen on"`
 }
 
 // NewConfiguration will return a *Configuration.
@@ -180,6 +169,8 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.LogLevel, "logLevel", CheckEnv("LOG_LEVEL", c.LogLevel).(string), "error/info/warning/debug/none")
 	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", CheckEnv("LOG_CONSOLE_TIMESTAMPS", c.LogConsoleTimestamps).(bool), "true/false for enabling or disabling timestamps when printing errors and information to stderr")
 	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", CheckEnv("KEEP_PUBLISHERS_ALIVE_FOR", c.KeepPublishersAliveFor).(int), "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
+	flag.BoolVar(&c.StartProcesses.StartJetstreamPublisher, "startJetstreamPublisher", CheckEnv("START_JETSTREAM_PUBLISHER", c.StartProcesses.StartJetstreamPublisher).(bool), "Start the nats jetstream publisher")
+	flag.BoolVar(&c.StartProcesses.StartJetstreamConsumer, "StartJetstreamConsumer", CheckEnv("START_JETSTREAM_CONSUMER", c.StartProcesses.StartJetstreamConsumer).(bool), "Start the nats jetstream consumer")
 	flag.StringVar(&c.Jetstreams, "jetstreams", CheckEnv("JETSTREAMS", c.Jetstreams).(string), "Comma separated list of Jetstrams to consume")
 
 	// Start of Request publishers/subscribers
@@ -258,21 +249,23 @@ func newConfigurationDefaults() Configuration {
 		Jetstreams:                "",
 
 		StartProcesses: StartProcesses{
-			StartPubHello:          30,
-			EnableKeyUpdates:       false,
-			EnableAclUpdates:       false,
-			IsCentralErrorLogger:   false,
-			StartSubHello:          true,
-			StartSubFileAppend:     true,
-			StartSubFile:           true,
-			StartSubCopySrc:        true,
-			StartSubCopyDst:        true,
-			StartSubCliCommand:     true,
-			StartSubConsole:        true,
-			StartSubHttpGet:        true,
-			StartSubTailFile:       true,
-			StartSubCliCommandCont: true,
-			IsCentralAuth:          false,
+			StartPubHello:           30,
+			EnableKeyUpdates:        false,
+			EnableAclUpdates:        false,
+			IsCentralErrorLogger:    false,
+			StartSubHello:           true,
+			StartSubFileAppend:      true,
+			StartSubFile:            true,
+			StartSubCopySrc:         true,
+			StartSubCopyDst:         true,
+			StartSubCliCommand:      true,
+			StartSubConsole:         true,
+			StartSubHttpGet:         true,
+			StartSubTailFile:        true,
+			StartSubCliCommandCont:  true,
+			IsCentralAuth:           false,
+			StartJetstreamPublisher: true,
+			StartJetstreamConsumer:  true,
 		},
 	}
 	return c
