@@ -49,6 +49,8 @@ type server struct {
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
 	newMessagesCh chan []subjectAndMessage
+	// jetstreamOutCh
+	jetstreamOutCh chan Message
 	// directSAMSCh
 	samSendLocalCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
@@ -218,6 +220,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		natsConn:       conn,
 		ctrlSocket:     ctrlSocket,
 		newMessagesCh:  make(chan []subjectAndMessage),
+		jetstreamOutCh: make(chan Message),
 		samSendLocalCh: make(chan []subjectAndMessage),
 		metrics:        metrics,
 		version:        version,
@@ -487,6 +490,14 @@ func (s *server) routeMessagesToProcess() {
 	go func() {
 		for samSlice := range s.newMessagesCh {
 			for _, sam := range samSlice {
+
+				// If the message have the JetstreamToNode field specified
+				// deliver it via the jet stream processes, and abort trying
+				// to send it via the normal nats publisher.
+				if sam.Message.JetstreamToNode != "" {
+					s.jetstreamOutCh <- sam.Message
+					continue
+				}
 
 				go func(sam subjectAndMessage) {
 					s.messageID.mu.Lock()

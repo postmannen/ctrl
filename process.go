@@ -90,6 +90,8 @@ type process struct {
 	configuration *Configuration
 	// The new messages channel copied from *Server
 	newMessagesCh chan<- []subjectAndMessage
+	// JetstreamOut channel
+	jetstreamOut chan Message
 	// The structure who holds all processes information
 	processes *processes
 	// nats connection
@@ -152,6 +154,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, stream str
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
 		newMessagesCh:    server.newMessagesCh,
+		jetstreamOut:     server.jetstreamOutCh,
 		configuration:    server.configuration,
 		processes:        server.processes,
 		natsConn:         server.natsConn,

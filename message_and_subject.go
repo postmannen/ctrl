@@ -84,6 +84,9 @@ type Message struct {
 	PreviousMessage *Message
 	// Schedule
 	Schedule []int `json:"schedule" yaml:"schedule"`
+	// Is to be used with the stream subject to tell what nodes
+	// the the message is for.
+	JetstreamToNode string
 }
 
 // --- Subject
