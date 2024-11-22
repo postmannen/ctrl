@@ -95,8 +95,8 @@ type Configuration struct {
 	KeepPublishersAliveFor int `comment:"KeepPublishersAliveFor number of seconds Timer that will be used for when to remove the sub process publisher. The timer is reset each time a message is published with the process, so the sub process publisher will not be removed until it have not received any messages for the given amount of time."`
 
 	StartProcesses StartProcesses
-	// Comma separated list of additional streams to listen on.
-	Jetstreams string
+	// Comma separated list of additional streams to consume from.
+	JetstreamsConsume string
 }
 
 type StartProcesses struct {
@@ -120,8 +120,7 @@ type StartProcesses struct {
 	StartJetstreamConsumer  bool `comment:"Start the nats jetstream consumer"`
 
 	// IsCentralAuth, enable to make this instance take the role as the central auth server
-	IsCentralAuth bool   `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
-	Jetstreams    string `comment: "Comma separated list of additional streams to listen on"`
+	IsCentralAuth bool `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
 }
 
 // NewConfiguration will return a *Configuration.
@@ -169,9 +168,8 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.LogLevel, "logLevel", CheckEnv("LOG_LEVEL", c.LogLevel).(string), "error/info/warning/debug/none")
 	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", CheckEnv("LOG_CONSOLE_TIMESTAMPS", c.LogConsoleTimestamps).(bool), "true/false for enabling or disabling timestamps when printing errors and information to stderr")
 	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", CheckEnv("KEEP_PUBLISHERS_ALIVE_FOR", c.KeepPublishersAliveFor).(int), "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
-	flag.BoolVar(&c.StartProcesses.StartJetstreamPublisher, "startJetstreamPublisher", CheckEnv("START_JETSTREAM_PUBLISHER", c.StartProcesses.StartJetstreamPublisher).(bool), "Start the nats jetstream publisher")
-	flag.BoolVar(&c.StartProcesses.StartJetstreamConsumer, "StartJetstreamConsumer", CheckEnv("START_JETSTREAM_CONSUMER", c.StartProcesses.StartJetstreamConsumer).(bool), "Start the nats jetstream consumer")
-	flag.StringVar(&c.Jetstreams, "jetstreams", CheckEnv("JETSTREAMS", c.Jetstreams).(string), "Comma separated list of Jetstrams to consume")
+
+	flag.StringVar(&c.JetstreamsConsume, "jetstreamsConsume", CheckEnv("JETSTREAMS_CONSUME", c.JetstreamsConsume).(string), "Comma separated list of Jetstrams to consume from")
 
 	// Start of Request publishers/subscribers
 
@@ -192,6 +190,9 @@ func NewConfiguration() *Configuration {
 	flag.BoolVar(&c.StartProcesses.StartSubHttpGet, "startSubHttpGet", CheckEnv("START_SUB_HTTP_GET", c.StartProcesses.StartSubHttpGet).(bool), "true/false")
 	flag.BoolVar(&c.StartProcesses.StartSubTailFile, "startSubTailFile", CheckEnv("START_SUB_TAIL_FILE", c.StartProcesses.StartSubTailFile).(bool), "true/false")
 	flag.BoolVar(&c.StartProcesses.StartSubCliCommandCont, "startSubCliCommandCont", CheckEnv("START_SUB_CLI_COMMAND_CONT", c.StartProcesses.StartSubCliCommandCont).(bool), "true/false")
+
+	flag.BoolVar(&c.StartProcesses.StartJetstreamPublisher, "startJetstreamPublisher", CheckEnv("START_JETSTREAM_PUBLISHER", c.StartProcesses.StartJetstreamPublisher).(bool), "Start the nats jetstream publisher")
+	flag.BoolVar(&c.StartProcesses.StartJetstreamConsumer, "StartJetstreamConsumer", CheckEnv("START_JETSTREAM_CONSUMER", c.StartProcesses.StartJetstreamConsumer).(bool), "Start the nats jetstream consumer")
 
 	// Check that mandatory flag values have been set.
 	switch {
@@ -246,7 +247,7 @@ func newConfigurationDefaults() Configuration {
 		LogLevel:                  "debug",
 		LogConsoleTimestamps:      false,
 		KeepPublishersAliveFor:    10,
-		Jetstreams:                "",
+		JetstreamsConsume:         "",
 
 		StartProcesses: StartProcesses{
 			StartPubHello:           30,
