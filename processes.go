@@ -99,23 +99,23 @@ func (p *processes) Start(proc process) {
 	proc.startup.subscriber(proc, OpProcessStop, nil)
 	proc.startup.subscriber(proc, Test, nil)
 
-	if proc.configuration.StartProcesses.StartSubFileAppend {
+	if proc.configuration.StartSubFileAppend {
 		proc.startup.subscriber(proc, FileAppend, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubFile {
+	if proc.configuration.StartSubFile {
 		proc.startup.subscriber(proc, File, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCopySrc {
+	if proc.configuration.StartSubCopySrc {
 		proc.startup.subscriber(proc, CopySrc, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCopyDst {
+	if proc.configuration.StartSubCopyDst {
 		proc.startup.subscriber(proc, CopyDst, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubHello {
+	if proc.configuration.StartSubHello {
 		// subREQHello is the handler that is triggered when we are receiving a hello
 		// message. To keep the state of all the hello's received from nodes we need
 		// to also start a procFunc that will live as a go routine tied to this process,
@@ -154,21 +154,22 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, Hello, pf)
 	}
 
-	if proc.configuration.StartProcesses.IsCentralErrorLogger {
+	fmt.Printf("--------------------------------IsCentralErrorLogger = %v------------------------------\n", proc.configuration.IsCentralErrorLogger)
+	if proc.configuration.IsCentralErrorLogger {
 		proc.startup.subscriber(proc, ErrorLog, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCliCommand {
+	if proc.configuration.StartSubCliCommand {
 		proc.startup.subscriber(proc, CliCommand, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubConsole {
+	if proc.configuration.StartSubConsole {
 		proc.startup.subscriber(proc, Console, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartPubHello != 0 {
+	if proc.configuration.StartPubHello != 0 {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartProcesses.StartPubHello))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubHello))
 			defer ticker.Stop()
 			for {
 
@@ -208,7 +209,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.publisher(proc, Hello, pf)
 	}
 
-	if proc.configuration.StartProcesses.EnableKeyUpdates {
+	if proc.configuration.EnableKeyUpdates {
 		// Define the startup of a publisher that will send KeysRequestUpdate
 		// to central server and ask for publics keys, and to get them deliver back with a request
 		// of type KeysDeliverUpdate.
@@ -259,7 +260,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, KeysDeliverUpdate, nil)
 	}
 
-	if proc.configuration.StartProcesses.EnableAclUpdates {
+	if proc.configuration.EnableAclUpdates {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
 			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.AclUpdateInterval))
 			defer ticker.Stop()
@@ -308,7 +309,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, AclDeliverUpdate, nil)
 	}
 
-	if proc.configuration.StartProcesses.IsCentralAuth {
+	if proc.configuration.IsCentralAuth {
 		proc.startup.subscriber(proc, KeysRequestUpdate, nil)
 		proc.startup.subscriber(proc, KeysAllow, nil)
 		proc.startup.subscriber(proc, KeysDelete, nil)
@@ -326,15 +327,15 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, AclImport, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubHttpGet {
+	if proc.configuration.StartSubHttpGet {
 		proc.startup.subscriber(proc, HttpGet, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubTailFile {
+	if proc.configuration.StartSubTailFile {
 		proc.startup.subscriber(proc, TailFile, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCliCommandCont {
+	if proc.configuration.StartSubCliCommandCont {
 		proc.startup.subscriber(proc, CliCommandCont, nil)
 	}
 
@@ -343,7 +344,7 @@ func (p *processes) Start(proc process) {
 	// --------------------------------------------------
 	// ProcFunc for Jetstream publishers.
 	// --------------------------------------------------
-	if proc.configuration.StartProcesses.StartJetstreamPublisher {
+	if proc.configuration.StartJetstreamPublisher {
 		pfJetstreamPublishers := func(ctx context.Context, procFuncCh chan Message) error {
 			js, err := jetstream.New(proc.natsConn)
 			if err != nil {
@@ -393,7 +394,7 @@ func (p *processes) Start(proc process) {
 	// After a jetstream message is picked up from the stream, the steward message
 	// will be extracted from the data field, and the ctrl message will be put
 	// on the local delivery channel, and handled as a normal ctrl message.
-	if proc.configuration.StartProcesses.StartJetstreamConsumer {
+	if proc.configuration.StartJetstreamConsumer {
 		pfJetstreamConsumers := func(ctx context.Context, procFuncCh chan Message) error {
 			js, err := jetstream.New(proc.natsConn)
 			if err != nil {

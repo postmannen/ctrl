@@ -76,8 +76,8 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	conf.SocketFolder = testFolder
 	conf.SubscribersDataFolder = testFolder
 	conf.DatabaseFolder = testFolder
-	conf.StartProcesses.IsCentralErrorLogger = true
-	conf.StartProcesses.IsCentralAuth = true
+	conf.IsCentralErrorLogger = true
+	conf.IsCentralAuth = true
 	conf.LogLevel = "none"
 
 	ctrlServer, err := NewServer(&conf, "test")
