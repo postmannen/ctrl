@@ -386,6 +386,13 @@ func (s *server) Start() {
 
 // startAuditLog will start up the logging of all messages to audit file
 func (s *server) startAuditLog(ctx context.Context) {
+	// Check if database folder exists, if not create it
+	if _, err := os.Stat(s.configuration.DatabaseFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(s.configuration.DatabaseFolder, 0770)
+		if err != nil {
+			log.Fatalf("error: failed to create socket folder directory %v: %v", s.configuration.SocketFolder, err)
+		}
+	}
 
 	storeFile := filepath.Join(s.configuration.DatabaseFolder, "store.log")
 	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0660)
