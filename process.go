@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -125,6 +124,8 @@ type process struct {
 	metrics *metrics
 	// jetstream
 	js jetstream.JetStream
+	// zstd encoder
+	zstdEncoder *zstd.Encoder
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -166,6 +167,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, stream str
 		errorKernel:      server.errorKernel,
 		metrics:          server.metrics,
 		js:               js,
+		zstdEncoder:      server.zstdEncoder,
 	}
 
 	// We use the  name of the subject to identify a unique process.
@@ -750,18 +752,6 @@ func (p process) subscribeMessagesNats() *nats.Subscription {
 // as long as the process it belongs to is running.
 func (p process) publishMessagesNats(natsConn *nats.Conn) {
 
-	var zEnc *zstd.Encoder
-	// Prepare a zstd encoder so we can reuse the zstd encoder for all messages.
-
-	enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
-	if err != nil {
-		er := fmt.Errorf("error: zstd new encoder failed: %v", err)
-		p.errorKernel.logError(er)
-		os.Exit(1)
-	}
-	zEnc = enc
-	defer zEnc.Close()
-
 	// Adding a timer that will be used for when to remove the sub process
 	// publisher. The timer is reset each time a message is published with
 	// the process, so the sub process publisher will not be removed until
@@ -804,7 +794,7 @@ func (p process) publishMessagesNats(natsConn *nats.Conn) {
 			m.ArgSignature = p.addMethodArgSignature(m)
 			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
-			go p.publishAMessageNats(m, zEnc, natsConn)
+			go p.publishAMessageNats(m, natsConn)
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
@@ -821,38 +811,24 @@ func (p process) addMethodArgSignature(m Message) []byte {
 	return sign
 }
 
-func (p process) publishAMessageNats(m Message, zEnc *zstd.Encoder, natsConn *nats.Conn) {
+func (p process) publishAMessageNats(m Message, natsConn *nats.Conn) {
 	// Create the initial header, and set values below depending on the
 	// various configuration options chosen.
 	natsMsgHeader := make(nats.Header)
 	natsMsgHeader["fromNode"] = []string{string(p.node)}
 
-	// The serialized value of the nats message payload
-	var natsMsgPayloadSerialized []byte
-
-	// encode the message structure into cbor
-	b, err := cbor.Marshal(m)
-	if err != nil {
-		er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-		p.errorKernel.logDebug(er)
-		return
-	}
-
-	natsMsgPayloadSerialized = b
-
 	// Get the process name so we can look up the process in the
 	// processes map, and increment the message counter.
 	pn := processNameGet(p.subject.name(), processKindPublisherNats)
 
-	// Compress the data payload if selected with configuration flag.
-	// The compression chosen is later set in the nats msg header when
-	// calling p.messageDeliverNats below.
-
-	natsMsgPayloadCompressed := zEnc.EncodeAll(natsMsgPayloadSerialized, nil)
+	serCmp, err := p.messageSerializeAndCompress(m)
+	if err != nil {
+		log.Fatalf("messageSerializeAndCompress: error: %v\n", err)
+	}
 
 	// Create the Nats message with headers and payload, and do the
 	// sending of the message.
-	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
+	p.messageDeliverNats(serCmp, natsMsgHeader, natsConn, m)
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++

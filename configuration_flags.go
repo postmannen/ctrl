@@ -105,7 +105,7 @@ type StartProcesses struct {
 
 	EnableAclUpdates bool `comment:"Enable the updates of acl's"`
 
-	IsCentralErrorLogger    bool `comment:"Start the central error logger."`
+	IsCentralErrorLogger    bool `comment:"Start the central error logger"`
 	StartSubHello           bool `comment:"Start subscriber for hello messages"`
 	StartSubFileAppend      bool `comment:"Start subscriber for text logging"`
 	StartSubFile            bool `comment:"Start subscriber for writing to file"`

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/copier"
+	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -75,6 +76,8 @@ type server struct {
 	messageID messageID
 	// audit logging
 	auditLogCh chan []subjectAndMessage
+	// zstd encoder
+	zstdEncoder *zstd.Encoder
 }
 
 type messageID struct {
@@ -212,6 +215,21 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	centralAuth := newCentralAuth(configuration, errorKernel)
 	//}
 
+	// Prepare the zstd encoder
+	// Prepare the zstd encoder to put into processInitial
+	var zEnc *zstd.Encoder
+	// Prepare a zstd encoder so we can reuse the zstd encoder for all messages.
+
+	zstdEncoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
+	if err != nil {
+		log.Fatalf("error: zstd new encoder failed: %v", err)
+	}
+
+	go func() {
+		<-ctx.Done()
+		zEnc.Close()
+	}()
+
 	s := server{
 		ctx:            ctx,
 		cancel:         cancel,
@@ -229,6 +247,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		helloRegister:  newHelloRegister(),
 		centralAuth:    centralAuth,
 		auditLogCh:     make(chan []subjectAndMessage),
+		zstdEncoder:    zstdEncoder,
 	}
 
 	s.processes = newProcesses(ctx, &s)
@@ -387,14 +406,14 @@ func (s *server) startAuditLog(ctx context.Context) {
 
 				js, err := json.Marshal(msgForPermStore)
 				if err != nil {
-					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
+					er := fmt.Errorf("error: startAuditLog: fillBuffer: json marshaling: %v", err)
 					s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
 				}
 				d := time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
 
 				_, err = f.WriteString(d)
 				if err != nil {
-					log.Printf("error:failed to write entry: %v\n", err)
+					log.Printf("error: startAuditLog:failed to write entry: %v\n", err)
 				}
 			}
 		case <-ctx.Done():

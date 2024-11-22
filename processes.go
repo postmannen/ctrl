@@ -2,7 +2,6 @@ package ctrl
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -367,7 +366,7 @@ func (p *processes) Start(proc process) {
 				// TODO:
 				select {
 				case msg := <-proc.jetstreamOut:
-					b, err := json.Marshal(msg)
+					b, err := proc.messageSerializeAndCompress(msg)
 					if err != nil {
 						log.Fatalf("error: pfJetstreamPublishers: js failed to marshal message: %v\n", err)
 					}
@@ -408,10 +407,15 @@ func (p *processes) Start(proc process) {
 
 			// Check for more subjects via flags to listen to, and if defined prefix all
 			// the values with "nodes."
-			filterSubjectValues := []string{fmt.Sprintf("nodes.%v", proc.server.nodeName), "nodes.all"}
+			filterSubjectValues := []string{
+				fmt.Sprintf("nodes.%v", proc.server.nodeName),
+				"nodes.all",
+			}
+
+			// Check if there are more to consume defined in flags/env.
 			if proc.configuration.JetstreamsConsume != "" {
-				filterSubjectValues = strings.Split(proc.configuration.JetstreamsConsume, ",")
-				for i, v := range filterSubjectValues {
+				splitValues := strings.Split(proc.configuration.JetstreamsConsume, ",")
+				for i, v := range splitValues {
 					filterSubjectValues[i] = fmt.Sprintf("nodes.%v", v)
 				}
 			}
@@ -427,7 +431,7 @@ func (p *processes) Start(proc process) {
 
 			cctx, err := consumer.Consume(func(msg jetstream.Msg) {
 				stewardMessage := Message{}
-				err := json.Unmarshal(msg.Data(), &stewardMessage)
+				stewardMessage, err := proc.messageDeserializeAndUncompress(msg)
 				if err != nil {
 					log.Fatalf("error: pfJetstreamConsumers: json.Unmarshal failed: %v\n", err)
 				}
