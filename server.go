@@ -455,6 +455,7 @@ func (s *server) directSAMSChRead() {
 					fmt.Printf("&&&&&&&: directSAMSChRead: content of methods available: %#v\n", s.processInitial.methodsAvailable)
 
 					mh, ok := p.methodsAvailable.CheckIfExists(sam.Message.Method)
+					fmt.Printf("error: subscriberHandler: method available check result, mh: %v, ok: %v\n", mh, ok)
 					if !ok {
 						fmt.Printf("error: subscriberHandler: method type not available: %v\n", sam.Message.Method)
 						// p.errorKernel.errSend(p, sam.Message, er, logError)
