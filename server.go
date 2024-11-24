@@ -443,7 +443,7 @@ func (s *server) directSAMSChRead() {
 				// fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
-				for i := range sams {
+				for i, sam := range sams {
 					processName := processNameGet(sams[i].Subject.name(), processKindSubscriberNats)
 
 					s.processes.active.mu.Lock()
@@ -453,7 +453,7 @@ func (s *server) directSAMSChRead() {
 					fmt.Printf("&&&&&&&: directSAMSChRead: len of sams: %v,i:%v\n", len(sams), i)
 					fmt.Printf("&&&&&&&: directSAMSChRead: content of sams[%v]: %v\n", i, sams[i])
 
-					mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
+					mh, ok := p.methodsAvailable.CheckIfExists(sam.Message.Method)
 					if !ok {
 						fmt.Printf("error: subscriberHandler: method type not available: %v\n", sams[i].Message.Method)
 						// p.errorKernel.errSend(p, sam.Message, er, logError)
