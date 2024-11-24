@@ -450,6 +450,9 @@ func (s *server) directSAMSChRead() {
 					p := s.processes.active.procNames[processName]
 					s.processes.active.mu.Unlock()
 
+					fmt.Printf("&&&&&&&: directSAMSChRead: len of sams: %v,i:%v\n", len(sams), i)
+					fmt.Printf("&&&&&&&: directSAMSChRead: content of sams[%v]: %v\n", i, sams[i])
+
 					mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
 					if !ok {
 						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Method)
