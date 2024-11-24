@@ -380,12 +380,12 @@ func (p *processes) Start(proc process) {
 					}
 
 					subject := fmt.Sprintf("nodes.%v", msg.JetstreamToNode)
-					fmt.Printf("######## DEBUG: Publisher: before publish: %v\n", "###")
+					fmt.Printf("######## DEBUG: Publisher: before publish on subject: %v\n", subject)
 					_, err = js.Publish(proc.ctx, subject, b)
 					if err != nil {
 						log.Fatalf("error: pfJetstreamPublishers:js failed to publish message: %v\n", err)
 					}
-					fmt.Printf("######## DEBUG: Publisher: after publish: %v\n", "###")
+					fmt.Printf("######## DEBUG: Publisher: after publish on subject: %v\n", subject)
 
 				case <-ctx.Done():
 					return fmt.Errorf("%v", "info: pfJetstreamPublishers: got <-ctx.done")
@@ -433,11 +433,11 @@ func (p *processes) Start(proc process) {
 
 			// Check for more subjects via flags to listen to, and if defined prefix all
 			// the values with "nodes."
-			filterSubjectValues := []string{
-				fmt.Sprintf("nodes.%v", proc.server.nodeName),
-				//"nodes.all",
-			}
-			fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
+			////filterSubjectValues := []string{
+			////	fmt.Sprintf("nodes.%v", proc.server.nodeName),
+			////	//"nodes.all",
+			////}
+			////fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
 
 			//// Check if there are more to consume defined in flags/env.
 			//if proc.configuration.JetstreamsConsume != "" {
@@ -448,16 +448,17 @@ func (p *processes) Start(proc process) {
 			//}
 
 			consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
-				Name:           "nodes_processor",
-				Durable:        "nodes_processor",
-				FilterSubjects: filterSubjectValues,
+				Name:    "nodes_processor",
+				Durable: "nodes_processor",
+				//FilterSubjects: filterSubjectValues,
 			})
 			if err != nil {
 				log.Fatalf("error: create or update consumer failed: %v\n", err)
 			}
 
-			consumerInfo, _ := fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
-			fmt.Printf("--- DEBUG: consumer: created consumer: %v\n", consumerInfo)
+			consumerInfo, _ := consumer.Info(proc.ctx)
+			fmt.Printf("--- DEBUG: consumer: consumerInfo: %v\n", consumerInfo)
+			//fmt.Printf("--- DEBUG: consumer: created consumer: %v\n", consumerInfo)
 
 			cctx, err := consumer.Consume(func(msg jetstream.Msg) {
 				fmt.Printf("--- DEBUG: consumer: got jetstream msg to consume: %v\n", msg)

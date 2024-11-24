@@ -520,8 +520,11 @@ func (s *server) routeMessagesToProcess() {
 				// If the message have the JetstreamToNode field specified
 				// deliver it via the jet stream processes, and abort trying
 				// to send it via the normal nats publisher.
+				fmt.Printf("$$$$$ DEBUG: routeMessagesToProcess: checking if it is a jetstram message: %v\n", sam.Message.JetstreamToNode)
 				if sam.Message.JetstreamToNode != "" {
+					fmt.Printf("$$$$$ DEBUG: routeMessagesToProcess: it was a jetstram message, putting it on jetstreamOutCh: %v\n", sam.Message.JetstreamToNode)
 					s.jetstreamOutCh <- sam.Message
+					fmt.Printf("$$$$$ DEBUG: routeMessagesToProcess:done putting it on jetstreamOutCh: %v\n", sam.Message.JetstreamToNode)
 					continue
 				}
 

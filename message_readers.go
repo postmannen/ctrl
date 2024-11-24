@@ -267,10 +267,17 @@ func (s *server) readFolder() {
 						}
 						fh.Close()
 
+						if len(b) == 0 {
+							return
+						}
+
+						fmt.Printf("!!!!!!!DEBUG: readfolder: 1: readbytes: %v\n", b)
 						b = bytes.Trim(b, "\x00")
 
 						// unmarshal the JSON into a struct
+						fmt.Printf("!!!!!!!DEBUG: readfolder: 2: readbytes: %v\n", b)
 						sams, err := s.convertBytesToSAMs(b)
+						fmt.Printf("!!!!!!!DEBUG: readfolder: done convertBytesToSAMs, got sams: %v\n", sams)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
@@ -289,12 +296,16 @@ func (s *server) readFolder() {
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 						}
 
-						er := fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", sams)
+						er := fmt.Errorf("readFolder: read new message in readfolder and putting it on s.newMessagesCh: %#v", sams)
 						s.errorKernel.logDebug(er)
 
 						// Send the SAM struct to be picked up by the ring buffer.
+						fmt.Print("!!!!!!!DEBUG: readfolder: Before putting on newMessagesCh\n")
 						s.newMessagesCh <- sams
+						fmt.Print("!!!!!!!DEBUG: readfolder: After putting on newMessagesCh\n")
+						fmt.Print("!!!!!!!DEBUG: readfolder: Before putting on auditLogCh\n")
 						s.auditLogCh <- sams
+						fmt.Print("!!!!!!!DEBUG: readfolder: After putting on auditLogCh\n")
 
 						// Delete the file.
 						err = os.Remove(event.Name)
