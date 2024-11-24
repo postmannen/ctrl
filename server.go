@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/copier"
+	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -49,6 +50,8 @@ type server struct {
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
 	newMessagesCh chan []subjectAndMessage
+	// jetstreamOutCh
+	jetstreamOutCh chan Message
 	// directSAMSCh
 	samSendLocalCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
@@ -73,6 +76,8 @@ type server struct {
 	messageID messageID
 	// audit logging
 	auditLogCh chan []subjectAndMessage
+	// zstd encoder
+	zstdEncoder *zstd.Encoder
 }
 
 type messageID struct {
@@ -210,6 +215,21 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	centralAuth := newCentralAuth(configuration, errorKernel)
 	//}
 
+	// Prepare the zstd encoder
+	// Prepare the zstd encoder to put into processInitial
+
+	zstdEncoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
+	if err != nil {
+		log.Fatalf("error: zstd new encoder failed: %v", err)
+	}
+
+	defer func() {
+		go func() {
+			<-ctx.Done()
+			zstdEncoder.Close()
+		}()
+	}()
+
 	s := server{
 		ctx:            ctx,
 		cancel:         cancel,
@@ -218,6 +238,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		natsConn:       conn,
 		ctrlSocket:     ctrlSocket,
 		newMessagesCh:  make(chan []subjectAndMessage),
+		jetstreamOutCh: make(chan Message),
 		samSendLocalCh: make(chan []subjectAndMessage),
 		metrics:        metrics,
 		version:        version,
@@ -226,6 +247,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		helloRegister:  newHelloRegister(),
 		centralAuth:    centralAuth,
 		auditLogCh:     make(chan []subjectAndMessage),
+		zstdEncoder:    zstdEncoder,
 	}
 
 	s.processes = newProcesses(ctx, &s)
@@ -337,7 +359,7 @@ func (s *server) Start() {
 	//
 	// The context of the initial process are set in processes.Start.
 	sub := newSubject(Initial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s, sub, "")
+	s.processInitial = newProcess(context.TODO(), s, sub, streamInfo{}, "")
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -364,6 +386,13 @@ func (s *server) Start() {
 
 // startAuditLog will start up the logging of all messages to audit file
 func (s *server) startAuditLog(ctx context.Context) {
+	// Check if database folder exists, if not create it
+	if _, err := os.Stat(s.configuration.DatabaseFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(s.configuration.DatabaseFolder, 0770)
+		if err != nil {
+			log.Fatalf("error: failed to create socket folder directory %v: %v", s.configuration.SocketFolder, err)
+		}
+	}
 
 	storeFile := filepath.Join(s.configuration.DatabaseFolder, "store.log")
 	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0660)
@@ -384,14 +413,14 @@ func (s *server) startAuditLog(ctx context.Context) {
 
 				js, err := json.Marshal(msgForPermStore)
 				if err != nil {
-					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
+					er := fmt.Errorf("error: startAuditLog: fillBuffer: json marshaling: %v", err)
 					s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
 				}
 				d := time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
 
 				_, err = f.WriteString(d)
 				if err != nil {
-					log.Printf("error:failed to write entry: %v\n", err)
+					log.Printf("error: startAuditLog:failed to write entry: %v\n", err)
 				}
 			}
 		case <-ctx.Done():
@@ -415,7 +444,7 @@ func (s *server) directSAMSChRead() {
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
 				for i := range sams {
-					processName := processNameGet(sams[i].Subject.name(), processKindSubscriber)
+					processName := processNameGet(sams[i].Subject.name(), processKindSubscriberNats)
 
 					s.processes.active.mu.Lock()
 					p := s.processes.active.procNames[processName]
@@ -488,6 +517,14 @@ func (s *server) routeMessagesToProcess() {
 		for samSlice := range s.newMessagesCh {
 			for _, sam := range samSlice {
 
+				// If the message have the JetstreamToNode field specified
+				// deliver it via the jet stream processes, and abort trying
+				// to send it via the normal nats publisher.
+				if sam.Message.JetstreamToNode != "" {
+					s.jetstreamOutCh <- sam.Message
+					continue
+				}
+
 				go func(sam subjectAndMessage) {
 					s.messageID.mu.Lock()
 					s.messageID.id++
@@ -516,7 +553,7 @@ func (s *server) routeMessagesToProcess() {
 					m := sam.Message
 
 					subjName := sam.Subject.name()
-					pn := processNameGet(subjName, processKindPublisher)
+					pn := processNameGet(subjName, processKindPublisherNats)
 
 					sendOK := func() bool {
 						var ctxCanceled bool
@@ -572,12 +609,12 @@ func (s *server) routeMessagesToProcess() {
 					var proc process
 					switch {
 					case m.IsSubPublishedMsg:
-						proc = newSubProcess(s.ctx, s, sub, processKindPublisher)
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisherNats)
 					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisher)
+						proc = newProcess(s.ctx, s, sub, streamInfo{}, processKindPublisherNats)
 					}
 
-					proc.spawnWorker()
+					proc.Start()
 					er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
 					s.errorKernel.logDebug(er)
 

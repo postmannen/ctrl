@@ -84,6 +84,9 @@ type Message struct {
 	PreviousMessage *Message
 	// Schedule
 	Schedule []int `json:"schedule" yaml:"schedule"`
+	// Is to be used with the stream subject to tell what nodes
+	// the the message is for.
+	JetstreamToNode string `json:"jetstreamToNode" yaml:"jetstreamToNode"`
 }
 
 // --- Subject
@@ -148,4 +151,17 @@ type subjectName string
 // Return a value of the subjectName for the subject as used with nats subject.
 func (s Subject) name() subjectName {
 	return subjectName(fmt.Sprintf("%s.%s", s.ToNode, s.Method))
+}
+
+type streamInfo struct {
+	name     string
+	subjects []string
+}
+
+func newStreamInfo(name string, subjects []string) streamInfo {
+	s := streamInfo{
+		name:     name,
+		subjects: subjects,
+	}
+	return s
 }

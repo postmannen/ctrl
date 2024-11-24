@@ -225,7 +225,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 		// Create a new sub process that will do the actual file copying.
 
-		copySrcSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber)
+		copySrcSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriberNats)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -235,7 +235,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		copySrcSubProc.handler = copySrcSubHandler()
 
 		// The process will be killed when the context expires.
-		go copySrcSubProc.spawnWorker()
+		go copySrcSubProc.Start()
 
 		// Send a message over the the node where the destination file will be written,
 		// to also start up a sub process on the destination node.
@@ -281,7 +281,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 // newSubProcess is a wrapper around newProcess which sets the isSubProcess value to true.
 func newSubProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
-	p := newProcess(ctx, server, subject, processKind)
+	p := newProcess(ctx, server, subject, streamInfo{}, processKind)
 	p.isSubProcess = true
 
 	return p
@@ -333,7 +333,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		// previous message is then fully up and running, so we just discard
 		// that second message in those cases.
 
-		pn := processNameGet(sub.name(), processKindSubscriber)
+		pn := processNameGet(sub.name(), processKindSubscriberNats)
 		// fmt.Printf("\n\n *** DEBUG: processNameGet: %v\n\n", pn)
 
 		proc.processes.active.mu.Lock()
@@ -352,7 +352,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		}
 
 		// Create a new sub process that will do the actual file copying.
-		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber)
+		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriberNats)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -362,7 +362,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		copyDstSubProc.handler = copyDstSubHandler()
 
 		// The process will be killed when the context expires.
-		go copyDstSubProc.spawnWorker()
+		go copyDstSubProc.Start()
 
 		fp := filepath.Join(cia.DstDir, cia.DstFile)
 		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copyDstSubProc.processName, node, fp, subProcessName)

@@ -2,11 +2,13 @@ package ctrl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -97,23 +99,23 @@ func (p *processes) Start(proc process) {
 	proc.startup.subscriber(proc, OpProcessStop, nil)
 	proc.startup.subscriber(proc, Test, nil)
 
-	if proc.configuration.StartProcesses.StartSubFileAppend {
+	if proc.configuration.StartSubFileAppend {
 		proc.startup.subscriber(proc, FileAppend, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubFile {
+	if proc.configuration.StartSubFile {
 		proc.startup.subscriber(proc, File, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCopySrc {
+	if proc.configuration.StartSubCopySrc {
 		proc.startup.subscriber(proc, CopySrc, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCopyDst {
+	if proc.configuration.StartSubCopyDst {
 		proc.startup.subscriber(proc, CopyDst, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubHello {
+	if proc.configuration.StartSubHello {
 		// subREQHello is the handler that is triggered when we are receiving a hello
 		// message. To keep the state of all the hello's received from nodes we need
 		// to also start a procFunc that will live as a go routine tied to this process,
@@ -152,21 +154,22 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, Hello, pf)
 	}
 
-	if proc.configuration.StartProcesses.IsCentralErrorLogger {
+	fmt.Printf("--------------------------------IsCentralErrorLogger = %v------------------------------\n", proc.configuration.IsCentralErrorLogger)
+	if proc.configuration.IsCentralErrorLogger {
 		proc.startup.subscriber(proc, ErrorLog, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCliCommand {
+	if proc.configuration.StartSubCliCommand {
 		proc.startup.subscriber(proc, CliCommand, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubConsole {
+	if proc.configuration.StartSubConsole {
 		proc.startup.subscriber(proc, Console, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartPubHello != 0 {
+	if proc.configuration.StartPubHello != 0 {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartProcesses.StartPubHello))
+			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubHello))
 			defer ticker.Stop()
 			for {
 
@@ -206,7 +209,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.publisher(proc, Hello, pf)
 	}
 
-	if proc.configuration.StartProcesses.EnableKeyUpdates {
+	if proc.configuration.EnableKeyUpdates {
 		// Define the startup of a publisher that will send KeysRequestUpdate
 		// to central server and ask for publics keys, and to get them deliver back with a request
 		// of type KeysDeliverUpdate.
@@ -257,7 +260,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, KeysDeliverUpdate, nil)
 	}
 
-	if proc.configuration.StartProcesses.EnableAclUpdates {
+	if proc.configuration.EnableAclUpdates {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
 			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.AclUpdateInterval))
 			defer ticker.Stop()
@@ -306,7 +309,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, AclDeliverUpdate, nil)
 	}
 
-	if proc.configuration.StartProcesses.IsCentralAuth {
+	if proc.configuration.IsCentralAuth {
 		proc.startup.subscriber(proc, KeysRequestUpdate, nil)
 		proc.startup.subscriber(proc, KeysAllow, nil)
 		proc.startup.subscriber(proc, KeysDelete, nil)
@@ -324,20 +327,182 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, AclImport, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubHttpGet {
+	if proc.configuration.StartSubHttpGet {
 		proc.startup.subscriber(proc, HttpGet, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubTailFile {
+	if proc.configuration.StartSubTailFile {
 		proc.startup.subscriber(proc, TailFile, nil)
 	}
 
-	if proc.configuration.StartProcesses.StartSubCliCommandCont {
+	if proc.configuration.StartSubCliCommandCont {
 		proc.startup.subscriber(proc, CliCommandCont, nil)
 	}
 
 	proc.startup.subscriber(proc, PublicKey, nil)
+
+	// --------------------------------------------------
+	// ProcFunc for Jetstream publishers.
+	// --------------------------------------------------
+	if proc.configuration.StartJetstreamPublisher {
+		pfJetstreamPublishers := func(ctx context.Context, procFuncCh chan Message) error {
+			fmt.Printf("######## DEBUG: Publisher: beginning og jetstream publisher: %v\n", "#######")
+			js, err := jetstream.New(proc.natsConn)
+			if err != nil {
+				log.Fatalf("error: jetstream new failed: %v\n", err)
+			}
+
+			_, err = js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
+				Name:        "nodes",
+				Description: "nodes stream",
+				Subjects:    []string{"nodes.>"},
+				// Discard older messages and keep only the last one.
+				// MaxMsgsPerSubject: 1,
+			})
+			fmt.Printf("######## DEBUG: Publisher: CreateOrUpdateStream: %v\n", "#######")
+
+			if err != nil {
+				log.Fatalf("error: jetstream create or update failed: %v\n", err)
+			}
+
+			for {
+				// TODO:
+				select {
+				case msg := <-proc.jetstreamOut:
+					fmt.Printf("######## DEBUG: Publisher: received on <-proc.jetstreamOut: %v\n", msg)
+					// b, err := proc.messageSerializeAndCompress(msg)
+					// if err != nil {
+					// 	log.Fatalf("error: pfJetstreamPublishers: js failed to marshal message: %v\n", err)
+					// }
+					b, err := json.Marshal(msg)
+					if err != nil {
+						log.Fatalf("error: pfJetstreamPublishers: js failed to marshal message: %v\n", err)
+					}
+
+					subject := fmt.Sprintf("nodes.%v", msg.JetstreamToNode)
+					fmt.Printf("######## DEBUG: Publisher: before publish: %v\n", "###")
+					_, err = js.Publish(proc.ctx, subject, b)
+					if err != nil {
+						log.Fatalf("error: pfJetstreamPublishers:js failed to publish message: %v\n", err)
+					}
+					fmt.Printf("######## DEBUG: Publisher: after publish: %v\n", "###")
+
+				case <-ctx.Done():
+					return fmt.Errorf("%v", "info: pfJetstreamPublishers: got <-ctx.done")
+				}
+			}
+		}
+		proc.startup.publisher(proc, JetStreamPublishers, pfJetstreamPublishers)
+	}
+
+	// --------------------------------------------------
+	// Procfunc for Jetstream consumers.
+	// --------------------------------------------------
+
+	// pfJetstreamConsumers connect to a given nats jetstream, and consume messages
+	// for the node on specified subjects within that stream.
+	// After a jetstream message is picked up from the stream, the steward message
+	// will be extracted from the data field, and the ctrl message will be put
+	// on the local delivery channel, and handled as a normal ctrl message.
+	if proc.configuration.StartJetstreamConsumer {
+		pfJetstreamConsumers := func(ctx context.Context, procFuncCh chan Message) error {
+			fmt.Println("---------------------------------------------------------------")
+			fmt.Printf("--- DEBUG: consumer: starting up jetstream consumer %v\n", "---")
+			fmt.Println("---------------------------------------------------------------")
+
+			js, err := jetstream.New(proc.natsConn)
+			if err != nil {
+				log.Fatalf("error: jetstream new failed: %v\n", err)
+			}
+
+			stream, err := js.Stream(proc.ctx, "nodes")
+			if err != nil {
+				log.Printf("error: js.Stream failed: %v\n", err)
+			}
+
+			// stream, err := js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
+			// 	Name:        "nodes",
+			// 	Description: "nodes stream",
+			// 	Subjects:    []string{"nodes.>"},
+			// 	// Discard older messages and keep only the last one.
+			// 	MaxMsgsPerSubject: 1,
+			// })
+			if err != nil {
+				log.Printf("error: js.Stream failed: %v\n", err)
+			}
+
+			// Check for more subjects via flags to listen to, and if defined prefix all
+			// the values with "nodes."
+			filterSubjectValues := []string{
+				fmt.Sprintf("nodes.%v", proc.server.nodeName),
+				//"nodes.all",
+			}
+			fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
+
+			//// Check if there are more to consume defined in flags/env.
+			//if proc.configuration.JetstreamsConsume != "" {
+			//	splitValues := strings.Split(proc.configuration.JetstreamsConsume, ",")
+			//	for i, v := range splitValues {
+			//		filterSubjectValues[i] = fmt.Sprintf("nodes.%v", v)
+			//	}
+			//}
+
+			consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
+				Name:           "nodes_processor",
+				Durable:        "nodes_processor",
+				FilterSubjects: filterSubjectValues,
+			})
+			if err != nil {
+				log.Fatalf("error: create or update consumer failed: %v\n", err)
+			}
+
+			consumerInfo, _ := fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
+			fmt.Printf("--- DEBUG: consumer: created consumer: %v\n", consumerInfo)
+
+			cctx, err := consumer.Consume(func(msg jetstream.Msg) {
+				fmt.Printf("--- DEBUG: consumer: got jetstream msg to consume: %v\n", msg)
+				msg.Ack()
+
+				stewardMessage := Message{}
+				// stewardMessage, err := proc.messageDeserializeAndUncompress(msg)
+				// if err != nil {
+				// 	log.Fatalf("error: pfJetstreamConsumers: json.Unmarshal failed: %v\n", err)
+				// }
+				err := json.Unmarshal(msg.Data(), &stewardMessage)
+				if err != nil {
+					log.Fatalf("error: pfJetstreamConsumers: json.Unmarshal failed: %v\n", err)
+				}
+
+				log.Printf("----- Received jetstream message to convert and handle as normal nats message: %v, with ctrl method: %v\n", string(msg.Subject()), string(stewardMessage.Method))
+
+				// Messages received here via jetstream are for this node. Put the message into
+				// a SubjectAndMessage structure, and we use the deliver local from here.
+				sam, err := newSubjectAndMessage(stewardMessage)
+				if err != nil {
+					log.Fatalf("error: pfJetstreamConsumers: newSubjectAndMessage failed: %v\n", err)
+				}
+
+				fmt.Print("--- DEBUG : consumer: befor putting on samSendLocalCh\n")
+				proc.server.samSendLocalCh <- []subjectAndMessage{sam}
+				fmt.Print("--- DEBUG : consumer: befor putting on samSendLocalCh\n")
+			})
+			if err != nil {
+				log.Fatalf("error: create or update consumer failed: %v\n", err)
+			}
+
+			defer cctx.Stop()
+
+			<-proc.ctx.Done()
+
+			return nil
+		}
+
+		proc.startup.subscriber(proc, JetstreamConsumers, pfJetstreamConsumers)
+	}
+
 }
+
+// --------------------------------------------------
 
 // Stop all subscriber processes.
 func (p *processes) Stop() {
@@ -348,6 +513,8 @@ func (p *processes) Stop() {
 
 }
 
+// ---------------------------------------------------------------------------------------
+// Helper functions, and other
 // ---------------------------------------------------------------------------------------
 
 // Startup holds all the startup methods for subscribers.
@@ -382,10 +549,10 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 	}
 
 	fmt.Printf("DEBUG:::startup subscriber, subject: %v\n", sub)
-	proc := newProcess(p.ctx, p.processes.server, sub, processKindSubscriber)
+	proc := newProcess(p.ctx, p.processes.server, sub, streamInfo{}, processKindSubscriberNats)
 	proc.procFunc = pf
 
-	go proc.spawnWorker()
+	go proc.Start()
 }
 
 // publisher will start a publisher process. It takes the initial process, request method,
@@ -394,11 +561,11 @@ func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, pr
 	er := fmt.Errorf("starting %v publisher: %#v", m, p.node)
 	p.errorKernel.logDebug(er)
 	sub := newSubject(m, string(p.node))
-	proc := newProcess(p.ctx, p.processes.server, sub, processKindPublisher)
+	proc := newProcess(p.ctx, p.processes.server, sub, streamInfo{}, processKindPublisherNats)
 	proc.procFunc = pf
 	proc.isLongRunningPublisher = true
 
-	go proc.spawnWorker()
+	go proc.Start()
 }
 
 // ---------------------------------------------------------------
