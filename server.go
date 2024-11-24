@@ -217,17 +217,17 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	// Prepare the zstd encoder
 	// Prepare the zstd encoder to put into processInitial
-	var zEnc *zstd.Encoder
-	// Prepare a zstd encoder so we can reuse the zstd encoder for all messages.
 
 	zstdEncoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
 	if err != nil {
 		log.Fatalf("error: zstd new encoder failed: %v", err)
 	}
 
-	go func() {
-		<-ctx.Done()
-		zEnc.Close()
+	defer func() {
+		go func() {
+			<-ctx.Done()
+			zstdEncoder.Close()
+		}()
 	}()
 
 	s := server{

@@ -766,9 +766,9 @@ func (p process) publishMessagesNats(natsConn *nats.Conn) {
 		select {
 		case <-ticker.C:
 			if p.isLongRunningPublisher {
-				er := fmt.Errorf("info: isLongRunningPublisher, will not cancel publisher: %v", p.processName)
+				// er := fmt.Errorf("info: isLongRunningPublisher, will not cancel publisher: %v", p.processName)
 				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-				p.errorKernel.logDebug(er)
+				// p.errorKernel.logDebug(er)
 
 				continue
 			}
