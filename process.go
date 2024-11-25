@@ -596,6 +596,11 @@ func (p process) callHandler(message Message, thisNode string) []byte {
 // executeHandler will call the handler for the Request type defined in the message.
 func executeHandler(p process, message Message, thisNode string) {
 	var err error
+	if message.ToNode != "errorCentral" {
+		fmt.Printf("??????? DEBUG: executeHandler: got message: %v\n", message)
+		fmt.Printf("??????? DEBUG: executeHandler: got thisNode: %v\n", thisNode)
+		fmt.Printf("??????? DEBUG: executeHandler: got process: %+v\n", p)
+	}
 
 	// Check if it is a message to run scheduled.
 	var interval int

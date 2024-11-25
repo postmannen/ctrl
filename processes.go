@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -369,7 +370,7 @@ func (p *processes) Start(proc process) {
 				// TODO:
 				select {
 				case msg := <-proc.jetstreamOut:
-					fmt.Printf("######## DEBUG: Publisher: received on <-proc.jetstreamOut: %v\n", msg)
+					fmt.Printf("\n######## DEBUG: Publisher: received on <-proc.jetstreamOut: %v\n", msg)
 					// b, err := proc.messageSerializeAndCompress(msg)
 					// if err != nil {
 					// 	log.Fatalf("error: pfJetstreamPublishers: js failed to marshal message: %v\n", err)
@@ -381,6 +382,7 @@ func (p *processes) Start(proc process) {
 
 					subject := fmt.Sprintf("nodes.%v", msg.JetstreamToNode)
 					fmt.Printf("######## DEBUG: Publisher: before publish on subject: %v\n", subject)
+
 					_, err = js.Publish(proc.ctx, subject, b)
 					if err != nil {
 						log.Fatalf("error: pfJetstreamPublishers:js failed to publish message: %v\n", err)
@@ -415,42 +417,45 @@ func (p *processes) Start(proc process) {
 				log.Fatalf("error: jetstream new failed: %v\n", err)
 			}
 
-			stream, err := js.Stream(proc.ctx, "nodes")
-			if err != nil {
-				log.Printf("error: js.Stream failed: %v\n", err)
-			}
+			// stream, err := js.Stream(proc.ctx, "nodes")
+			// if err != nil {
+			// 	log.Printf("error: js.Stream failed: %v\n", err)
+			// }
 
-			// stream, err := js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
-			// 	Name:        "nodes",
-			// 	Description: "nodes stream",
-			// 	Subjects:    []string{"nodes.>"},
-			// 	// Discard older messages and keep only the last one.
-			// 	MaxMsgsPerSubject: 1,
-			// })
+			stream, err := js.CreateOrUpdateStream(proc.ctx, jetstream.StreamConfig{
+				Name:        "nodes",
+				Description: "nodes stream",
+				Subjects:    []string{"nodes.>"},
+				// Discard older messages and keep only the last one.
+				MaxMsgsPerSubject: 10,
+			})
 			if err != nil {
 				log.Printf("error: js.Stream failed: %v\n", err)
 			}
 
 			// Check for more subjects via flags to listen to, and if defined prefix all
 			// the values with "nodes."
-			////filterSubjectValues := []string{
-			////	fmt.Sprintf("nodes.%v", proc.server.nodeName),
-			////	//"nodes.all",
-			////}
-			////fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
+			fmt.Println("-------------------------------------------------------")
+			fmt.Printf(" DEBUG: start consumer: proc.server.nodeName: %v\n", proc.server.nodeName)
+			fmt.Println("-------------------------------------------------------")
+			filterSubjectValues := []string{
+				fmt.Sprintf("nodes.%v", proc.server.nodeName),
+				//"nodes.all",
+			}
+			fmt.Printf("--- DEBUG: consumer: filterSubjectValues: %v\n", filterSubjectValues)
 
-			//// Check if there are more to consume defined in flags/env.
-			//if proc.configuration.JetstreamsConsume != "" {
-			//	splitValues := strings.Split(proc.configuration.JetstreamsConsume, ",")
-			//	for i, v := range splitValues {
-			//		filterSubjectValues[i] = fmt.Sprintf("nodes.%v", v)
-			//	}
-			//}
+			// Check if there are more to consume defined in flags/env.
+			if proc.configuration.JetstreamsConsume != "" {
+				splitValues := strings.Split(proc.configuration.JetstreamsConsume, ",")
+				for i, v := range splitValues {
+					filterSubjectValues[i] = fmt.Sprintf("nodes.%v", v)
+				}
+			}
 
 			consumer, err := stream.CreateOrUpdateConsumer(proc.ctx, jetstream.ConsumerConfig{
-				Name:    "nodes_processor",
-				Durable: "nodes_processor",
-				//FilterSubjects: filterSubjectValues,
+				Name:           "nodes_processor",
+				Durable:        "nodes_processor",
+				FilterSubjects: filterSubjectValues,
 			})
 			if err != nil {
 				log.Fatalf("error: create or update consumer failed: %v\n", err)

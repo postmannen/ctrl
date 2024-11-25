@@ -446,6 +446,11 @@ func (s *server) directSAMSChRead() {
 				for i, sam := range sams {
 					processName := processNameGet(sams[i].Subject.name(), processKindSubscriberNats)
 
+					if processName == "" {
+						fmt.Printf("error: processName was empty, sams[%v] was: %#v\n", i, sams[i])
+						os.Exit(1)
+					}
+
 					s.processes.active.mu.Lock()
 					p := s.processes.active.procNames[processName]
 					s.processes.active.mu.Unlock()
