@@ -200,7 +200,7 @@ func (s *server) jetstreamConsume() {
 
 		msg.Ack()
 
-		m, err := s.messageDeserializeAndUncompress(msg)
+		m, err := s.messageDeserializeAndUncompress(msg.Data())
 		if err != nil {
 			er := fmt.Errorf("jetstreamConsume: deserialize and uncompress failed: %v", err)
 			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)

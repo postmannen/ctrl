@@ -17,7 +17,6 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -669,17 +668,14 @@ func (s *server) messageSerializeAndCompress(msg Message) ([]byte, error) {
 }
 
 // messageDeserializeAndUncompress will deserialize the ctrl message
-func (s *server) messageDeserializeAndUncompress(msg jetstream.Msg) (Message, error) {
+func (s *server) messageDeserializeAndUncompress(msgData []byte) (Message, error) {
 
-	// Variable to hold a copy of the message data.
-	msgData := msg.Data()
-
-	// If debugging is enabled, print the source node name of the nats messages received.
-	headerFromNode := msg.Headers().Get("fromNode")
-	if headerFromNode != "" {
-		er := fmt.Errorf("info: subscriberHandlerJetstream: nats message received from %v, with subject %v ", headerFromNode, msg.Subject())
-		s.errorKernel.logDebug(er)
-	}
+	// // If debugging is enabled, print the source node name of the nats messages received.
+	// headerFromNode := msg.Headers().Get("fromNode")
+	// if headerFromNode != "" {
+	// 	er := fmt.Errorf("info: subscriberHandlerJetstream: nats message received from %v, with subject %v ", headerFromNode, msg.Subject())
+	// 	s.errorKernel.logDebug(er)
+	// }
 
 	zr, err := zstd.NewReader(nil)
 	if err != nil {
@@ -699,7 +695,7 @@ func (s *server) messageDeserializeAndUncompress(msg jetstream.Msg) (Message, er
 
 	err = cbor.Unmarshal(msgData, &message)
 	if err != nil {
-		er := fmt.Errorf("error: subscriberHandlerJetstream: cbor decoding failed, subject: %v, error: %v", msg.Subject(), err)
+		er := fmt.Errorf("error: subscriberHandlerJetstream: cbor decoding failed, error: %v", err)
 		return Message{}, er
 	}
 
