@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
-	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 	// "google.golang.org/protobuf/internal/errors"
@@ -179,13 +177,13 @@ func (p process) start() {
 	}
 
 	// Start a publisher worker, which will start a go routine (process)
-	// That will take care of all the messages for the subject it owns.
+	// to handle publishing of the messages for the subject it owns.
 	if p.processKind == processKindPublisher {
 		p.startPublisher()
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
-	// That will take care of all the messages for the subject it owns.
+	// to handle executing the request method defined in the message.
 	if p.processKind == processKindSubscriber {
 		p.startSubscriber()
 	}
@@ -199,6 +197,7 @@ func (p process) start() {
 	p.errorKernel.logDebug(er)
 }
 
+// startPublisher.
 func (p process) startPublisher() {
 	// If there is a procFunc for the process, start it.
 	if p.procFunc != nil {
@@ -715,24 +714,6 @@ func (p process) subscribeMessages() *nats.Subscription {
 // process. The function should be run as a goroutine, and will run
 // as long as the process it belongs to is running.
 func (p process) publishMessages(natsConn *nats.Conn) {
-
-	var zEnc *zstd.Encoder
-	// Prepare a zstd encoder if enabled. By enabling it here before
-	// looping over the messages to send below, we can reuse the zstd
-	// encoder for all messages.
-	switch p.configuration.Compression {
-	case "z": // zstd
-		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-		enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
-		if err != nil {
-			er := fmt.Errorf("error: zstd new encoder failed: %v", err)
-			p.errorKernel.logError(er)
-			os.Exit(1)
-		}
-		zEnc = enc
-		defer zEnc.Close()
-
-	}
 
 	// Adding a timer that will be used for when to remove the sub process
 	// publisher. The timer is reset each time a message is published with

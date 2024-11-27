@@ -182,7 +182,7 @@ func (s *server) jetstreamConsume() {
 		}
 	}
 
-	er := fmt.Errorf("jetstreamConsume: will consume the following subjects: %q", filterSubjectValues)
+	er := fmt.Errorf("jetstreamConsume: will consume the following subjects: %v", filterSubjectValues)
 	s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
 	cons, err := stream.CreateOrUpdateConsumer(s.ctx, jetstream.ConsumerConfig{
