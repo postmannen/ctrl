@@ -128,11 +128,9 @@ func (s *server) jetstreamPublish() {
 
 	// Create a stream
 	_, _ = js.CreateStream(s.ctx, jetstream.StreamConfig{
-		Name:     "NODES",
-		Subjects: []string{"NODES.>"},
-		// TODO: Create Flag ?
-		MaxMsgsPerSubject: 100,
-		// MaxMsgsPerSubject: 1,
+		Name:              "NODES",
+		Subjects:          []string{"NODES.>"},
+		MaxMsgsPerSubject: int64(s.configuration.JetStreamMaxMsgsPerSubject),
 	})
 
 	// Publish messages.
