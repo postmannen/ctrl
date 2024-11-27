@@ -728,11 +728,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// exit this function if Cancel are received via ctx.
 		select {
 		case <-ticker.C:
+			// If it is a long running publisher we don't want to cancel it.
 			if p.isLongRunningPublisher {
-				er := fmt.Errorf("info: isLongRunningPublisher, will not cancel publisher: %v", p.processName)
-				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-				p.errorKernel.logDebug(er)
-
 				continue
 			}
 
