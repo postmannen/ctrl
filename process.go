@@ -153,8 +153,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
-	// one message queue.
-
+	// one request type.
 	if proc.processKind == processKindPublisher {
 		proc.processName = processNameGet(proc.subject.name(), processKindPublisher)
 	}
@@ -172,7 +171,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
-func (p process) spawnWorker() {
+func (p process) start() {
 
 	// Add prometheus metrics for the process.
 	if !p.isSubProcess {
