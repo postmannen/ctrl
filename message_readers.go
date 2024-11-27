@@ -136,19 +136,20 @@ func (s *server) jetstreamPublish() {
 	// Publish messages.
 	for {
 		select {
-		case jsMSG := <-s.jetstreamPublishCh:
-			b, err := json.Marshal(jsMSG)
+		case msg := <-s.jetstreamPublishCh:
+
+			b, err := s.messageSerializeAndCompress(msg)
 			if err != nil {
 				log.Fatalf("error: jetstreamPublish: marshal of message failed: %v\n", err)
 			}
 
-			subject := string(fmt.Sprintf("NODES.%v", jsMSG.JetstreamToNode))
+			subject := string(fmt.Sprintf("NODES.%v", msg.JetstreamToNode))
 			_, err = js.Publish(s.ctx, subject, b)
 			if err != nil {
 				log.Fatalf("error: jetstreamPublish: publish failed: %v\n", err)
 			}
 
-			fmt.Printf("Published jetstream on subject: %q, message: %v\n", subject, jsMSG)
+			fmt.Printf("Published jetstream on subject: %q, message: %v\n", subject, msg)
 		case <-s.ctx.Done():
 		}
 	}
@@ -199,10 +200,9 @@ func (s *server) jetstreamConsume() {
 
 		msg.Ack()
 
-		m := Message{}
-		err := json.Unmarshal(msg.Data(), &m)
+		m, err := s.messageDeserializeAndUncompress(msg)
 		if err != nil {
-			er := fmt.Errorf("error: jetstreamConsume: CreateOrUpdateConsumer failed: %v", err)
+			er := fmt.Errorf("jetstreamConsume: deserialize and uncompress failed: %v", err)
 			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
 			return
 		}
