@@ -68,7 +68,7 @@ const logNone logLevel = "none"
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error {
+func (e *errorKernel) start(ringBufferBulkInCh chan<- subjectAndMessage) error {
 	// Initiate the slog logger.
 	var replaceFunc func(groups []string, a slog.Attr) slog.Attr
 	if !e.configuration.LogConsoleTimestamps {
@@ -137,7 +137,7 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 			}
 
 			// Put the message on the channel to the ringbuffer.
-			ringBufferBulkInCh <- []subjectAndMessage{sam}
+			ringBufferBulkInCh <- sam
 
 			// if errEvent.process.configuration.EnableDebug {
 			// 	log.Printf("%v\n", er)

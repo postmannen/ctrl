@@ -11,6 +11,7 @@
 
 - [Messaging](./core_messaging_overview.md)
 - [Message fields](./core_messaging_message_fields.md)
+- [Message jetstream/broadcast](./core_messaging_jetstream.md)
 - [Request Methods](./core_request_methods.md)
 - [Nats timeouts](./core_nats_timeouts.md)
 - [Startup folder](./core_startup_folder.md)

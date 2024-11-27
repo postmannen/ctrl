@@ -50,6 +50,8 @@ type Configuration struct {
 	ProfilingPort string `comment:"The number of the profiling port"`
 	// Host and port for prometheus listener, e.g. localhost:2112
 	PromHostAndPort string `comment:"Host and port for prometheus listener, e.g. localhost:2112"`
+	// Comma separated list of additional streams to consume from.
+	JetstreamsConsume string
 	// Set to true if this is the node that should receive the error log's from other nodes
 	DefaultMessageTimeout int `comment:"Set to true if this is the node that should receive the error log's from other nodes"`
 	// Default value for how long can a request method max be allowed to run in seconds
@@ -165,6 +167,7 @@ func NewConfiguration() *Configuration {
 	flag.IntVar(&c.AclUpdateInterval, "aclUpdateInterval", CheckEnv("ACL_UPDATE_INTERVAL", c.AclUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", CheckEnv("PROFILING_PORT", c.ProfilingPort).(string), "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", CheckEnv("PROM_HOST_AND_PORT", c.PromHostAndPort).(string), "host and port for prometheus listener, e.g. localhost:2112")
+	flag.StringVar(&c.JetstreamsConsume, "jetstreamsConsume", CheckEnv("JETSTREAMS_CONSUME", c.JetstreamsConsume).(string), "Comma separated list of Jetstrams to consume from")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", CheckEnv("DEFAULT_MESSAGE_TIMEOUT", c.DefaultMessageTimeout).(int), "default message timeout in seconds. This can be overridden on the message level")
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", CheckEnv("DEFAULT_MESSAGE_RETRIES", c.DefaultMessageRetries).(int), "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.IntVar(&c.DefaultMethodTimeout, "defaultMethodTimeout", CheckEnv("DEFAULT_METHOD_TIMEOUT", c.DefaultMethodTimeout).(int), "default amount of seconds a request method max will be allowed to run")
@@ -242,6 +245,7 @@ func newConfigurationDefaults() Configuration {
 		AclUpdateInterval:         60,
 		ProfilingPort:             "",
 		PromHostAndPort:           "",
+		JetstreamsConsume:         "",
 		DefaultMessageTimeout:     10,
 		DefaultMessageRetries:     1,
 		DefaultMethodTimeout:      10,

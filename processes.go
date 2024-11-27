@@ -191,7 +191,7 @@ func (p *processes) Start(proc process) {
 					er := fmt.Errorf("error: ProcessesStart: %v", err)
 					p.errorKernel.errSend(proc, m, er, logError)
 				}
-				proc.newMessagesCh <- []subjectAndMessage{sam}
+				proc.newMessagesCh <- sam
 
 				select {
 				case <-ticker.C:
@@ -241,7 +241,7 @@ func (p *processes) Start(proc process) {
 					// In theory the system should drop the message before it reaches here.
 					p.errorKernel.errSend(proc, m, err, logError)
 				}
-				proc.newMessagesCh <- []subjectAndMessage{sam}
+				proc.newMessagesCh <- sam
 
 				select {
 				case <-ticker.C:
@@ -290,7 +290,7 @@ func (p *processes) Start(proc process) {
 					p.errorKernel.errSend(proc, m, err, logError)
 					log.Printf("error: ProcessesStart: %v\n", err)
 				}
-				proc.newMessagesCh <- []subjectAndMessage{sam}
+				proc.newMessagesCh <- sam
 
 				select {
 				case <-ticker.C:

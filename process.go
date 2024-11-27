@@ -88,7 +88,7 @@ type process struct {
 	// copy of the configuration from server
 	configuration *Configuration
 	// The new messages channel copied from *Server
-	newMessagesCh chan<- []subjectAndMessage
+	newMessagesCh chan<- subjectAndMessage
 	// The structure who holds all processes information
 	processes *processes
 	// nats connection
@@ -507,6 +507,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	}
 
 	message := Message{}
+
+	// TODO: Jetstream
+	// Use CBOR and Compression for all messages, and drop the use of the header fields.
 
 	// Check if serialization is specified.
 	// Will default to gob serialization if nothing or non existing value is specified.

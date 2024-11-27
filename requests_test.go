@@ -289,7 +289,7 @@ func TestRequest(t *testing.T) {
 				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
 			}
 
-			tstSrv.newMessagesCh <- []subjectAndMessage{sam}
+			tstSrv.newMessagesCh <- sam
 
 		case viaSocket:
 			msgs := []Message{tt.message}

@@ -21,6 +21,9 @@ type Message struct {
 	// With other words, a message that exists within ctrl is always
 	// for just for a single node.
 	ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
+	// JetstreamToNode, the topic used to prefix the stream name with
+	// with the format NODES.<JetstreamToNode> .
+	JetstreamToNode Node `json:"jetstreamToNode" yaml:"jetstreamToNode"`
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
 	// The actual data in the message. This is typically where we

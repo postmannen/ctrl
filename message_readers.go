@@ -10,8 +10,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/nats-io/nats.go/jetstream"
 
 	"gopkg.in/yaml.v3"
 )
@@ -119,6 +122,114 @@ func (s *server) readStartupFolder() {
 
 }
 
+func (s *server) jetstreamPublish() {
+	// Create a JetStream management interface
+	js, _ := jetstream.New(s.natsConn)
+
+	// Create a stream
+	_, _ = js.CreateStream(s.ctx, jetstream.StreamConfig{
+		Name:     "NODES",
+		Subjects: []string{"NODES.>"},
+		// TODO: Create Flag ?
+		MaxMsgsPerSubject: 100,
+		// MaxMsgsPerSubject: 1,
+	})
+
+	// Publish messages.
+	for {
+		select {
+		case jsMSG := <-s.jetstreamPublishCh:
+			b, err := json.Marshal(jsMSG)
+			if err != nil {
+				log.Fatalf("error: jetstreamPublish: marshal of message failed: %v\n", err)
+			}
+
+			subject := string(fmt.Sprintf("NODES.%v", jsMSG.JetstreamToNode))
+			_, err = js.Publish(s.ctx, subject, b)
+			if err != nil {
+				log.Fatalf("error: jetstreamPublish: publish failed: %v\n", err)
+			}
+
+			fmt.Printf("Published jetstream on subject: %q, message: %v\n", subject, jsMSG)
+		case <-s.ctx.Done():
+		}
+	}
+}
+
+func (s *server) jetstreamConsume() {
+	// Create a JetStream management interface
+	js, _ := jetstream.New(s.natsConn)
+
+	// Create a stream
+	stream, err := js.CreateOrUpdateStream(s.ctx, jetstream.StreamConfig{
+		Name:     "NODES",
+		Subjects: []string{"NODES.>"},
+	})
+	if err != nil {
+		log.Printf("error: jetstreamConsume: failed to create stream: %v\n", err)
+	}
+
+	// The standard streams we want to consume.
+	filterSubjectValues := []string{
+		fmt.Sprintf("NODES.%v", s.nodeName),
+		"NODES.all",
+	}
+
+	// Check if there are more to consume defined in flags/env.
+	if s.configuration.JetstreamsConsume != "" {
+		splitValues := strings.Split(s.configuration.JetstreamsConsume, ",")
+		for _, v := range splitValues {
+			filterSubjectValues = append(filterSubjectValues, fmt.Sprintf("NODES.%v", v))
+		}
+	}
+
+	er := fmt.Errorf("jetstreamConsume: will consume the following subjects: %q", filterSubjectValues)
+	s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+
+	cons, err := stream.CreateOrUpdateConsumer(s.ctx, jetstream.ConsumerConfig{
+		Name:           s.nodeName,
+		Durable:        s.nodeName,
+		FilterSubjects: filterSubjectValues,
+	})
+	if err != nil {
+		log.Fatalf("error: jetstreamConsume: CreateOrUpdateConsumer failed: %v\n", err)
+	}
+
+	consumeContext, _ := cons.Consume(func(msg jetstream.Msg) {
+		er := fmt.Errorf("jetstreamConsume: jetstream msg received: subject %q, data: %q", msg.Subject(), string(msg.Data()))
+		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+
+		msg.Ack()
+
+		m := Message{}
+		err := json.Unmarshal(msg.Data(), &m)
+		if err != nil {
+			er := fmt.Errorf("error: jetstreamConsume: CreateOrUpdateConsumer failed: %v", err)
+			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+			return
+		}
+
+		// From here it is the normal message logic that applies, and since messages received
+		// via jetstream are to be handled by the node it was consumed we set the current
+		// nodeName of the consumer in the ctrl Message, so we are sure it is handled locally.
+		m.ToNode = Node(s.nodeName)
+
+		sam, err := newSubjectAndMessage(m)
+		if err != nil {
+			er := fmt.Errorf("error: jetstreamConsume: newSubjectAndMessage failed: %v", err)
+			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+			return
+		}
+
+		// If a message is received via
+		s.samSendLocalCh <- []subjectAndMessage{sam}
+	})
+	defer consumeContext.Stop()
+
+	<-s.ctx.Done()
+
+}
+
 // getFilePaths will get the names of all the messages in
 // the folder specified from current working directory.
 func (s *server) getFilePaths(dirName string) ([]string, error) {
@@ -208,10 +319,12 @@ func (s *server) readSocket() {
 				// for auditing.
 				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, sams[i].Message)
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+
+				s.newMessagesCh <- sams[i]
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.newMessagesCh <- sams
+
 			s.auditLogCh <- sams
 
 		}(conn)
@@ -246,7 +359,8 @@ func (s *server) readFolder() {
 					return
 				}
 
-				if event.Op == fsnotify.Create || event.Op == fsnotify.Chmod {
+				if event.Op == fsnotify.Create || event.Op == fsnotify.Write {
+					time.Sleep(time.Millisecond * 250)
 					er := fmt.Errorf("readFolder: got file event, name: %v, op: %v", event.Name, event.Op)
 					s.errorKernel.logDebug(er)
 
@@ -266,6 +380,8 @@ func (s *server) readFolder() {
 							return
 						}
 						fh.Close()
+
+						fmt.Printf("------- DEBUG: %v\n", b)
 
 						b = bytes.Trim(b, "\x00")
 
@@ -287,13 +403,24 @@ func (s *server) readFolder() {
 							// for auditing.
 							er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, sams[i].Message)
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+
+							// Check if it is a message to publish with Jetstream.
+							if sams[i].Message.JetstreamToNode != "" {
+
+								s.jetstreamPublishCh <- sams[i].Message
+								er = fmt.Errorf("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh: %#v", sams)
+								s.errorKernel.logDebug(er)
+
+								continue
+							}
+
+							s.newMessagesCh <- sams[i]
+
+							er = fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", sams)
+							s.errorKernel.logDebug(er)
 						}
 
-						er := fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", sams)
-						s.errorKernel.logDebug(er)
-
 						// Send the SAM struct to be picked up by the ring buffer.
-						s.newMessagesCh <- sams
 						s.auditLogCh <- sams
 
 						// Delete the file.
@@ -383,10 +510,10 @@ func (s *server) readTCPListener() {
 				// Fill in the value for the FromNode field, so the receiver
 				// can check this field to know where it came from.
 				sams[i].Message.FromNode = Node(s.nodeName)
+				s.newMessagesCh <- sams[i]
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.newMessagesCh <- sams
 			s.auditLogCh <- sams
 
 		}(conn)
@@ -428,10 +555,10 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 		// Fill in the value for the FromNode field, so the receiver
 		// can check this field to know where it came from.
 		sams[i].Message.FromNode = Node(s.nodeName)
+		s.newMessagesCh <- sams[i]
 	}
 
 	// Send the SAM struct to be picked up by the ring buffer.
-	s.newMessagesCh <- sams
 	s.auditLogCh <- sams
 
 }
