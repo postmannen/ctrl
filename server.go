@@ -495,9 +495,6 @@ func (s *server) routeMessagesToProcess() {
 		for sam := range s.newMessagesCh {
 
 			go func(sam subjectAndMessage) {
-				// TODO: Jetstream
-				// Check if Jetstream stream are specified,
-				// and send off to Jetstream publisher.
 
 				s.messageID.mu.Lock()
 				s.messageID.id++

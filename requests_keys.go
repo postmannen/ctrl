@@ -125,10 +125,6 @@ func methodKeysRequestUpdate(proc process, message Message, node string) ([]byte
 func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
-	// TODO:
-	// - Since this is implemented as a NACK message we could implement a
-	//   metric thats shows the last time keys were updated.
-
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
 	proc.processes.wg.Add(1)

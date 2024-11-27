@@ -847,7 +847,6 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						proc.errorKernel.logDebug(er)
 
 						if _, err := os.Stat(cia.DstDir); os.IsNotExist(err) {
-							// TODO: Add option to set permission here ???
 							err := os.MkdirAll(cia.DstDir, fs.FileMode(cia.FolderPermission))
 							if err != nil {
 								return fmt.Errorf("error: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
