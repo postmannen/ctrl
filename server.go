@@ -568,7 +568,7 @@ func (s *server) routeMessagesToPublisherProcess() {
 					// put the message on that processes incomming message channel.
 					if ok && !ctxCanceled {
 						select {
-						case proc.subject.messageCh <- m:
+						case proc.subject.publishMessageCh <- m:
 							er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
 							s.errorKernel.logDebug(er)
 						case <-proc.ctx.Done():
@@ -607,7 +607,7 @@ func (s *server) routeMessagesToPublisherProcess() {
 				// Now when the process is spawned we continue,
 				// and send the message to that new process.
 				select {
-				case proc.subject.messageCh <- m:
+				case proc.subject.publishMessageCh <- m:
 					er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
 					s.errorKernel.logDebug(er)
 				case <-proc.ctx.Done():

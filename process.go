@@ -749,7 +749,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			return
 			//}
 
-		case m := <-p.subject.messageCh:
+		case m := <-p.subject.publishMessageCh:
 			ticker.Reset(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
 			// Sign the methodArgs, and add the signature to the message.
 			m.ArgSignature = p.addMethodArgSignature(m)

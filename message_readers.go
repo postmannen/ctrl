@@ -688,9 +688,9 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 	}
 
 	sub := Subject{
-		ToNode:    string(m.ToNode),
-		Method:    m.Method,
-		messageCh: make(chan Message),
+		ToNode:           string(m.ToNode),
+		Method:           m.Method,
+		publishMessageCh: make(chan Message),
 	}
 
 	sam := subjectAndMessage{
