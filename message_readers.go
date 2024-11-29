@@ -116,7 +116,7 @@ func (s *server) readStartupFolder() {
 		er = fmt.Errorf("%v", string(j))
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
-		s.samSendLocalCh <- sams
+		s.messageDeliverLocalCh <- sams
 
 	}
 
@@ -220,7 +220,7 @@ func (s *server) jetstreamConsume() {
 		}
 
 		// If a message is received via
-		s.samSendLocalCh <- []subjectAndMessage{sam}
+		s.messageDeliverLocalCh <- []subjectAndMessage{sam}
 	})
 	defer consumeContext.Stop()
 

@@ -237,7 +237,7 @@ func (p process) startSubscriber() {
 		}()
 	}
 
-	p.natsSubscription = p.subscribeMessages()
+	p.natsSubscription = p.startNatsSubscriber()
 
 	// We also need to be able to remove all the information about this process
 	// when the process context is canceled.
@@ -264,11 +264,12 @@ var (
 	ErrACKSubscribeRetry = errors.New("ctrl: retrying to subscribe for ack message")
 )
 
-// messageDeliverNats will create the Nats message with headers and payload.
-// It will also take care of the delivering the message that is converted to
-// gob or cbor format as a nats.Message. It will also take care of checking
-// timeouts and retries specified for the message.
-func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.Header, natsConn *nats.Conn, message Message) {
+// publishNats will create the Nats message with headers and payload.
+// The payload of the nats message, which is the ctrl message will be
+// serialized and compress before put in the data field of the nats
+// message.
+// It will also take care of resending if not delievered, and timeouts.
+func (p process) publishNats(natsMsgPayload []byte, natsMsgHeader nats.Header, natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
 	if message.RetryWait <= 0 {
@@ -435,7 +436,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 // kind of message it is and then it will check how to handle that message type,
 // and then call the correct method handler for it.
 //
-// This handler function should be started in it's own go routine,so
+// This function should be started in it's own go routine,so
 // one individual handler is started per message received so we can keep
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
@@ -692,7 +693,7 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 // SubscribeMessage will register the Nats callback function for the specified
 // nats subject. This allows us to receive Nats messages for a given subject
 // on a node.
-func (p process) subscribeMessages() *nats.Subscription {
+func (p process) startNatsSubscriber() *nats.Subscription {
 	subject := string(p.subject.name())
 	// natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 	natsSubscription, err := p.natsConn.QueueSubscribe(subject, subject, func(msg *nats.Msg) {
@@ -786,7 +787,7 @@ func (p process) publishAMessage(m Message, natsConn *nats.Conn) {
 
 	// Create the Nats message with headers and payload, and do the
 	// sending of the message.
-	p.messageDeliverNats(b, natsMsgHeader, natsConn, m)
+	p.publishNats(b, natsMsgHeader, natsConn, m)
 
 	// Get the process name so we can look up the process in the
 	// processes map, and increment the message counter.

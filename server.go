@@ -51,8 +51,8 @@ type server struct {
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
 	newMessagesCh chan subjectAndMessage
-	// directSAMSCh
-	samSendLocalCh chan []subjectAndMessage
+	// messageDeliverLocalCh
+	messageDeliverLocalCh chan []subjectAndMessage
 	// Channel for messages to publish with Jetstream.
 	jetstreamPublishCh chan Message
 	// errorKernel is doing all the error handling like what to do if
@@ -228,23 +228,23 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	}()
 
 	s := server{
-		ctx:                ctx,
-		cancel:             cancel,
-		configuration:      configuration,
-		nodeName:           configuration.NodeName,
-		natsConn:           conn,
-		ctrlSocket:         ctrlSocket,
-		newMessagesCh:      make(chan subjectAndMessage),
-		samSendLocalCh:     make(chan []subjectAndMessage),
-		jetstreamPublishCh: make(chan Message),
-		metrics:            metrics,
-		version:            version,
-		errorKernel:        errorKernel,
-		nodeAuth:           nodeAuth,
-		helloRegister:      newHelloRegister(),
-		centralAuth:        centralAuth,
-		auditLogCh:         make(chan []subjectAndMessage),
-		zstdEncoder:        zstdEncoder,
+		ctx:                   ctx,
+		cancel:                cancel,
+		configuration:         configuration,
+		nodeName:              configuration.NodeName,
+		natsConn:              conn,
+		ctrlSocket:            ctrlSocket,
+		newMessagesCh:         make(chan subjectAndMessage),
+		messageDeliverLocalCh: make(chan []subjectAndMessage),
+		jetstreamPublishCh:    make(chan Message),
+		metrics:               metrics,
+		version:               version,
+		errorKernel:           errorKernel,
+		nodeAuth:              nodeAuth,
+		helloRegister:         newHelloRegister(),
+		centralAuth:           centralAuth,
+		auditLogCh:            make(chan []subjectAndMessage),
+		zstdEncoder:           zstdEncoder,
 	}
 
 	s.processes = newProcesses(ctx, &s)
@@ -374,7 +374,7 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess()
+	s.routeMessagesToPublisherProcess()
 
 	// Start reading the channel for injecting direct messages that should
 	// not be sent via the message broker.
@@ -433,7 +433,7 @@ func (s *server) directSAMSChRead() {
 			case <-s.ctx.Done():
 				log.Printf("info: stopped the directSAMSCh reader\n\n")
 				return
-			case sams := <-s.samSendLocalCh:
+			case sams := <-s.messageDeliverLocalCh:
 				// fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
@@ -487,7 +487,7 @@ func (s *server) Stop() {
 
 }
 
-// routeMessagesToProcess takes a database name it's input argument.
+// routeMessagesToPublisherProcess takes a database name it's input argument.
 // The database will be used as the persistent k/v store for the work
 // queue which is implemented as a ring buffer.
 // The ringBufferInCh are where we get new messages to publish.
@@ -496,7 +496,7 @@ func (s *server) Stop() {
 // worker process.
 // It will also handle the process of spawning more worker processes
 // for publisher subjects if it does not exist.
-func (s *server) routeMessagesToProcess() {
+func (s *server) routeMessagesToPublisherProcess() {
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file.
 
