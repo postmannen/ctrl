@@ -93,8 +93,9 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 func newNatsServerForTesting(port int) *natsserver.Server {
 	// Start up the nats-server message broker.
 	nsOpt := &natsserver.Options{
-		Host: "127.0.0.1",
-		Port: port,
+		Host:      "127.0.0.1",
+		Port:      port,
+		JetStream: true,
 	}
 
 	ns, err := natsserver.NewServer(nsOpt)
