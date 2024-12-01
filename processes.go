@@ -166,6 +166,9 @@ func (p *processes) Start(proc process) {
 
 	if proc.configuration.StartProcesses.StartPubHello != 0 {
 		pf := func(ctx context.Context, procFuncCh chan Message) error {
+			fmt.Println("\n-------------------------------------------------------------------------------------------")
+			fmt.Printf("--- starting up publisher for method %v\n", "hello")
+			fmt.Print("-------------------------------------------------------------------------------------------\n\n")
 			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartProcesses.StartPubHello))
 			defer ticker.Stop()
 			for {
