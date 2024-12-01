@@ -23,7 +23,7 @@ func methodOpProcessList(proc process, message Message, node string) ([]byte, er
 
 		proc.processes.active.mu.Lock()
 		for _, pTmp := range proc.processes.active.procNames {
-			s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pTmp.processKind, pTmp.processID, pTmp.subject.name())
+			s := fmt.Sprintf("%v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pTmp.processID, pTmp.subject.name())
 			sb := []byte(s)
 			out = append(out, sb...)
 
@@ -68,7 +68,7 @@ func methodOpProcessStart(proc process, message Message, node string) ([]byte, e
 
 		// Create the process and start it.
 		sub := newSubject(method, proc.configuration.NodeName)
-		procNew := newProcess(proc.ctx, proc.server, sub, processKindSubscriber)
+		procNew := newProcess(proc.ctx, proc.server, sub)
 		go procNew.start()
 
 		txt := fmt.Sprintf("info: OpProcessStart: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
@@ -115,7 +115,6 @@ func methodOpProcessStop(proc process, message Message, node string) ([]byte, er
 
 		methodString := message.MethodArgs[0]
 		node := message.MethodArgs[1]
-		kind := message.MethodArgs[2]
 
 		method := Method(methodString)
 		tmpH := mt.getHandler(Method(method))
@@ -132,7 +131,7 @@ func methodOpProcessStop(proc process, message Message, node string) ([]byte, er
 		// We can then use this processName to get the real values for the
 		// actual process we want to stop.
 		sub := newSubject(method, string(node))
-		processName := processNameGet(sub.name(), processKind(kind))
+		processName := processNameGet(sub.name())
 
 		// Remove the process from the processes active map if found.
 		proc.processes.active.mu.Lock()

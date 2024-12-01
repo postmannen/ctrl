@@ -570,16 +570,6 @@ func (s *server) readHttpListener() {
 	}()
 }
 
-// The subject are made up of different parts of the message field.
-// To make things easier and to avoid figuring out what the subject
-// is in all places we've created the concept of subjectAndMessage
-// (sam) where we get the subject for the message once, and use the
-// sam structure with subject alongside the message instead.
-type subjectAndMessage struct {
-	Subject `json:"subject" yaml:"subject"`
-	Message `json:"message" yaml:"message"`
-}
-
 // convertBytesToSAMs will range over the  byte representing a message given in
 // json format. For each element found the Message type will be converted into
 // a SubjectAndMessage type value and appended to a slice, and the slice is
@@ -639,37 +629,4 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 	}
 
 	return msgs
-}
-
-// newSubjectAndMessage will look up the correct values and value types to
-// be used in a subject for a Message (sam), and return the a combined structure
-// of type subjectAndMessage.
-func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
-	// We need to create a tempory method type to look up the kind for the
-	// real method for the message.
-	var mt Method
-
-	tmpH := mt.getHandler(m.Method)
-	if tmpH == nil {
-		return subjectAndMessage{}, fmt.Errorf("error: newSubjectAndMessage: no such request type defined: %v", m.Method)
-	}
-
-	switch {
-	case m.ToNode == "":
-		return subjectAndMessage{}, fmt.Errorf("error: newSubjectAndMessage: ToNode empty: %+v", m)
-	case m.Method == "":
-		return subjectAndMessage{}, fmt.Errorf("error: newSubjectAndMessage: Method empty: %v", m)
-	}
-
-	sub := Subject{
-		ToNode: string(m.ToNode),
-		Method: m.Method,
-	}
-
-	sam := subjectAndMessage{
-		Subject: sub,
-		Message: m,
-	}
-
-	return sam, nil
 }

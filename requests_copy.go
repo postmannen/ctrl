@@ -92,15 +92,6 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
 	}
 
-	// Check if the filepaths for the socket a realpaths.
-	file := filepath.Join(message.Directory, message.FileName)
-	if strings.HasPrefix(file, "./") || !strings.HasPrefix(file, "/") {
-		er := fmt.Errorf("error: copySrcSubHandler: path in message started with ./ or no directory at all, only full paths are allowed, path given was : %v", file)
-		proc.errorKernel.errSend(proc, message, er, logError)
-		newReplyMessage(proc, message, []byte(er.Error()))
-		return nil, er
-	}
-
 	var subProcessName string
 
 	proc.processes.wg.Add(1)
@@ -220,7 +211,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 		// Create a new sub process that will do the actual file copying.
 
-		copySrcSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber)
+		copySrcSubProc := newSubProcess(ctx, proc.server, sub)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -268,8 +259,8 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 }
 
 // newSubProcess is a wrapper around newProcess which sets the isSubProcess value to true.
-func newSubProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
-	p := newProcess(ctx, server, subject, processKind)
+func newSubProcess(ctx context.Context, server *server, subject Subject) process {
+	p := newProcess(ctx, server, subject)
 	p.isSubProcess = true
 
 	return p
@@ -321,7 +312,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		// previous message is then fully up and running, so we just discard
 		// that second message in those cases.
 
-		pn := processNameGet(sub.name(), processKindSubscriber)
+		pn := processNameGet(sub.name())
 		// fmt.Printf("\n\n *** DEBUG: processNameGet: %v\n\n", pn)
 
 		proc.processes.active.mu.Lock()
@@ -340,7 +331,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		}
 
 		// Create a new sub process that will do the actual file copying.
-		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber)
+		copyDstSubProc := newSubProcess(ctx, proc.server, sub)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.

@@ -23,9 +23,8 @@ import (
 type processName string
 
 // Will return a process name made up of subjectName+processKind
-func processNameGet(sn subjectName, pk processKind) processName {
-	pn := fmt.Sprintf("%s_%s", sn, pk)
-	return processName(pn)
+func processNameGet(sn subjectName) processName {
+	return processName(sn)
 }
 
 // server is the structure that will hold the state about spawned
@@ -356,7 +355,7 @@ func (s *server) Start() {
 	//
 	// The context of the initial process are set in processes.Start.
 	sub := newSubject(Initial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s, sub, "")
+	s.processInitial = newProcess(context.TODO(), s, sub)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -440,7 +439,7 @@ func (s *server) directSAMSChRead() {
 				for i := range messages {
 					// TODO: !!!!!! Shoud the node here be the fromNode ???????
 					subject := newSubject(messages[i].Method, string(messages[i].ToNode))
-					processName := processNameGet(subject.name(), processKindSubscriber)
+					processName := processNameGet(subject.name())
 
 					s.processes.active.mu.Lock()
 					p := s.processes.active.procNames[processName]

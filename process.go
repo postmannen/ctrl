@@ -13,25 +13,11 @@ import (
 	// "google.golang.org/protobuf/internal/errors"
 )
 
-// processKind are either kindSubscriber or kindPublisher, and are
-// used to distinguish the kind of process to spawn and to know
-// the process kind put in the process map.
-type processKind string
-
-const (
-	processKindSubscriber processKind = "subscriber"
-	processKindPublisher  processKind = "publisher"
-)
-
 // process holds all the logic to handle a message type and it's
 // method, subscription/publishin messages for a subject, and more.
 type process struct {
 	// isSubProcess is used to indentify subprocesses spawned by other processes.
 	isSubProcess bool
-	// isLongRunningPublisher is set to true for a publisher service that should not
-	// be auto terminated like a normal autospawned publisher would be when the the
-	// inactivity timeout have expired
-	isLongRunningPublisher bool
 	// server
 	server *server
 	// messageID
@@ -43,8 +29,7 @@ type process struct {
 	// Put a node here to be able know the node a process is at.
 	node Node
 	// The processID for the current process
-	processID   int
-	processKind processKind
+	processID int
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
 	// procFunc is a function that will be started when a worker process
@@ -117,7 +102,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
+func newProcess(ctx context.Context, server *server, subject Subject) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	server.processes.mu.Lock()
 	server.processes.lastProcessID++
@@ -134,7 +119,6 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		subject:          subject,
 		node:             Node(server.configuration.NodeName),
 		processID:        pid,
-		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
 		newMessagesCh:    server.newMessagesCh,
 		configuration:    server.configuration,
@@ -152,12 +136,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one request type.
-	if proc.processKind == processKindPublisher {
-		proc.processName = processNameGet(proc.subject.name(), processKindPublisher)
-	}
-	if proc.processKind == processKindSubscriber {
-		proc.processName = processNameGet(proc.subject.name(), processKindSubscriber)
-	}
+	proc.processName = processNameGet(proc.subject.name())
 
 	return proc
 }
@@ -178,9 +157,7 @@ func (p process) start() {
 
 	// Start a subscriber worker, which will start a go routine (process)
 	// to handle executing the request method defined in the message.
-	if p.processKind == processKindSubscriber {
-		p.startSubscriber()
-	}
+	p.startSubscriber()
 
 	// Add information about the new process to the started processes map.
 	p.processes.active.mu.Lock()
@@ -711,7 +688,7 @@ func (p process) publishAMessage(m Message, natsConn *nats.Conn) {
 
 	// Get the process name so we can look up the process in the
 	// processes map, and increment the message counter.
-	pn := processNameGet(p.subject.name(), processKindPublisher)
+	pn := processNameGet(p.subject.name())
 	// Increment the counter for the next message to be sent.
 	p.messageID++
 

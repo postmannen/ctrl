@@ -200,7 +200,7 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.publisher(proc, Hello, pf)
+		proc.startup.subscriber(proc, Hello, pf)
 	}
 
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
@@ -245,7 +245,7 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.publisher(proc, KeysRequestUpdate, pf)
+		proc.startup.subscriber(proc, KeysRequestUpdate, pf)
 		proc.startup.subscriber(proc, KeysDeliverUpdate, nil)
 	}
 
@@ -288,7 +288,7 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.publisher(proc, AclRequestUpdate, pf)
+		proc.startup.subscriber(proc, AclRequestUpdate, pf)
 		proc.startup.subscriber(proc, AclDeliverUpdate, nil)
 	}
 
@@ -368,21 +368,8 @@ func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, p
 	}
 
 	fmt.Printf("DEBUG:::startup subscriber, subject: %v\n", sub)
-	proc := newProcess(p.ctx, p.processes.server, sub, processKindSubscriber)
+	proc := newProcess(p.ctx, p.processes.server, sub)
 	proc.procFunc = pf
-
-	go proc.start()
-}
-
-// publisher will start a publisher process. It takes the initial process, request method,
-// and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
-func (s *startup) publisher(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
-	er := fmt.Errorf("starting %v publisher: %#v", m, p.node)
-	p.errorKernel.logDebug(er)
-	sub := newSubject(m, string(p.node))
-	proc := newProcess(p.ctx, p.processes.server, sub, processKindPublisher)
-	proc.procFunc = pf
-	proc.isLongRunningPublisher = true
 
 	go proc.start()
 }
@@ -398,7 +385,7 @@ func (p *processes) printProcessesMap() {
 		p.active.mu.Lock()
 
 		for pName, proc := range p.active.procNames {
-			er := fmt.Errorf("info: proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v", proc.processKind, pName, proc.processID, proc.subject.name())
+			er := fmt.Errorf("info: proc - procName in map: %v , id: %v, subject: %v", pName, proc.processID, proc.subject.name())
 			proc.errorKernel.logDebug(er)
 		}
 
