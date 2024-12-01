@@ -77,7 +77,7 @@ func (s *server) readStartupFolder() {
 		readBytes = bytes.Trim(readBytes, "\x00")
 
 		// unmarshal the JSON into a struct
-		sams, err := s.convertBytesToSAMs(readBytes)
+		messages, err := s.convertBytesToMessages(readBytes)
 		if err != nil {
 			er := fmt.Errorf("error: startup folder: malformed json read: %v", err)
 			s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
@@ -85,38 +85,35 @@ func (s *server) readStartupFolder() {
 		}
 
 		// Check if fromNode field is specified, and remove the message if blank.
-		for i := range sams {
+		for i := range messages {
 			// We want to allow the use of nodeName local only in startup folder, and
 			// if used we substite it for the local node name.
-			if sams[i].Message.ToNode == "local" {
-				sams[i].Message.ToNode = Node(s.nodeName)
-				sams[i].Subject.ToNode = s.nodeName
+			if messages[i].ToNode == "local" {
+				messages[i].ToNode = Node(s.nodeName)
 			}
 
 			switch {
-			case sams[i].Message.FromNode == "":
-				// Remove the first message from the slice.
-				sams = append(sams[:i], sams[i+1:]...)
+			case messages[i].FromNode == "":
 				er := fmt.Errorf(" error: missing value in fromNode field in startup message, discarding message")
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+				continue
 
-			case sams[i].Message.ToNode == "" && len(sams[i].Message.ToNodes) == 0:
-				// Remove the first message from the slice.
-				sams = append(sams[:i], sams[i+1:]...)
+			case messages[i].ToNode == "" && len(messages[i].ToNodes) == 0:
 				er := fmt.Errorf(" error: missing value in both toNode and toNodes fields in startup message, discarding message")
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+				continue
 			}
 
 		}
 
-		j, err := json.MarshalIndent(sams, "", "   ")
+		j, err := json.MarshalIndent(messages, "", "   ")
 		if err != nil {
 			log.Printf("test error: %v\n", err)
 		}
 		er = fmt.Errorf("%v", string(j))
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
-		s.messageDeliverLocalCh <- sams
+		s.messageDeliverLocalCh <- messages
 
 	}
 
@@ -212,15 +209,7 @@ func (s *server) jetstreamConsume() {
 		// nodeName of the consumer in the ctrl Message, so we are sure it is handled locally.
 		m.ToNode = Node(s.nodeName)
 
-		sam, err := newSubjectAndMessage(m)
-		if err != nil {
-			er := fmt.Errorf("error: jetstreamConsume: newSubjectAndMessage failed: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
-			return
-		}
-
-		// If a message is received via
-		s.messageDeliverLocalCh <- []subjectAndMessage{sam}
+		s.messageDeliverLocalCh <- []Message{m}
 	})
 	defer consumeContext.Stop()
 
@@ -300,30 +289,30 @@ func (s *server) readSocket() {
 			readBytes = bytes.Trim(readBytes, "\x00")
 
 			// unmarshal the JSON into a struct
-			sams, err := s.convertBytesToSAMs(readBytes)
+			messages, err := s.convertBytesToMessages(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on socket: %s\n %v", readBytes, err)
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 				return
 			}
 
-			for i := range sams {
+			for i := range messages {
 
 				// Fill in the value for the FromNode field, so the receiver
 				// can check this field to know where it came from.
-				sams[i].Message.FromNode = Node(s.nodeName)
+				messages[i].FromNode = Node(s.nodeName)
 
 				// Send an info message to the central about the message picked
 				// for auditing.
-				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, sams[i].Message)
+				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, messages[i])
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
-				s.newMessagesCh <- sams[i]
+				s.newMessagesCh <- messages[i]
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
 
-			s.auditLogCh <- sams
+			s.auditLogCh <- messages
 
 		}(conn)
 	}
@@ -384,42 +373,42 @@ func (s *server) readFolder() {
 						b = bytes.Trim(b, "\x00")
 
 						// unmarshal the JSON into a struct
-						sams, err := s.convertBytesToSAMs(b)
+						messages, err := s.convertBytesToMessages(b)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 							return
 						}
 
-						for i := range sams {
+						for i := range messages {
 
 							// Fill in the value for the FromNode field, so the receiver
 							// can check this field to know where it came from.
-							sams[i].Message.FromNode = Node(s.nodeName)
+							messages[i].FromNode = Node(s.nodeName)
 
 							// Send an info message to the central about the message picked
 							// for auditing.
-							er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, sams[i].Message)
+							er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, messages[i])
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 
 							// Check if it is a message to publish with Jetstream.
-							if sams[i].Message.JetstreamToNode != "" {
+							if messages[i].JetstreamToNode != "" {
 
-								s.jetstreamPublishCh <- sams[i].Message
-								er = fmt.Errorf("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh: %#v", sams)
+								s.jetstreamPublishCh <- messages[i]
+								er = fmt.Errorf("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh: %#v", messages)
 								s.errorKernel.logDebug(er)
 
 								continue
 							}
 
-							s.newMessagesCh <- sams[i]
+							s.newMessagesCh <- messages[i]
 
-							er = fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", sams)
+							er = fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", messages)
 							s.errorKernel.logDebug(er)
 						}
 
 						// Send the SAM struct to be picked up by the ring buffer.
-						s.auditLogCh <- sams
+						s.auditLogCh <- messages
 
 						// Delete the file.
 						err = os.Remove(event.Name)
@@ -496,23 +485,23 @@ func (s *server) readTCPListener() {
 			readBytes = bytes.Trim(readBytes, "\x00")
 
 			// unmarshal the JSON into a struct
-			sams, err := s.convertBytesToSAMs(readBytes)
+			messages, err := s.convertBytesToMessages(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on tcp listener: %v", err)
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 				return
 			}
 
-			for i := range sams {
+			for i := range messages {
 
 				// Fill in the value for the FromNode field, so the receiver
 				// can check this field to know where it came from.
-				sams[i].Message.FromNode = Node(s.nodeName)
-				s.newMessagesCh <- sams[i]
+				messages[i].FromNode = Node(s.nodeName)
+				s.newMessagesCh <- messages[i]
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.auditLogCh <- sams
+			s.auditLogCh <- messages
 
 		}(conn)
 	}
@@ -541,23 +530,23 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	readBytes = bytes.Trim(readBytes, "\x00")
 
 	// unmarshal the JSON into a struct
-	sams, err := s.convertBytesToSAMs(readBytes)
+	messages, err := s.convertBytesToMessages(readBytes)
 	if err != nil {
 		er := fmt.Errorf("error: malformed json received on HTTPListener: %v", err)
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 		return
 	}
 
-	for i := range sams {
+	for i := range messages {
 
 		// Fill in the value for the FromNode field, so the receiver
 		// can check this field to know where it came from.
-		sams[i].Message.FromNode = Node(s.nodeName)
-		s.newMessagesCh <- sams[i]
+		messages[i].FromNode = Node(s.nodeName)
+		s.newMessagesCh <- messages[i]
 	}
 
 	// Send the SAM struct to be picked up by the ring buffer.
-	s.auditLogCh <- sams
+	s.auditLogCh <- messages
 
 }
 
@@ -595,7 +584,7 @@ type subjectAndMessage struct {
 // json format. For each element found the Message type will be converted into
 // a SubjectAndMessage type value and appended to a slice, and the slice is
 // returned to the caller.
-func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
+func (s *server) convertBytesToMessages(b []byte) ([]Message, error) {
 	MsgSlice := []Message{}
 
 	err := yaml.Unmarshal(b, &MsgSlice)
@@ -607,22 +596,7 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	MsgSlice = s.checkMessageToNodes(MsgSlice)
 	s.metrics.promUserMessagesTotal.Add(float64(len(MsgSlice)))
 
-	sam := []subjectAndMessage{}
-
-	// Range over all the messages parsed from json, and create a subject for
-	// each message.
-	for _, m := range MsgSlice {
-		sm, err := newSubjectAndMessage(m)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage: %v", err)
-			s.errorKernel.errSend(s.processInitial, m, er, logWarning)
-
-			continue
-		}
-		sam = append(sam, sm)
-	}
-
-	return sam, nil
+	return MsgSlice, nil
 }
 
 // checkMessageToNodes will check that either toHost or toHosts are

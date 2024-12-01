@@ -81,7 +81,7 @@ type process struct {
 	// copy of the configuration from server
 	configuration *Configuration
 	// The new messages channel copied from *Server
-	newMessagesCh chan<- subjectAndMessage
+	newMessagesCh chan<- Message
 	// The structure who holds all processes information
 	processes *processes
 	// nats connection

@@ -185,13 +185,7 @@ func (p *processes) Start(proc process) {
 					Retries:    1,
 				}
 
-				sam, err := newSubjectAndMessage(m)
-				if err != nil {
-					// In theory the system should drop the message before it reaches here.
-					er := fmt.Errorf("error: ProcessesStart: %v", err)
-					p.errorKernel.errSend(proc, m, er, logError)
-				}
-				proc.newMessagesCh <- sam
+				proc.newMessagesCh <- m
 
 				select {
 				case <-ticker.C:
@@ -236,12 +230,7 @@ func (p *processes) Start(proc process) {
 				}
 				proc.nodeAuth.publicKeys.mu.Unlock()
 
-				sam, err := newSubjectAndMessage(m)
-				if err != nil {
-					// In theory the system should drop the message before it reaches here.
-					p.errorKernel.errSend(proc, m, err, logError)
-				}
-				proc.newMessagesCh <- sam
+				proc.newMessagesCh <- m
 
 				select {
 				case <-ticker.C:
@@ -284,13 +273,7 @@ func (p *processes) Start(proc process) {
 				}
 				proc.nodeAuth.nodeAcl.mu.Unlock()
 
-				sam, err := newSubjectAndMessage(m)
-				if err != nil {
-					// In theory the system should drop the message before it reaches here.
-					p.errorKernel.errSend(proc, m, err, logError)
-					log.Printf("error: ProcessesStart: %v\n", err)
-				}
-				proc.newMessagesCh <- sam
+				proc.newMessagesCh <- m
 
 				select {
 				case <-ticker.C:

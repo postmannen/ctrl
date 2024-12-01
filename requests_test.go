@@ -285,12 +285,7 @@ func TestRequest(t *testing.T) {
 	for _, tt := range tests {
 		switch tt.viaSocketOrCh {
 		case viaCh:
-			sam, err := newSubjectAndMessage(tt.message)
-			if err != nil {
-				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
-			}
-
-			tstSrv.newMessagesCh <- sam
+			tstSrv.newMessagesCh <- tt.message
 
 		case viaSocket:
 			msgs := []Message{tt.message}
@@ -339,6 +334,7 @@ func TestRequest(t *testing.T) {
 	checkREQTailFileTest(tstConf, t, tstTempDir)
 	checkMetricValuesTest(tstSrv, t)
 	checkErrorKernelMalformedJSONtest(tstConf, t)
+	t.Log("*******starting with checkREQCopySrc\n")
 	checkREQCopySrc(tstConf, t, tstTempDir)
 }
 

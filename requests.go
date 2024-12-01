@@ -352,14 +352,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		PreviousMessage: &thisMsg,
 	}
 
-	sam, err := newSubjectAndMessage(newMsg)
-	if err != nil {
-		// In theory the system should drop the message before it reaches here.
-		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-		proc.errorKernel.errSend(proc, message, er, logError)
-	}
-
-	proc.newMessagesCh <- sam
+	proc.newMessagesCh <- newMsg
 }
 
 // selectFileNaming will figure out the correct naming of the file

@@ -50,9 +50,9 @@ type server struct {
 	//
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
-	newMessagesCh chan subjectAndMessage
+	newMessagesCh chan Message
 	// messageDeliverLocalCh
-	messageDeliverLocalCh chan []subjectAndMessage
+	messageDeliverLocalCh chan []Message
 	// Channel for messages to publish with Jetstream.
 	jetstreamPublishCh chan Message
 	// errorKernel is doing all the error handling like what to do if
@@ -76,7 +76,7 @@ type server struct {
 	// message ID
 	messageID messageID
 	// audit logging
-	auditLogCh  chan []subjectAndMessage
+	auditLogCh  chan []Message
 	zstdEncoder *zstd.Encoder
 }
 
@@ -234,8 +234,8 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		nodeName:              configuration.NodeName,
 		natsConn:              conn,
 		ctrlSocket:            ctrlSocket,
-		newMessagesCh:         make(chan subjectAndMessage),
-		messageDeliverLocalCh: make(chan []subjectAndMessage),
+		newMessagesCh:         make(chan Message),
+		messageDeliverLocalCh: make(chan []Message),
 		jetstreamPublishCh:    make(chan Message),
 		metrics:               metrics,
 		version:               version,
@@ -243,7 +243,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		nodeAuth:              nodeAuth,
 		helloRegister:         newHelloRegister(),
 		centralAuth:           centralAuth,
-		auditLogCh:            make(chan []subjectAndMessage),
+		auditLogCh:            make(chan []Message),
 		zstdEncoder:           zstdEncoder,
 	}
 
@@ -397,11 +397,11 @@ func (s *server) startAuditLog(ctx context.Context) {
 
 	for {
 		select {
-		case sams := <-s.auditLogCh:
+		case messages := <-s.auditLogCh:
 
-			for _, sam := range sams {
+			for _, message := range messages {
 				msgForPermStore := Message{}
-				copier.Copy(&msgForPermStore, sam.Message)
+				copier.Copy(&msgForPermStore, message)
 				// Remove the content of the data field.
 				msgForPermStore.Data = nil
 
@@ -433,27 +433,29 @@ func (s *server) directSAMSChRead() {
 			case <-s.ctx.Done():
 				log.Printf("info: stopped the directSAMSCh reader\n\n")
 				return
-			case sams := <-s.messageDeliverLocalCh:
+			case messages := <-s.messageDeliverLocalCh:
 				// fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
-				for i := range sams {
-					processName := processNameGet(sams[i].Subject.name(), processKindSubscriber)
+				for i := range messages {
+					// TODO: !!!!!! Shoud the node here be the fromNode ???????
+					subject := newSubject(messages[i].Method, string(messages[i].ToNode))
+					processName := processNameGet(subject.name(), processKindSubscriber)
 
 					s.processes.active.mu.Lock()
 					p := s.processes.active.procNames[processName]
 					s.processes.active.mu.Unlock()
 
-					mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
+					mh, ok := p.methodsAvailable.CheckIfExists(messages[i].Method)
 					if !ok {
 						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Method)
-						p.errorKernel.errSend(p, sams[i].Message, er, logError)
+						p.errorKernel.errSend(p, messages[i], er, logError)
 						continue
 					}
 
 					p.handler = mh
 
-					go executeHandler(p, sams[i].Message, s.nodeName)
+					go executeHandler(p, messages[i], s.nodeName)
 				}
 			}
 		}
@@ -508,8 +510,7 @@ func (s *server) routeMessagesToPublisherProcess() {
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
-		for sam1 := range s.newMessagesCh {
-			message := sam1.Message
+		for message := range s.newMessagesCh {
 
 			go func(message Message) {
 

@@ -86,13 +86,8 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 	// we should forward the message to that specified toNode. This will allow
 	// us to initiate a file copy from another node to this node.
 	if message.ToNode != proc.node {
-		sam, err := newSubjectAndMessage(message)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage failed: %v, message=%v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
-		}
 
-		proc.newMessagesCh <- sam
+		proc.newMessagesCh <- message
 
 		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
 	}
@@ -260,14 +255,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		// msg.Directory = dstDir
 		// msg.FileName = dstFile
 
-		sam, err := newSubjectAndMessage(msg)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage failed: %v, message=%v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
-			cancel()
-		}
-
-		proc.newMessagesCh <- sam
+		proc.newMessagesCh <- msg
 
 		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
 
@@ -558,15 +546,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							ReplyRetries:      initialMessage.ReplyRetries,
 						}
 
-						sam, err := newSubjectAndMessage(msg)
-						if err != nil {
-							er := fmt.Errorf("copySrcProcSubFunc: newSubjectAndMessage failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
-							newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
-							return er
-						}
-
-						proc.newMessagesCh <- sam
+						proc.newMessagesCh <- msg
 
 						resendRetries = 0
 
@@ -628,15 +608,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						ReplyRetries:      initialMessage.ReplyRetries,
 					}
 
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
-						newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
-						return er
-					}
-
-					proc.newMessagesCh <- sam
+					proc.newMessagesCh <- msg
 
 					resendRetries++
 
@@ -692,14 +664,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				ReplyRetries:      message.ReplyRetries,
 			}
 
-			sam, err := newSubjectAndMessage(msg)
-			if err != nil {
-				er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
-				return er
-			}
-
-			proc.newMessagesCh <- sam
+			proc.newMessagesCh <- msg
 		}
 
 		// Open a tmp folder for where to write the received chunks
@@ -794,14 +759,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ReplyRetries:      message.ReplyRetries,
 					}
 
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
-						return er
-					}
-
-					proc.newMessagesCh <- sam
+					proc.newMessagesCh <- msg
 
 				case copyResendLast:
 					// The csa already contains copyStatus copyResendLast when reached here,
@@ -827,14 +785,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ReplyRetries:      message.ReplyRetries,
 					}
 
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
-						return er
-					}
-
-					proc.newMessagesCh <- sam
+					proc.newMessagesCh <- msg
 
 				case copySrcDone:
 					err := func() error {
@@ -980,14 +931,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								ReplyRetries:      message.ReplyRetries,
 							}
 
-							sam, err := newSubjectAndMessage(msg)
-							if err != nil {
-								er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-								proc.errorKernel.errSend(proc, message, er, logWarning)
-								return er
-							}
-
-							proc.newMessagesCh <- sam
+							proc.newMessagesCh <- msg
 						}
 
 						cancel()

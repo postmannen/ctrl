@@ -323,14 +323,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 			ACKTimeout:  0,
 		}
 
-		sam, err := newSubjectAndMessage(msg)
-		if err != nil {
-			// In theory the system should drop the message before it reaches here.
-			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
-		}
-
-		proc.newMessagesCh <- sam
+		proc.newMessagesCh <- msg
 
 		er = fmt.Errorf("----> methodKeysAllow: SENDING KEYS TO NODE=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
@@ -370,14 +363,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 			ACKTimeout:  0,
 		}
 
-		sam, err := newSubjectAndMessage(msg)
-		if err != nil {
-			// In theory the system should drop the message before it reaches here.
-			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
-		}
-
-		proc.newMessagesCh <- sam
+		proc.newMessagesCh <- msg
 
 		er = fmt.Errorf("----> methodKeysAllow: sending keys update to node=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
