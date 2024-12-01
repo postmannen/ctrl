@@ -101,11 +101,6 @@ type Subject struct {
 	ToNode string `json:"node" yaml:"toNode"`
 	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`
-	// messageCh is used by publisher kind processes to read new messages
-	// to be published. The content on this channel have been routed here
-	// from routeMessagesToPublish in *server.
-	// This channel is only used for publishing processes.
-	publishMessageCh chan Message
 }
 
 // newSubject will return a new variable of the type subject, and insert
@@ -124,9 +119,8 @@ func newSubject(method Method, node string) Subject {
 	}
 
 	return Subject{
-		ToNode:           node,
-		Method:           method,
-		publishMessageCh: make(chan Message),
+		ToNode: node,
+		Method: method,
 	}
 }
 
@@ -139,9 +133,8 @@ func newSubjectNoVerifyHandler(method Method, node string) Subject {
 	// Get the Event type for the Method.
 
 	return Subject{
-		ToNode:           node,
-		Method:           method,
-		publishMessageCh: make(chan Message),
+		ToNode: node,
+		Method: method,
 	}
 }
 

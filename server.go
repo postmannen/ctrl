@@ -508,114 +508,41 @@ func (s *server) routeMessagesToPublisherProcess() {
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
-		for sam := range s.newMessagesCh {
+		for sam1 := range s.newMessagesCh {
+			message := sam1.Message
 
-			go func(sam subjectAndMessage) {
+			go func(message Message) {
 
 				s.messageID.mu.Lock()
 				s.messageID.id++
-				sam.Message.ID = s.messageID.id
+				message.ID = s.messageID.id
 				s.messageID.mu.Unlock()
 
-				s.metrics.promMessagesProcessedIDLast.Set(float64(sam.Message.ID))
+				s.metrics.promMessagesProcessedIDLast.Set(float64(message.ID))
 
 				// Check if the format of the message is correct.
-				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-					s.errorKernel.errSend(s.processInitial, sam.Message, er, logError)
+				if _, ok := methodsAvailable.CheckIfExists(message.Method); !ok {
+					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", message.Method)
+					s.errorKernel.errSend(s.processInitial, message, er, logError)
 					return
 				}
 
 				switch {
-				case sam.Message.Retries < 0:
-					sam.Message.Retries = s.configuration.DefaultMessageRetries
+				case message.Retries < 0:
+					message.Retries = s.configuration.DefaultMessageRetries
 				}
-				if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
-					sam.Message.MethodTimeout = s.configuration.DefaultMethodTimeout
+				if message.MethodTimeout < 1 && message.MethodTimeout != -1 {
+					message.MethodTimeout = s.configuration.DefaultMethodTimeout
 				}
 
 				// ---
 
-				m := sam.Message
+				message.ArgSignature = s.processInitial.addMethodArgSignature(message)
+				// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
-				subjName := sam.Subject.name()
-				pn := processNameGet(subjName, processKindPublisher)
+				go s.processInitial.publishAMessage(message, s.natsConn)
 
-				sendOK := func() bool {
-					var ctxCanceled bool
-
-					s.processes.active.mu.Lock()
-					defer s.processes.active.mu.Unlock()
-
-					// Check if the process exist, if it do not exist return false so a
-					// new publisher process will be created.
-					proc, ok := s.processes.active.procNames[pn]
-					if !ok {
-						return false
-					}
-
-					if proc.ctx.Err() != nil {
-						ctxCanceled = true
-					}
-					if ok && ctxCanceled {
-						er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
-						s.errorKernel.logDebug(er)
-						delete(proc.processes.active.procNames, proc.processName)
-						return false
-					}
-
-					// If found in map above, and go routine for publishing is running,
-					// put the message on that processes incomming message channel.
-					if ok && !ctxCanceled {
-						select {
-						case proc.subject.publishMessageCh <- m:
-							er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
-							s.errorKernel.logDebug(er)
-						case <-proc.ctx.Done():
-							er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-							s.errorKernel.logDebug(er)
-						}
-
-						return true
-					}
-
-					// The process was not found, so we return false here so a new publisher
-					// process will be created later.
-					return false
-				}()
-
-				if sendOK {
-					return
-				}
-
-				er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
-				s.errorKernel.logDebug(er)
-
-				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				var proc process
-				switch {
-				case m.IsSubPublishedMsg:
-					proc = newSubProcess(s.ctx, s, sub, processKindPublisher)
-				default:
-					proc = newProcess(s.ctx, s, sub, processKindPublisher)
-				}
-
-				proc.start()
-				er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-				s.errorKernel.logDebug(er)
-
-				// Now when the process is spawned we continue,
-				// and send the message to that new process.
-				select {
-				case proc.subject.publishMessageCh <- m:
-					er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
-					s.errorKernel.logDebug(er)
-				case <-proc.ctx.Done():
-					er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-					s.errorKernel.logDebug(er)
-				}
-
-			}(sam)
+			}(message)
 
 		}
 	}()

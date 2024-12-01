@@ -176,12 +176,6 @@ func (p process) start() {
 		p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(p.processName)})
 	}
 
-	// Start a publisher worker, which will start a go routine (process)
-	// to handle publishing of the messages for the subject it owns.
-	if p.processKind == processKindPublisher {
-		p.startPublisher()
-	}
-
 	// Start a subscriber worker, which will start a go routine (process)
 	// to handle executing the request method defined in the message.
 	if p.processKind == processKindSubscriber {
@@ -195,28 +189,6 @@ func (p process) start() {
 
 	er := fmt.Errorf("successfully started process: %v", p.processName)
 	p.errorKernel.logDebug(er)
-}
-
-// startPublisher.
-func (p process) startPublisher() {
-	// If there is a procFunc for the process, start it.
-	if p.procFunc != nil {
-		// Initialize the channel for communication between the proc and
-		// the procFunc.
-		p.procFuncCh = make(chan Message)
-
-		// Start the procFunc in it's own anonymous func so we are able
-		// to get the return error.
-		go func() {
-			err := p.procFunc(p.ctx, p.procFuncCh)
-			if err != nil {
-				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logError)
-			}
-		}()
-	}
-
-	go p.publishMessages(p.natsConn)
 }
 
 func (p process) startSubscriber() {
@@ -276,15 +248,17 @@ func (p process) publishNats(natsMsgPayload []byte, natsMsgHeader nats.Header, n
 		message.RetryWait = 0
 	}
 
+	subject := newSubject(message.Method, string(message.ToNode))
+
 	// The for loop will run until the message is delivered successfully,
 	// or that retries are reached.
 	for {
 		msg := &nats.Msg{
-			Subject: string(p.subject.name()),
+			Subject: string(subject.name()),
 			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "CLICommandRequest"),
 			// Structure of the reply message are:
 			// <nodename>.<message type>.<method>.reply
-			Reply:  fmt.Sprintf("%s.reply", p.subject.name()),
+			Reply:  fmt.Sprintf("%s.reply", subject.name()),
 			Data:   natsMsgPayload,
 			Header: natsMsgHeader,
 		}
@@ -384,7 +358,7 @@ func (p process) publishNats(natsMsgPayload []byte, natsMsgHeader nats.Header, n
 
 					switch {
 					case err == nats.ErrNoResponders || err == nats.ErrTimeout:
-						er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, subject.name(), err)
 						p.errorKernel.logDebug(er)
 
 						time.Sleep(time.Second * time.Duration(message.RetryWait))
@@ -393,13 +367,13 @@ func (p process) publishNats(natsMsgPayload []byte, natsMsgHeader nats.Header, n
 						return ErrACKSubscribeRetry
 
 					case err == nats.ErrBadSubscription || err == nats.ErrConnectionClosed:
-						er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", subject.name(), err)
 						p.errorKernel.logDebug(er)
 
 						return er
 
 					default:
-						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update ctrl to handle the new error type:   subject=%v: %v", p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update ctrl to handle the new error type:   subject=%v: %v", subject.name(), err)
 						p.errorKernel.logDebug(er)
 
 						return er
@@ -709,60 +683,6 @@ func (p process) startNatsSubscriber() *nats.Subscription {
 	}
 
 	return natsSubscription
-}
-
-// publishMessages will do the publishing of messages for one single
-// process. The function should be run as a goroutine, and will run
-// as long as the process it belongs to is running.
-func (p process) publishMessages(natsConn *nats.Conn) {
-
-	// Adding a timer that will be used for when to remove the sub process
-	// publisher. The timer is reset each time a message is published with
-	// the process, so the sub process publisher will not be removed until
-	// it have not received any messages for the given amount of time.
-	ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
-	defer ticker.Stop()
-
-	for {
-
-		// Wait and read the next message on the message channel, or
-		// exit this function if Cancel are received via ctx.
-		select {
-		case <-ticker.C:
-			// If it is a long running publisher we don't want to cancel it.
-			if p.isLongRunningPublisher {
-				continue
-			}
-
-			// We only want to remove subprocesses
-			// REMOVED 120123: Removed if so all publishers should be canceled if inactive.
-			//if p.isSubProcess {
-			p.processes.active.mu.Lock()
-			p.ctxCancel()
-			delete(p.processes.active.procNames, p.processName)
-			p.processes.active.mu.Unlock()
-
-			er := fmt.Errorf("info: canceled publisher: %v", p.processName)
-			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			p.errorKernel.logDebug(er)
-
-			return
-			//}
-
-		case m := <-p.subject.publishMessageCh:
-			ticker.Reset(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
-			// Sign the methodArgs, and add the signature to the message.
-			m.ArgSignature = p.addMethodArgSignature(m)
-			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
-
-			go p.publishAMessage(m, natsConn)
-		case <-p.ctx.Done():
-			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
-			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			p.errorKernel.logDebug(er)
-			return
-		}
-	}
 }
 
 func (p process) addMethodArgSignature(m Message) []byte {
