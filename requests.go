@@ -104,8 +104,9 @@ const (
 	SUBCopySrc Method = "subCopySrc"
 	// Write the destination copied to some node.
 	SUBCopyDst Method = "subCopyDst"
-	// Send Hello I'm here message.
-	Hello Method = "hello"
+	// Hello I'm here message.
+	Hello          Method = "hello"
+	HelloPublisher Method = "helloPublisher"
 	// Error log methods to centralError node.
 	ErrorLog Method = "errorLog"
 	// Http Get
@@ -187,6 +188,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			SUBCopySrc:        HandlerFunc(methodSUB),
 			SUBCopyDst:        HandlerFunc(methodSUB),
 			Hello:             HandlerFunc(methodHello),
+			HelloPublisher:    HandlerFunc(nil),
 			ErrorLog:          HandlerFunc(methodErrorLog),
 			HttpGet:           HandlerFunc(methodHttpGet),
 			HttpGetScheduled:  HandlerFunc(methodHttpGetScheduled),

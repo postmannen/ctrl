@@ -82,7 +82,7 @@ type process struct {
 
 	// handler is used to directly attach a handler to a process upon
 	// creation of the process, like when a process is spawning a sub
-	// process like REQCopySrc do. If we're not spawning a sub process
+	// process like copySrc do. If we're not spawning a sub process
 	// and it is a regular process the handler to use is found with the
 	// getHandler method
 	handler func(proc process, message Message, node string) ([]byte, error)
