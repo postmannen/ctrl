@@ -92,25 +92,25 @@ func (p *processes) Start(proc process) {
 
 	// --- Subscriber services that can be started via flags
 
-	proc.startup.subscriber(proc, OpProcessList, nil)
-	proc.startup.subscriber(proc, OpProcessStart, nil)
-	proc.startup.subscriber(proc, OpProcessStop, nil)
-	proc.startup.subscriber(proc, Test, nil)
+	proc.startup.startProcess(proc, OpProcessList, nil)
+	proc.startup.startProcess(proc, OpProcessStart, nil)
+	proc.startup.startProcess(proc, OpProcessStop, nil)
+	proc.startup.startProcess(proc, Test, nil)
 
 	if proc.configuration.StartProcesses.StartSubFileAppend {
-		proc.startup.subscriber(proc, FileAppend, nil)
+		proc.startup.startProcess(proc, FileAppend, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubFile {
-		proc.startup.subscriber(proc, File, nil)
+		proc.startup.startProcess(proc, File, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubCopySrc {
-		proc.startup.subscriber(proc, CopySrc, nil)
+		proc.startup.startProcess(proc, CopySrc, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubCopyDst {
-		proc.startup.subscriber(proc, CopyDst, nil)
+		proc.startup.startProcess(proc, CopyDst, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubHello {
@@ -149,19 +149,19 @@ func (p *processes) Start(proc process) {
 
 			}
 		}
-		proc.startup.subscriber(proc, Hello, pf)
+		proc.startup.startProcess(proc, Hello, pf)
 	}
 
 	if proc.configuration.StartProcesses.IsCentralErrorLogger {
-		proc.startup.subscriber(proc, ErrorLog, nil)
+		proc.startup.startProcess(proc, ErrorLog, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubCliCommand {
-		proc.startup.subscriber(proc, CliCommand, nil)
+		proc.startup.startProcess(proc, CliCommand, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubConsole {
-		proc.startup.subscriber(proc, Console, nil)
+		proc.startup.startProcess(proc, Console, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartPubHello != 0 {
@@ -198,7 +198,7 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.subscriber(proc, HelloPublisher, pf)
+		proc.startup.startProcess(proc, HelloPublisher, pf)
 	}
 
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
@@ -243,8 +243,8 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.subscriber(proc, KeysRequestUpdate, pf)
-		proc.startup.subscriber(proc, KeysDeliverUpdate, nil)
+		proc.startup.startProcess(proc, KeysRequestUpdate, pf)
+		proc.startup.startProcess(proc, KeysDeliverUpdate, nil)
 	}
 
 	if proc.configuration.StartProcesses.EnableAclUpdates {
@@ -286,41 +286,41 @@ func (p *processes) Start(proc process) {
 				}
 			}
 		}
-		proc.startup.subscriber(proc, AclRequestUpdate, pf)
-		proc.startup.subscriber(proc, AclDeliverUpdate, nil)
+		proc.startup.startProcess(proc, AclRequestUpdate, pf)
+		proc.startup.startProcess(proc, AclDeliverUpdate, nil)
 	}
 
 	if proc.configuration.StartProcesses.IsCentralAuth {
-		proc.startup.subscriber(proc, KeysRequestUpdate, nil)
-		proc.startup.subscriber(proc, KeysAllow, nil)
-		proc.startup.subscriber(proc, KeysDelete, nil)
-		proc.startup.subscriber(proc, AclRequestUpdate, nil)
-		proc.startup.subscriber(proc, AclAddCommand, nil)
-		proc.startup.subscriber(proc, AclDeleteCommand, nil)
-		proc.startup.subscriber(proc, AclDeleteSource, nil)
-		proc.startup.subscriber(proc, AclGroupNodesAddNode, nil)
-		proc.startup.subscriber(proc, AclGroupNodesDeleteNode, nil)
-		proc.startup.subscriber(proc, AclGroupNodesDeleteGroup, nil)
-		proc.startup.subscriber(proc, AclGroupCommandsAddCommand, nil)
-		proc.startup.subscriber(proc, AclGroupCommandsDeleteCommand, nil)
-		proc.startup.subscriber(proc, AclGroupCommandsDeleteGroup, nil)
-		proc.startup.subscriber(proc, AclExport, nil)
-		proc.startup.subscriber(proc, AclImport, nil)
+		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
+		proc.startup.startProcess(proc, KeysAllow, nil)
+		proc.startup.startProcess(proc, KeysDelete, nil)
+		proc.startup.startProcess(proc, AclRequestUpdate, nil)
+		proc.startup.startProcess(proc, AclAddCommand, nil)
+		proc.startup.startProcess(proc, AclDeleteCommand, nil)
+		proc.startup.startProcess(proc, AclDeleteSource, nil)
+		proc.startup.startProcess(proc, AclGroupNodesAddNode, nil)
+		proc.startup.startProcess(proc, AclGroupNodesDeleteNode, nil)
+		proc.startup.startProcess(proc, AclGroupNodesDeleteGroup, nil)
+		proc.startup.startProcess(proc, AclGroupCommandsAddCommand, nil)
+		proc.startup.startProcess(proc, AclGroupCommandsDeleteCommand, nil)
+		proc.startup.startProcess(proc, AclGroupCommandsDeleteGroup, nil)
+		proc.startup.startProcess(proc, AclExport, nil)
+		proc.startup.startProcess(proc, AclImport, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubHttpGet {
-		proc.startup.subscriber(proc, HttpGet, nil)
+		proc.startup.startProcess(proc, HttpGet, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubTailFile {
-		proc.startup.subscriber(proc, TailFile, nil)
+		proc.startup.startProcess(proc, TailFile, nil)
 	}
 
 	if proc.configuration.StartProcesses.StartSubCliCommandCont {
-		proc.startup.subscriber(proc, CliCommandCont, nil)
+		proc.startup.startProcess(proc, CliCommandCont, nil)
 	}
 
-	proc.startup.subscriber(proc, PublicKey, nil)
+	proc.startup.startProcess(proc, PublicKey, nil)
 }
 
 // Stop all subscriber processes.
@@ -351,9 +351,9 @@ func newStartup(server *server) *startup {
 	return &s
 }
 
-// subscriber will start a subscriber process. It takes the initial process, request method,
+// startProcess will start a process. It takes the initial process, request method,
 // and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
-func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
+func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
 	p.errorKernel.logDebug(er)
 
