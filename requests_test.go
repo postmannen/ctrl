@@ -446,7 +446,8 @@ func checkREQCopySrc(conf *Configuration, t *testing.T, tmpDir string) error {
 						"methodArgs": ["` + srcfp + `","central","` + dstfp + `","20","10"],
 						"ACKTimeout":5,
 						"retries":3,
-						"methodTimeout": 10
+						"methodTimeout": 10,
+						"fileName": "filecopy2.log"
 					}
 				]`
 

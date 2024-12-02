@@ -424,8 +424,9 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// We don't care about the error.
 		fi, err := os.Stat(file)
 		if err != nil {
-			fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
-			fmt.Printf(" ** DEBUG: fi: %#v\n", fi)
+			er := fmt.Errorf("DEBUG: ERROR while os.Stat(file): copySrcProcFunc, fileInfo: %v, err: %v\n", fi, err)
+			proc.errorKernel.errSend(proc, Message{}, er, logWarning)
+
 		}
 
 		// We want to be able to send the reply message when the copying is done,
