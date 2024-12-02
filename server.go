@@ -116,7 +116,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		// 	return nil, fmt.Errorf("error: failed to create tmp seed file: %v", err)
 		// }
 
-		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0700)
+		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0600)
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("error: failed to write temp seed file: %v", err)
@@ -128,13 +128,14 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			return nil, fmt.Errorf("error: failed to read temp nkey seed file: %v", err)
 		}
 
-		defer func() {
-			err = os.Remove(pth)
-			if err != nil {
-				cancel()
-				log.Fatalf("error: failed to remove temp seed file: %v\n", err)
-			}
-		}()
+		// // TODO: REMOVED for testing
+		//defer func() {
+		//	err = os.Remove(pth)
+		//	if err != nil {
+		//		cancel()
+		//		log.Fatalf("error: failed to remove temp seed file: %v\n", err)
+		//	}
+		//}()
 
 	case configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "":
 		var err error
