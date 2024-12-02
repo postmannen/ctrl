@@ -368,8 +368,6 @@ func (s *server) readFolder() {
 						}
 						fh.Close()
 
-						fmt.Printf("------- DEBUG: %v\n", b)
-
 						b = bytes.Trim(b, "\x00")
 
 						// unmarshal the JSON into a struct

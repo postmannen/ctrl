@@ -46,6 +46,8 @@ type Configuration struct {
 	KeysUpdateInterval int `comment:"KeysUpdateInterval in seconds"`
 	// AclUpdateInterval in seconds
 	AclUpdateInterval int `comment:"AclUpdateInterval in seconds"`
+	// The type of profiling
+	Profiling string
 	// The number of the profiling port
 	ProfilingPort string `comment:"The number of the profiling port"`
 	// Host and port for prometheus listener, e.g. localhost:2112
@@ -163,6 +165,7 @@ func NewConfiguration() *Configuration {
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", CheckEnv("NATS_RECONNECT_JITTER_TLS", c.NatsReconnectJitterTLS).(int), "default nats ReconnectJitterTLS interval in seconds.")
 	flag.IntVar(&c.KeysUpdateInterval, "keysUpdateInterval", CheckEnv("KEYS_UPDATE_INTERVAL", c.KeysUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
 	flag.IntVar(&c.AclUpdateInterval, "aclUpdateInterval", CheckEnv("ACL_UPDATE_INTERVAL", c.AclUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
+	flag.StringVar(&c.Profiling, "profiling", CheckEnv("PROFILING", c.Profiling).(string), "type of profiling: cpu/block/trace/mem/heap")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", CheckEnv("PROFILING_PORT", c.ProfilingPort).(string), "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", CheckEnv("PROM_HOST_AND_PORT", c.PromHostAndPort).(string), "host and port for prometheus listener, e.g. localhost:2112")
 	flag.StringVar(&c.JetstreamsConsume, "jetstreamsConsume", CheckEnv("JETSTREAMS_CONSUME", c.JetstreamsConsume).(string), "Comma separated list of Jetstrams to consume from")
@@ -240,6 +243,7 @@ func newConfigurationDefaults() Configuration {
 		NatsReconnectJitterTLS:     1,
 		KeysUpdateInterval:         60,
 		AclUpdateInterval:          60,
+		Profiling:                  "",
 		ProfilingPort:              "",
 		PromHostAndPort:            "",
 		JetstreamsConsume:          "",
