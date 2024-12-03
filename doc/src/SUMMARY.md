@@ -16,7 +16,7 @@
 - [Nats timeouts](./core_nats_timeouts.md)
 - [Startup folder](./core_startup_folder.md)
 - [{{CTRL_DATA}} variable](./core_messaging_CTRL_DATA.md)
-- [{{CTRL_FILE}}](./core_messaging_CTRL_FILE.md)
+- [{{CTRL_FILE}} variable](./core_messaging_CTRL_FILE.md)
 - [Errors](./core_errors.md)
 
 # Example standard messages
