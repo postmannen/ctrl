@@ -5,11 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -537,9 +540,54 @@ func (s *server) routeMessagesToPublisherProcess() {
 				}
 
 				// ---
+				// Check for {{CTRL_FILE}} and if we should read and load a local file into
+				// the message before sending.
+
+				var filePathToOpen string
+				foundFile := false
+				var argPos int
+				for i, v := range message.MethodArgs {
+					if strings.Contains(v, "{{CTRL_FILE:") {
+						foundFile = true
+						argPos = i
+
+						// Example to split:
+						// echo {{CTRL_FILE:/somedir/msg_file.yaml}}>ctrlfile.txt
+						//
+						// Split at colon. We want the part after.
+						ss := strings.Split(v, ":")
+						// Split at "}}",so pos [0] in the result contains just the file path.
+						sss := strings.Split(ss[1], "}}")
+						filePathToOpen = sss[0]
+
+					}
+				}
+
+				if foundFile {
+
+					fh, err := os.Open(filePathToOpen)
+					if err != nil {
+						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument: %v", err)
+						s.errorKernel.logError(er)
+						return
+					}
+					defer fh.Close()
+
+					b, err := io.ReadAll(fh)
+					if err != nil {
+						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to read file %v given as CTRL_FILE argument: %v", filePathToOpen, err)
+						s.errorKernel.logError(er)
+						return
+					}
+
+					// Replace the {{CTRL_FILE}} with the actual content read from file.
+					re := regexp.MustCompile(`(.*)({{CTRL_FILE.*}})(.*)`)
+					message.MethodArgs[argPos] = re.ReplaceAllString(message.MethodArgs[argPos], `${1}`+string(b)+`${3}`)
+					// ---
+
+				}
 
 				message.ArgSignature = s.processInitial.addMethodArgSignature(message)
-				// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
 				go s.processInitial.publishAMessage(message, s.natsConn)
 

@@ -55,7 +55,10 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 			// data payload there.
 			var foundEnvData bool
 			var envData string
+			//var foundEnvFile bool
+			//var envFile string
 			for i, v := range message.MethodArgs {
+				// Check if to use the content of the data field are specified.
 				if strings.Contains(v, "{{CTRL_DATA}}") {
 					foundEnvData = true
 					// Replace the found env variable placeholder with an actual env variable
