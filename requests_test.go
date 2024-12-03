@@ -93,8 +93,9 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 func newNatsServerForTesting(port int) *natsserver.Server {
 	// Start up the nats-server message broker.
 	nsOpt := &natsserver.Options{
-		Host: "127.0.0.1",
-		Port: port,
+		Host:      "127.0.0.1",
+		Port:      port,
+		JetStream: true,
 	}
 
 	ns, err := natsserver.NewServer(nsOpt)
@@ -284,12 +285,7 @@ func TestRequest(t *testing.T) {
 	for _, tt := range tests {
 		switch tt.viaSocketOrCh {
 		case viaCh:
-			sam, err := newSubjectAndMessage(tt.message)
-			if err != nil {
-				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
-			}
-
-			tstSrv.newMessagesCh <- sam
+			tstSrv.newMessagesCh <- tt.message
 
 		case viaSocket:
 			msgs := []Message{tt.message}
@@ -338,6 +334,7 @@ func TestRequest(t *testing.T) {
 	checkREQTailFileTest(tstConf, t, tstTempDir)
 	checkMetricValuesTest(tstSrv, t)
 	checkErrorKernelMalformedJSONtest(tstConf, t)
+	t.Log("*******starting with checkREQCopySrc\n")
 	checkREQCopySrc(tstConf, t, tstTempDir)
 }
 
@@ -449,7 +446,8 @@ func checkREQCopySrc(conf *Configuration, t *testing.T, tmpDir string) error {
 						"methodArgs": ["` + srcfp + `","central","` + dstfp + `","20","10"],
 						"ACKTimeout":5,
 						"retries":3,
-						"methodTimeout": 10
+						"methodTimeout": 10,
+						"fileName": "filecopy2.log"
 					}
 				]`
 

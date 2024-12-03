@@ -5,15 +5,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/jinzhu/copier"
+	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -21,9 +26,8 @@ import (
 type processName string
 
 // Will return a process name made up of subjectName+processKind
-func processNameGet(sn subjectName, pk processKind) processName {
-	pn := fmt.Sprintf("%s_%s", sn, pk)
-	return processName(pn)
+func processNameGet(sn subjectName) processName {
+	return processName(sn)
 }
 
 // server is the structure that will hold the state about spawned
@@ -48,9 +52,9 @@ type server struct {
 	//
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
-	newMessagesCh chan subjectAndMessage
-	// directSAMSCh
-	samSendLocalCh chan []subjectAndMessage
+	newMessagesCh chan Message
+	// messageDeliverLocalCh
+	messageDeliverLocalCh chan []Message
 	// Channel for messages to publish with Jetstream.
 	jetstreamPublishCh chan Message
 	// errorKernel is doing all the error handling like what to do if
@@ -74,7 +78,8 @@ type server struct {
 	// message ID
 	messageID messageID
 	// audit logging
-	auditLogCh chan []subjectAndMessage
+	auditLogCh  chan []Message
+	zstdEncoder *zstd.Encoder
 }
 
 type messageID struct {
@@ -114,7 +119,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		// 	return nil, fmt.Errorf("error: failed to create tmp seed file: %v", err)
 		// }
 
-		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0700)
+		err = os.WriteFile(pth, []byte(configuration.NkeySeed), 0600)
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("error: failed to write temp seed file: %v", err)
@@ -126,13 +131,14 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			return nil, fmt.Errorf("error: failed to read temp nkey seed file: %v", err)
 		}
 
-		defer func() {
-			err = os.Remove(pth)
-			if err != nil {
-				cancel()
-				log.Fatalf("error: failed to remove temp seed file: %v\n", err)
-			}
-		}()
+		// // TODO: REMOVED for testing
+		//defer func() {
+		//	err = os.Remove(pth)
+		//	if err != nil {
+		//		cancel()
+		//		log.Fatalf("error: failed to remove temp seed file: %v\n", err)
+		//	}
+		//}()
 
 	case configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "":
 		var err error
@@ -212,23 +218,36 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	centralAuth := newCentralAuth(configuration, errorKernel)
 	//}
 
+	zstdEncoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
+	if err != nil {
+		log.Fatalf("error: zstd new encoder failed: %v", err)
+	}
+
+	defer func() {
+		go func() {
+			<-ctx.Done()
+			zstdEncoder.Close()
+		}()
+	}()
+
 	s := server{
-		ctx:                ctx,
-		cancel:             cancel,
-		configuration:      configuration,
-		nodeName:           configuration.NodeName,
-		natsConn:           conn,
-		ctrlSocket:         ctrlSocket,
-		newMessagesCh:      make(chan subjectAndMessage),
-		samSendLocalCh:     make(chan []subjectAndMessage),
-		jetstreamPublishCh: make(chan Message),
-		metrics:            metrics,
-		version:            version,
-		errorKernel:        errorKernel,
-		nodeAuth:           nodeAuth,
-		helloRegister:      newHelloRegister(),
-		centralAuth:        centralAuth,
-		auditLogCh:         make(chan []subjectAndMessage),
+		ctx:                   ctx,
+		cancel:                cancel,
+		configuration:         configuration,
+		nodeName:              configuration.NodeName,
+		natsConn:              conn,
+		ctrlSocket:            ctrlSocket,
+		newMessagesCh:         make(chan Message),
+		messageDeliverLocalCh: make(chan []Message),
+		jetstreamPublishCh:    make(chan Message),
+		metrics:               metrics,
+		version:               version,
+		errorKernel:           errorKernel,
+		nodeAuth:              nodeAuth,
+		helloRegister:         newHelloRegister(),
+		centralAuth:           centralAuth,
+		auditLogCh:            make(chan []Message),
+		zstdEncoder:           zstdEncoder,
 	}
 
 	s.processes = newProcesses(ctx, &s)
@@ -340,7 +359,7 @@ func (s *server) Start() {
 	//
 	// The context of the initial process are set in processes.Start.
 	sub := newSubject(Initial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s, sub, "")
+	s.processInitial = newProcess(context.TODO(), s, sub)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -358,7 +377,7 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess()
+	s.routeMessagesToPublisherProcess()
 
 	// Start reading the channel for injecting direct messages that should
 	// not be sent via the message broker.
@@ -381,11 +400,11 @@ func (s *server) startAuditLog(ctx context.Context) {
 
 	for {
 		select {
-		case sams := <-s.auditLogCh:
+		case messages := <-s.auditLogCh:
 
-			for _, sam := range sams {
+			for _, message := range messages {
 				msgForPermStore := Message{}
-				copier.Copy(&msgForPermStore, sam.Message)
+				copier.Copy(&msgForPermStore, message)
 				// Remove the content of the data field.
 				msgForPermStore.Data = nil
 
@@ -417,27 +436,29 @@ func (s *server) directSAMSChRead() {
 			case <-s.ctx.Done():
 				log.Printf("info: stopped the directSAMSCh reader\n\n")
 				return
-			case sams := <-s.samSendLocalCh:
+			case messages := <-s.messageDeliverLocalCh:
 				// fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
-				for i := range sams {
-					processName := processNameGet(sams[i].Subject.name(), processKindSubscriber)
+				for i := range messages {
+					// TODO: !!!!!! Shoud the node here be the fromNode ???????
+					subject := newSubject(messages[i].Method, string(messages[i].ToNode))
+					processName := processNameGet(subject.name())
 
 					s.processes.active.mu.Lock()
 					p := s.processes.active.procNames[processName]
 					s.processes.active.mu.Unlock()
 
-					mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
+					mh, ok := p.methodsAvailable.CheckIfExists(messages[i].Method)
 					if !ok {
 						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Method)
-						p.errorKernel.errSend(p, sams[i].Message, er, logError)
+						p.errorKernel.errSend(p, messages[i], er, logError)
 						continue
 					}
 
 					p.handler = mh
 
-					go executeHandler(p, sams[i].Message, s.nodeName)
+					go executeHandler(p, messages[i], s.nodeName)
 				}
 			}
 		}
@@ -471,7 +492,7 @@ func (s *server) Stop() {
 
 }
 
-// routeMessagesToProcess takes a database name it's input argument.
+// routeMessagesToPublisherProcess takes a database name it's input argument.
 // The database will be used as the persistent k/v store for the work
 // queue which is implemented as a ring buffer.
 // The ringBufferInCh are where we get new messages to publish.
@@ -480,7 +501,7 @@ func (s *server) Stop() {
 // worker process.
 // It will also handle the process of spawning more worker processes
 // for publisher subjects if it does not exist.
-func (s *server) routeMessagesToProcess() {
+func (s *server) routeMessagesToPublisherProcess() {
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file.
 
@@ -492,117 +513,85 @@ func (s *server) routeMessagesToProcess() {
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
-		for sam := range s.newMessagesCh {
+		for message := range s.newMessagesCh {
 
-			go func(sam subjectAndMessage) {
-				// TODO: Jetstream
-				// Check if Jetstream stream are specified,
-				// and send off to Jetstream publisher.
+			go func(message Message) {
 
 				s.messageID.mu.Lock()
 				s.messageID.id++
-				sam.Message.ID = s.messageID.id
+				message.ID = s.messageID.id
 				s.messageID.mu.Unlock()
 
-				s.metrics.promMessagesProcessedIDLast.Set(float64(sam.Message.ID))
+				s.metrics.promMessagesProcessedIDLast.Set(float64(message.ID))
 
 				// Check if the format of the message is correct.
-				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-					s.errorKernel.errSend(s.processInitial, sam.Message, er, logError)
+				if _, ok := methodsAvailable.CheckIfExists(message.Method); !ok {
+					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", message.Method)
+					s.errorKernel.errSend(s.processInitial, message, er, logError)
 					return
 				}
 
 				switch {
-				case sam.Message.Retries < 0:
-					sam.Message.Retries = s.configuration.DefaultMessageRetries
+				case message.Retries < 0:
+					message.Retries = s.configuration.DefaultMessageRetries
 				}
-				if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
-					sam.Message.MethodTimeout = s.configuration.DefaultMethodTimeout
+				if message.MethodTimeout < 1 && message.MethodTimeout != -1 {
+					message.MethodTimeout = s.configuration.DefaultMethodTimeout
 				}
 
 				// ---
+				// Check for {{CTRL_FILE}} and if we should read and load a local file into
+				// the message before sending.
 
-				m := sam.Message
+				var filePathToOpen string
+				foundFile := false
+				var argPos int
+				for i, v := range message.MethodArgs {
+					if strings.Contains(v, "{{CTRL_FILE:") {
+						foundFile = true
+						argPos = i
 
-				subjName := sam.Subject.name()
-				pn := processNameGet(subjName, processKindPublisher)
+						// Example to split:
+						// echo {{CTRL_FILE:/somedir/msg_file.yaml}}>ctrlfile.txt
+						//
+						// Split at colon. We want the part after.
+						ss := strings.Split(v, ":")
+						// Split at "}}",so pos [0] in the result contains just the file path.
+						sss := strings.Split(ss[1], "}}")
+						filePathToOpen = sss[0]
 
-				sendOK := func() bool {
-					var ctxCanceled bool
-
-					s.processes.active.mu.Lock()
-					defer s.processes.active.mu.Unlock()
-
-					// Check if the process exist, if it do not exist return false so a
-					// new publisher process will be created.
-					proc, ok := s.processes.active.procNames[pn]
-					if !ok {
-						return false
 					}
-
-					if proc.ctx.Err() != nil {
-						ctxCanceled = true
-					}
-					if ok && ctxCanceled {
-						er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
-						s.errorKernel.logDebug(er)
-						delete(proc.processes.active.procNames, proc.processName)
-						return false
-					}
-
-					// If found in map above, and go routine for publishing is running,
-					// put the message on that processes incomming message channel.
-					if ok && !ctxCanceled {
-						select {
-						case proc.subject.messageCh <- m:
-							er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
-							s.errorKernel.logDebug(er)
-						case <-proc.ctx.Done():
-							er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-							s.errorKernel.logDebug(er)
-						}
-
-						return true
-					}
-
-					// The process was not found, so we return false here so a new publisher
-					// process will be created later.
-					return false
-				}()
-
-				if sendOK {
-					return
 				}
 
-				er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
-				s.errorKernel.logDebug(er)
+				if foundFile {
 
-				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				var proc process
-				switch {
-				case m.IsSubPublishedMsg:
-					proc = newSubProcess(s.ctx, s, sub, processKindPublisher)
-				default:
-					proc = newProcess(s.ctx, s, sub, processKindPublisher)
+					fh, err := os.Open(filePathToOpen)
+					if err != nil {
+						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument: %v", err)
+						s.errorKernel.logError(er)
+						return
+					}
+					defer fh.Close()
+
+					b, err := io.ReadAll(fh)
+					if err != nil {
+						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to read file %v given as CTRL_FILE argument: %v", filePathToOpen, err)
+						s.errorKernel.logError(er)
+						return
+					}
+
+					// Replace the {{CTRL_FILE}} with the actual content read from file.
+					re := regexp.MustCompile(`(.*)({{CTRL_FILE.*}})(.*)`)
+					message.MethodArgs[argPos] = re.ReplaceAllString(message.MethodArgs[argPos], `${1}`+string(b)+`${3}`)
+					// ---
+
 				}
 
-				proc.spawnWorker()
-				er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-				s.errorKernel.logDebug(er)
+				message.ArgSignature = s.processInitial.addMethodArgSignature(message)
 
-				// Now when the process is spawned we continue,
-				// and send the message to that new process.
-				select {
-				case proc.subject.messageCh <- m:
-					er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
-					s.errorKernel.logDebug(er)
-				case <-proc.ctx.Done():
-					er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-					s.errorKernel.logDebug(er)
-				}
+				go s.processInitial.publishAMessage(message, s.natsConn)
 
-			}(sam)
+			}(message)
 
 		}
 	}()
@@ -631,4 +620,60 @@ func (s *server) exposeDataFolder() {
 	}
 	os.Exit(1)
 
+}
+
+// messageSerializeAndCompress will serialize and compress the Message, and
+// return the result as a []byte.
+func (s *server) messageSerializeAndCompress(msg Message) ([]byte, error) {
+
+	// encode the message structure into cbor
+	bSerialized, err := cbor.Marshal(msg)
+	if err != nil {
+		er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
+		s.errorKernel.logDebug(er)
+		return nil, er
+	}
+
+	// Compress the data payload if selected with configuration flag.
+	// The compression chosen is later set in the nats msg header when
+	// calling p.messageDeliverNats below.
+
+	bCompressed := s.zstdEncoder.EncodeAll(bSerialized, nil)
+
+	return bCompressed, nil
+}
+
+// messageDeserializeAndUncompress will deserialize the ctrl message
+func (s *server) messageDeserializeAndUncompress(msgData []byte) (Message, error) {
+
+	// // If debugging is enabled, print the source node name of the nats messages received.
+	// headerFromNode := msg.Headers().Get("fromNode")
+	// if headerFromNode != "" {
+	// 	er := fmt.Errorf("info: subscriberHandlerJetstream: nats message received from %v, with subject %v ", headerFromNode, msg.Subject())
+	// 	s.errorKernel.logDebug(er)
+	// }
+
+	zr, err := zstd.NewReader(nil)
+	if err != nil {
+		er := fmt.Errorf("error: subscriberHandlerJetstream: zstd NewReader failed: %v", err)
+		return Message{}, er
+	}
+	msgData, err = zr.DecodeAll(msgData, nil)
+	if err != nil {
+		er := fmt.Errorf("error: subscriberHandlerJetstream: zstd decoding failed: %v", err)
+		zr.Close()
+		return Message{}, er
+	}
+
+	zr.Close()
+
+	message := Message{}
+
+	err = cbor.Unmarshal(msgData, &message)
+	if err != nil {
+		er := fmt.Errorf("error: subscriberHandlerJetstream: cbor decoding failed, error: %v", err)
+		return Message{}, er
+	}
+
+	return message, nil
 }

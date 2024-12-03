@@ -1,4 +1,3 @@
-TODO:
+# TODO
 
-- Create {{ file:<somefilehere> }} to be used within methodArguments
-- Add option to send request types with Jetstream.
+## Key and ACL updates to use jetstream

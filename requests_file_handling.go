@@ -17,8 +17,6 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	fileName, folderTree := selectFileNaming(message, proc)
 	file := filepath.Join(folderTree, fileName)
 
-	fmt.Printf("******************* DEBUG: CHECK IF SOCKET OR FILE: %v\n", file)
-
 	// log.Fatalf("EXITING\n")
 
 	// Check the file is a unix socket, and if it is we write the
@@ -70,8 +68,8 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	// Open file and write data.
 	f, err := os.OpenFile(file, fileFlag, 0755)
 	if err != nil {
-		er := fmt.Errorf("error: methodToFile/Append: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-
+		er := fmt.Errorf("error: methodToFile/Append: failed to open file %v, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", file, message.Directory, message.FileName, err)
+		fmt.Printf("%v\n", er)
 		return er
 	}
 	defer f.Close()

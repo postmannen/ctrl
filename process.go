@@ -1,33 +1,16 @@
 package ctrl
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	"crypto/ed25519"
-	"encoding/gob"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"sync"
+	"log"
 	"time"
 
-	"github.com/fxamacker/cbor/v2"
-	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 	// "google.golang.org/protobuf/internal/errors"
-)
-
-// processKind are either kindSubscriber or kindPublisher, and are
-// used to distinguish the kind of process to spawn and to know
-// the process kind put in the process map.
-type processKind string
-
-const (
-	processKindSubscriber processKind = "subscriber"
-	processKindPublisher  processKind = "publisher"
 )
 
 // process holds all the logic to handle a message type and it's
@@ -35,10 +18,6 @@ const (
 type process struct {
 	// isSubProcess is used to indentify subprocesses spawned by other processes.
 	isSubProcess bool
-	// isLongRunningPublisher is set to true for a publisher service that should not
-	// be auto terminated like a normal autospawned publisher would be when the the
-	// inactivity timeout have expired
-	isLongRunningPublisher bool
 	// server
 	server *server
 	// messageID
@@ -50,8 +29,7 @@ type process struct {
 	// Put a node here to be able know the node a process is at.
 	node Node
 	// The processID for the current process
-	processID   int
-	processKind processKind
+	processID int
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
 	// procFunc is a function that will be started when a worker process
@@ -88,7 +66,7 @@ type process struct {
 	// copy of the configuration from server
 	configuration *Configuration
 	// The new messages channel copied from *Server
-	newMessagesCh chan<- subjectAndMessage
+	newMessagesCh chan<- Message
 	// The structure who holds all processes information
 	processes *processes
 	// nats connection
@@ -104,7 +82,7 @@ type process struct {
 
 	// handler is used to directly attach a handler to a process upon
 	// creation of the process, like when a process is spawning a sub
-	// process like REQCopySrc do. If we're not spawning a sub process
+	// process like copySrc do. If we're not spawning a sub process
 	// and it is a regular process the handler to use is found with the
 	// getHandler method
 	handler func(proc process, message Message, node string) ([]byte, error)
@@ -124,7 +102,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
+func newProcess(ctx context.Context, server *server, subject Subject) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	server.processes.mu.Lock()
 	server.processes.lastProcessID++
@@ -141,7 +119,6 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		subject:          subject,
 		node:             Node(server.configuration.NodeName),
 		processID:        pid,
-		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
 		newMessagesCh:    server.newMessagesCh,
 		configuration:    server.configuration,
@@ -158,14 +135,8 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
-	// one message queue.
-
-	if proc.processKind == processKindPublisher {
-		proc.processName = processNameGet(proc.subject.name(), processKindPublisher)
-	}
-	if proc.processKind == processKindSubscriber {
-		proc.processName = processNameGet(proc.subject.name(), processKindSubscriber)
-	}
+	// one request type.
+	proc.processName = processNameGet(proc.subject.name())
 
 	return proc
 }
@@ -177,24 +148,16 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
-func (p process) spawnWorker() {
+func (p process) start() {
 
 	// Add prometheus metrics for the process.
 	if !p.isSubProcess {
 		p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(p.processName)})
 	}
 
-	// Start a publisher worker, which will start a go routine (process)
-	// That will take care of all the messages for the subject it owns.
-	if p.processKind == processKindPublisher {
-		p.startPublisher()
-	}
-
 	// Start a subscriber worker, which will start a go routine (process)
-	// That will take care of all the messages for the subject it owns.
-	if p.processKind == processKindSubscriber {
-		p.startSubscriber()
-	}
+	// to handle executing the request method defined in the message.
+	p.startSubscriber()
 
 	// Add information about the new process to the started processes map.
 	p.processes.active.mu.Lock()
@@ -203,27 +166,6 @@ func (p process) spawnWorker() {
 
 	er := fmt.Errorf("successfully started process: %v", p.processName)
 	p.errorKernel.logDebug(er)
-}
-
-func (p process) startPublisher() {
-	// If there is a procFunc for the process, start it.
-	if p.procFunc != nil {
-		// Initialize the channel for communication between the proc and
-		// the procFunc.
-		p.procFuncCh = make(chan Message)
-
-		// Start the procFunc in it's own anonymous func so we are able
-		// to get the return error.
-		go func() {
-			err := p.procFunc(p.ctx, p.procFuncCh)
-			if err != nil {
-				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logError)
-			}
-		}()
-	}
-
-	go p.publishMessages(p.natsConn)
 }
 
 func (p process) startSubscriber() {
@@ -244,7 +186,7 @@ func (p process) startSubscriber() {
 		}()
 	}
 
-	p.natsSubscription = p.subscribeMessages()
+	p.natsSubscription = p.startNatsSubscriber()
 
 	// We also need to be able to remove all the information about this process
 	// when the process context is canceled.
@@ -271,26 +213,29 @@ var (
 	ErrACKSubscribeRetry = errors.New("ctrl: retrying to subscribe for ack message")
 )
 
-// messageDeliverNats will create the Nats message with headers and payload.
-// It will also take care of the delivering the message that is converted to
-// gob or cbor format as a nats.Message. It will also take care of checking
-// timeouts and retries specified for the message.
-func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.Header, natsConn *nats.Conn, message Message) {
+// publishNats will create the Nats message with headers and payload.
+// The payload of the nats message, which is the ctrl message will be
+// serialized and compress before put in the data field of the nats
+// message.
+// It will also take care of resending if not delievered, and timeouts.
+func (p process) publishNats(natsMsgPayload []byte, natsMsgHeader nats.Header, natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
 	if message.RetryWait <= 0 {
 		message.RetryWait = 0
 	}
 
+	subject := newSubject(message.Method, string(message.ToNode))
+
 	// The for loop will run until the message is delivered successfully,
 	// or that retries are reached.
 	for {
 		msg := &nats.Msg{
-			Subject: string(p.subject.name()),
+			Subject: string(subject.name()),
 			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "CLICommandRequest"),
 			// Structure of the reply message are:
 			// <nodename>.<message type>.<method>.reply
-			Reply:  fmt.Sprintf("%s.reply", p.subject.name()),
+			Reply:  fmt.Sprintf("%s.reply", subject.name()),
 			Data:   natsMsgPayload,
 			Header: natsMsgHeader,
 		}
@@ -390,7 +335,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 					switch {
 					case err == nats.ErrNoResponders || err == nats.ErrTimeout:
-						er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, subject.name(), err)
 						p.errorKernel.logDebug(er)
 
 						time.Sleep(time.Second * time.Duration(message.RetryWait))
@@ -399,13 +344,13 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 						return ErrACKSubscribeRetry
 
 					case err == nats.ErrBadSubscription || err == nats.ErrConnectionClosed:
-						er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", subject.name(), err)
 						p.errorKernel.logDebug(er)
 
 						return er
 
 					default:
-						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update ctrl to handle the new error type:   subject=%v: %v", p.subject.name(), err)
+						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update ctrl to handle the new error type:   subject=%v: %v", subject.name(), err)
 						p.errorKernel.logDebug(er)
 
 						return er
@@ -442,7 +387,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 // kind of message it is and then it will check how to handle that message type,
 // and then call the correct method handler for it.
 //
-// This handler function should be started in it's own go routine,so
+// This function should be started in it's own go routine,so
 // one individual handler is started per message received so we can keep
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
@@ -462,90 +407,11 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		p.errorKernel.logDebug(er)
 	}
 
-	// If compression is used, decompress it to get the gob data. If
-	// compression is not used it is the gob encoded data we already
-	// got in msgData so we do nothing with it.
-	if val, ok := msg.Header["cmp"]; ok {
-		switch val[0] {
-		case "z":
-			zr, err := zstd.NewReader(nil)
-			if err != nil {
-				er := fmt.Errorf("error: zstd NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logWarning)
-				return
-			}
-			msgData, err = zr.DecodeAll(msg.Data, nil)
-			if err != nil {
-				er := fmt.Errorf("error: zstd decoding failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logWarning)
-				zr.Close()
-				return
-			}
-
-			zr.Close()
-
-		case "g":
-			r := bytes.NewReader(msgData)
-			gr, err := gzip.NewReader(r)
-			if err != nil {
-				er := fmt.Errorf("error: gzip NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logError)
-				return
-			}
-
-			b, err := io.ReadAll(gr)
-			if err != nil {
-				er := fmt.Errorf("error: gzip ReadAll failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er, logWarning)
-				return
-			}
-
-			gr.Close()
-
-			msgData = b
-		}
-	}
-
-	message := Message{}
-
-	// TODO: Jetstream
-	// Use CBOR and Compression for all messages, and drop the use of the header fields.
-
-	// Check if serialization is specified.
-	// Will default to gob serialization if nothing or non existing value is specified.
-	if val, ok := msg.Header["serial"]; ok {
-		// fmt.Printf(" * DEBUG: ok = %v, map = %v, len of val = %v\n", ok, msg.Header, len(val))
-		switch val[0] {
-		case "cbor":
-			err := cbor.Unmarshal(msgData, &message)
-			if err != nil {
-				er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er, logError)
-				return
-			}
-		default: // Deaults to gob if no match was found.
-			r := bytes.NewReader(msgData)
-			gobDec := gob.NewDecoder(r)
-
-			err := gobDec.Decode(&message)
-			if err != nil {
-				er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er, logError)
-				return
-			}
-		}
-
-	} else {
-		// Default to gob if serialization flag was not specified.
-		r := bytes.NewReader(msgData)
-		gobDec := gob.NewDecoder(r)
-
-		err := gobDec.Decode(&message)
-		if err != nil {
-			er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-			p.errorKernel.errSend(p, message, er, logError)
-			return
-		}
+	message, err := p.server.messageDeserializeAndUncompress(msgData)
+	if err != nil {
+		er := fmt.Errorf("error: messageSubscriberHandler: deserialize and uncompress failed: %v", err)
+		// p.errorKernel.logDebug(er)
+		log.Fatalf("%v\n", er)
 	}
 
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
@@ -778,7 +644,7 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 // SubscribeMessage will register the Nats callback function for the specified
 // nats subject. This allows us to receive Nats messages for a given subject
 // on a node.
-func (p process) subscribeMessages() *nats.Subscription {
+func (p process) startNatsSubscriber() *nats.Subscription {
 	subject := string(p.subject.name())
 	// natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 	natsSubscription, err := p.natsConn.QueueSubscribe(subject, subject, func(msg *nats.Msg) {
@@ -796,82 +662,6 @@ func (p process) subscribeMessages() *nats.Subscription {
 	return natsSubscription
 }
 
-// publishMessages will do the publishing of messages for one single
-// process. The function should be run as a goroutine, and will run
-// as long as the process it belongs to is running.
-func (p process) publishMessages(natsConn *nats.Conn) {
-	var once sync.Once
-
-	var zEnc *zstd.Encoder
-	// Prepare a zstd encoder if enabled. By enabling it here before
-	// looping over the messages to send below, we can reuse the zstd
-	// encoder for all messages.
-	switch p.configuration.Compression {
-	case "z": // zstd
-		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-		enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
-		if err != nil {
-			er := fmt.Errorf("error: zstd new encoder failed: %v", err)
-			p.errorKernel.logError(er)
-			os.Exit(1)
-		}
-		zEnc = enc
-		defer zEnc.Close()
-
-	}
-
-	// Adding a timer that will be used for when to remove the sub process
-	// publisher. The timer is reset each time a message is published with
-	// the process, so the sub process publisher will not be removed until
-	// it have not received any messages for the given amount of time.
-	ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
-	defer ticker.Stop()
-
-	for {
-
-		// Wait and read the next message on the message channel, or
-		// exit this function if Cancel are received via ctx.
-		select {
-		case <-ticker.C:
-			if p.isLongRunningPublisher {
-				er := fmt.Errorf("info: isLongRunningPublisher, will not cancel publisher: %v", p.processName)
-				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-				p.errorKernel.logDebug(er)
-
-				continue
-			}
-
-			// We only want to remove subprocesses
-			// REMOVED 120123: Removed if so all publishers should be canceled if inactive.
-			//if p.isSubProcess {
-			p.processes.active.mu.Lock()
-			p.ctxCancel()
-			delete(p.processes.active.procNames, p.processName)
-			p.processes.active.mu.Unlock()
-
-			er := fmt.Errorf("info: canceled publisher: %v", p.processName)
-			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			p.errorKernel.logDebug(er)
-
-			return
-			//}
-
-		case m := <-p.subject.messageCh:
-			ticker.Reset(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
-			// Sign the methodArgs, and add the signature to the message.
-			m.ArgSignature = p.addMethodArgSignature(m)
-			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
-
-			go p.publishAMessage(m, zEnc, &once, natsConn)
-		case <-p.ctx.Done():
-			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
-			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			p.errorKernel.logDebug(er)
-			return
-		}
-	}
-}
-
 func (p process) addMethodArgSignature(m Message) []byte {
 	argsString := argsToString(m.MethodArgs)
 	sign := ed25519.Sign(p.nodeAuth.SignPrivateKey, []byte(argsString))
@@ -879,108 +669,26 @@ func (p process) addMethodArgSignature(m Message) []byte {
 	return sign
 }
 
-func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once, natsConn *nats.Conn) {
+func (p process) publishAMessage(m Message, natsConn *nats.Conn) {
 	// Create the initial header, and set values below depending on the
 	// various configuration options chosen.
 	natsMsgHeader := make(nats.Header)
 	natsMsgHeader["fromNode"] = []string{string(p.node)}
 
-	// The serialized value of the nats message payload
-	var natsMsgPayloadSerialized []byte
-
-	// encode the message structure into gob binary format before putting
-	// it into a nats message.
-	// Prepare a gob encoder with a buffer before we start the loop
-	switch p.configuration.Serialization {
-	case "cbor":
-		b, err := cbor.Marshal(m)
-		if err != nil {
-			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			p.errorKernel.logDebug(er)
-			return
-		}
-
-		natsMsgPayloadSerialized = b
-		natsMsgHeader["serial"] = []string{p.configuration.Serialization}
-
-	default:
-		var bufGob bytes.Buffer
-		gobEnc := gob.NewEncoder(&bufGob)
-		err := gobEnc.Encode(m)
-		if err != nil {
-			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			p.errorKernel.logDebug(er)
-			return
-		}
-
-		natsMsgPayloadSerialized = bufGob.Bytes()
-		natsMsgHeader["serial"] = []string{"gob"}
-	}
-
-	// Get the process name so we can look up the process in the
-	// processes map, and increment the message counter.
-	pn := processNameGet(p.subject.name(), processKindPublisher)
-
-	// The compressed value of the nats message payload. The content
-	// can either be compressed or in it's original form depening on
-	// the outcome of the switch below, and if compression were chosen
-	// or not.
-	var natsMsgPayloadCompressed []byte
-
-	// Compress the data payload if selected with configuration flag.
-	// The compression chosen is later set in the nats msg header when
-	// calling p.messageDeliverNats below.
-	switch p.configuration.Compression {
-	case "z": // zstd
-		natsMsgPayloadCompressed = zEnc.EncodeAll(natsMsgPayloadSerialized, nil)
-		natsMsgHeader["cmp"] = []string{p.configuration.Compression}
-
-		// p.zEncMutex.Lock()
-		// zEnc.Reset(nil)
-		// p.zEncMutex.Unlock()
-
-	case "g": // gzip
-		var buf bytes.Buffer
-		func() {
-			gzipW := gzip.NewWriter(&buf)
-			defer gzipW.Close()
-			defer gzipW.Flush()
-			_, err := gzipW.Write(natsMsgPayloadSerialized)
-			if err != nil {
-				er := fmt.Errorf("error: failed to write gzip: %v", err)
-				p.errorKernel.logDebug(er)
-				return
-			}
-
-		}()
-
-		natsMsgPayloadCompressed = buf.Bytes()
-		natsMsgHeader["cmp"] = []string{p.configuration.Compression}
-
-	case "": // no compression
-		natsMsgPayloadCompressed = natsMsgPayloadSerialized
-		natsMsgHeader["cmp"] = []string{"none"}
-
-	default: // no compression
-		// Allways log the error to console.
-		er := fmt.Errorf("error: publishing: compression type not defined, setting default to no compression")
+	b, err := p.server.messageSerializeAndCompress(m)
+	if err != nil {
+		er := fmt.Errorf("error: publishAMessage: serialize and compress failed: %v", err)
 		p.errorKernel.logDebug(er)
-
-		// We only wan't to send the error message to errorCentral once.
-		once.Do(func() {
-			p.errorKernel.logDebug(er)
-		})
-
-		// No compression, so we just assign the value of the serialized
-		// data directly to the variable used with messageDeliverNats.
-		natsMsgPayloadCompressed = natsMsgPayloadSerialized
-		natsMsgHeader["cmp"] = []string{"none"}
+		return
 	}
 
 	// Create the Nats message with headers and payload, and do the
 	// sending of the message.
-	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
+	p.publishNats(b, natsMsgHeader, natsConn, m)
 
+	// Get the process name so we can look up the process in the
+	// processes map, and increment the message counter.
+	pn := processNameGet(p.subject.name())
 	// Increment the counter for the next message to be sent.
 	p.messageID++
 

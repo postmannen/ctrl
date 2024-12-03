@@ -21,20 +21,25 @@ import (
 var version string
 
 func main() {
-	defer profile.Start(profile.BlockProfile).Stop()
-	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
-	//defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
-	//defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
 
 	c := ctrl.NewConfiguration()
-	// err := c.CheckFlags(version)
-	// if err != nil {
-	// 	log.Printf("%v\n", err)
-	// 	return
-	// }
 
 	// Start profiling if profiling port is specified
 	if c.ProfilingPort != "" {
+
+		switch c.Profiling {
+		case "block":
+			defer profile.Start(profile.BlockProfile).Stop()
+		case "cpu":
+			defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+		case "trace":
+			defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
+		case "mem":
+			defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
+		default:
+			log.Fatalf("error: profiling port defined, but no valid profiling type defined. Check --help. Got: %v\n", c.Profiling)
+		}
+
 		go func() {
 			http.ListenAndServe("localhost:"+c.ProfilingPort, nil)
 		}()

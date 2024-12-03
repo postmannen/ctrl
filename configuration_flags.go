@@ -46,12 +46,16 @@ type Configuration struct {
 	KeysUpdateInterval int `comment:"KeysUpdateInterval in seconds"`
 	// AclUpdateInterval in seconds
 	AclUpdateInterval int `comment:"AclUpdateInterval in seconds"`
+	// The type of profiling
+	Profiling string
 	// The number of the profiling port
 	ProfilingPort string `comment:"The number of the profiling port"`
 	// Host and port for prometheus listener, e.g. localhost:2112
 	PromHostAndPort string `comment:"Host and port for prometheus listener, e.g. localhost:2112"`
 	// Comma separated list of additional streams to consume from.
-	JetstreamsConsume string
+	JetstreamsConsume string `comment:"a comma separated list of other jetstream subjects to consume"`
+	// Jetstream MaxMsgsPerSubject
+	JetStreamMaxMsgsPerSubject int `comment:"max messages to keep on the broker for a jetstream subject"`
 	// Set to true if this is the node that should receive the error log's from other nodes
 	DefaultMessageTimeout int `comment:"Set to true if this is the node that should receive the error log's from other nodes"`
 	// Default value for how long can a request method max be allowed to run in seconds
@@ -78,10 +82,6 @@ type Configuration struct {
 	ErrorMessageTimeout int `comment:"Timeout in seconds for error messages"`
 	// Retries for error messages
 	ErrorMessageRetries int `comment:"Retries for error messages"`
-	// Compression z for zstd or g for gzip
-	Compression string `comment:"Compression z for zstd or g for gzip"`
-	// Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor
-	Serialization string `comment:"Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor"`
 	// SetBlockProfileRate for block profiling
 	SetBlockProfileRate int `comment:"SetBlockProfileRate for block profiling"`
 	// EnableSocket for enabling the creation of a ctrl.sock file
@@ -165,9 +165,11 @@ func NewConfiguration() *Configuration {
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", CheckEnv("NATS_RECONNECT_JITTER_TLS", c.NatsReconnectJitterTLS).(int), "default nats ReconnectJitterTLS interval in seconds.")
 	flag.IntVar(&c.KeysUpdateInterval, "keysUpdateInterval", CheckEnv("KEYS_UPDATE_INTERVAL", c.KeysUpdateInterval).(int), "default interval in seconds for asking the central for public keys")
 	flag.IntVar(&c.AclUpdateInterval, "aclUpdateInterval", CheckEnv("ACL_UPDATE_INTERVAL", c.AclUpdateInterval).(int), "default interval in seconds for asking the central for acl updates")
+	flag.StringVar(&c.Profiling, "profiling", CheckEnv("PROFILING", c.Profiling).(string), "type of profiling: cpu/block/trace/mem/heap")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", CheckEnv("PROFILING_PORT", c.ProfilingPort).(string), "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", CheckEnv("PROM_HOST_AND_PORT", c.PromHostAndPort).(string), "host and port for prometheus listener, e.g. localhost:2112")
 	flag.StringVar(&c.JetstreamsConsume, "jetstreamsConsume", CheckEnv("JETSTREAMS_CONSUME", c.JetstreamsConsume).(string), "Comma separated list of Jetstrams to consume from")
+	flag.IntVar(&c.JetStreamMaxMsgsPerSubject, "jetstreamMaxMsgsPerSubject", CheckEnv("JETSTREAM_MAX_MSGS_PER_SUBJECT", c.JetStreamMaxMsgsPerSubject).(int), "max messages to keep on the broker per jetstream subject")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", CheckEnv("DEFAULT_MESSAGE_TIMEOUT", c.DefaultMessageTimeout).(int), "default message timeout in seconds. This can be overridden on the message level")
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", CheckEnv("DEFAULT_MESSAGE_RETRIES", c.DefaultMessageRetries).(int), "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.IntVar(&c.DefaultMethodTimeout, "defaultMethodTimeout", CheckEnv("DEFAULT_METHOD_TIMEOUT", c.DefaultMethodTimeout).(int), "default amount of seconds a request method max will be allowed to run")
@@ -180,8 +182,6 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", CheckEnv("EXPOSE_DATA_FOLDER", c.ExposeDataFolder).(string), "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", CheckEnv("ERROR_MESSAGE_TIMEOUT", c.ErrorMessageTimeout).(int), "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", CheckEnv("ERROR_MESSAGE_RETRIES", c.ErrorMessageRetries).(int), "The number of if times to retry an error message before we drop it")
-	flag.StringVar(&c.Compression, "compression", CheckEnv("COMPRESSION", c.Compression).(string), "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
-	flag.StringVar(&c.Serialization, "serialization", CheckEnv("SERIALIZATION", c.Serialization).(string), "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", CheckEnv("BLOCK_PROFILE_RATE", c.SetBlockProfileRate).(int), "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
 	flag.BoolVar(&c.EnableSocket, "enableSocket", CheckEnv("ENABLE_SOCKET", c.EnableSocket).(bool), "true/false, for enabling the creation of ctrl.sock file")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", CheckEnv("ENABLE_SIGNATURE_CHECK", c.EnableSignatureCheck).(bool), "true/false *TESTING* enable signature checking.")
@@ -228,46 +228,46 @@ func NewConfiguration() *Configuration {
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:              "./etc/",
-		SocketFolder:              "./tmp",
-		ReadFolder:                "./readfolder",
-		EnableReadFolder:          true,
-		TCPListener:               "",
-		HTTPListener:              "",
-		DatabaseFolder:            "./var/lib",
-		NodeName:                  "",
-		BrokerAddress:             "127.0.0.1:4222",
-		NatsConnOptTimeout:        20,
-		NatsConnectRetryInterval:  10,
-		NatsReconnectJitter:       100,
-		NatsReconnectJitterTLS:    1,
-		KeysUpdateInterval:        60,
-		AclUpdateInterval:         60,
-		ProfilingPort:             "",
-		PromHostAndPort:           "",
-		JetstreamsConsume:         "",
-		DefaultMessageTimeout:     10,
-		DefaultMessageRetries:     1,
-		DefaultMethodTimeout:      10,
-		SubscribersDataFolder:     "./data",
-		CentralNodeName:           "central",
-		RootCAPath:                "",
-		NkeySeedFile:              "",
-		NkeyFromED25519SSHKeyFile: "",
-		NkeySeed:                  "",
-		ExposeDataFolder:          "",
-		ErrorMessageTimeout:       60,
-		ErrorMessageRetries:       10,
-		Compression:               "z",
-		Serialization:             "cbor",
-		SetBlockProfileRate:       0,
-		EnableSocket:              true,
-		EnableSignatureCheck:      false,
-		EnableAclCheck:            false,
-		EnableDebug:               false,
-		LogLevel:                  "debug",
-		LogConsoleTimestamps:      false,
-		KeepPublishersAliveFor:    10,
+		ConfigFolder:               "./etc/",
+		SocketFolder:               "./tmp",
+		ReadFolder:                 "./readfolder",
+		EnableReadFolder:           true,
+		TCPListener:                "",
+		HTTPListener:               "",
+		DatabaseFolder:             "./var/lib",
+		NodeName:                   "",
+		BrokerAddress:              "127.0.0.1:4222",
+		NatsConnOptTimeout:         20,
+		NatsConnectRetryInterval:   10,
+		NatsReconnectJitter:        100,
+		NatsReconnectJitterTLS:     1,
+		KeysUpdateInterval:         60,
+		AclUpdateInterval:          60,
+		Profiling:                  "",
+		ProfilingPort:              "",
+		PromHostAndPort:            "",
+		JetstreamsConsume:          "",
+		JetStreamMaxMsgsPerSubject: 100,
+		DefaultMessageTimeout:      10,
+		DefaultMessageRetries:      1,
+		DefaultMethodTimeout:       10,
+		SubscribersDataFolder:      "./data",
+		CentralNodeName:            "central",
+		RootCAPath:                 "",
+		NkeySeedFile:               "",
+		NkeyFromED25519SSHKeyFile:  "",
+		NkeySeed:                   "",
+		ExposeDataFolder:           "",
+		ErrorMessageTimeout:        60,
+		ErrorMessageRetries:        10,
+		SetBlockProfileRate:        0,
+		EnableSocket:               true,
+		EnableSignatureCheck:       false,
+		EnableAclCheck:             false,
+		EnableDebug:                false,
+		LogLevel:                   "debug",
+		LogConsoleTimestamps:       false,
+		KeepPublishersAliveFor:     10,
 
 		StartProcesses: StartProcesses{
 			StartPubHello:          30,

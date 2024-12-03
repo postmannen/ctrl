@@ -86,24 +86,10 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 	// we should forward the message to that specified toNode. This will allow
 	// us to initiate a file copy from another node to this node.
 	if message.ToNode != proc.node {
-		sam, err := newSubjectAndMessage(message)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage failed: %v, message=%v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
-		}
 
-		proc.newMessagesCh <- sam
+		proc.newMessagesCh <- message
 
 		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
-	}
-
-	// Check if the filepaths for the socket a realpaths.
-	file := filepath.Join(message.Directory, message.FileName)
-	if strings.HasPrefix(file, "./") || !strings.HasPrefix(file, "/") {
-		er := fmt.Errorf("error: copySrcSubHandler: path in message started with ./ or no directory at all, only full paths are allowed, path given was : %v", file)
-		proc.errorKernel.errSend(proc, message, er, logError)
-		newReplyMessage(proc, message, []byte(er.Error()))
-		return nil, er
 	}
 
 	var subProcessName string
@@ -225,7 +211,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 		// Create a new sub process that will do the actual file copying.
 
-		copySrcSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber)
+		copySrcSubProc := newSubProcess(ctx, proc.server, sub)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -235,7 +221,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		copySrcSubProc.handler = copySrcSubHandler()
 
 		// The process will be killed when the context expires.
-		go copySrcSubProc.spawnWorker()
+		go copySrcSubProc.start()
 
 		// Send a message over the the node where the destination file will be written,
 		// to also start up a sub process on the destination node.
@@ -260,14 +246,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		// msg.Directory = dstDir
 		// msg.FileName = dstFile
 
-		sam, err := newSubjectAndMessage(msg)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage failed: %v, message=%v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
-			cancel()
-		}
-
-		proc.newMessagesCh <- sam
+		proc.newMessagesCh <- msg
 
 		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
 
@@ -280,8 +259,8 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 }
 
 // newSubProcess is a wrapper around newProcess which sets the isSubProcess value to true.
-func newSubProcess(ctx context.Context, server *server, subject Subject, processKind processKind) process {
-	p := newProcess(ctx, server, subject, processKind)
+func newSubProcess(ctx context.Context, server *server, subject Subject) process {
+	p := newProcess(ctx, server, subject)
 	p.isSubProcess = true
 
 	return p
@@ -333,7 +312,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		// previous message is then fully up and running, so we just discard
 		// that second message in those cases.
 
-		pn := processNameGet(sub.name(), processKindSubscriber)
+		pn := processNameGet(sub.name())
 		// fmt.Printf("\n\n *** DEBUG: processNameGet: %v\n\n", pn)
 
 		proc.processes.active.mu.Lock()
@@ -352,7 +331,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		}
 
 		// Create a new sub process that will do the actual file copying.
-		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber)
+		copyDstSubProc := newSubProcess(ctx, proc.server, sub)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -362,7 +341,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		copyDstSubProc.handler = copyDstSubHandler()
 
 		// The process will be killed when the context expires.
-		go copyDstSubProc.spawnWorker()
+		go copyDstSubProc.start()
 
 		fp := filepath.Join(cia.DstDir, cia.DstFile)
 		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copyDstSubProc.processName, node, fp, subProcessName)
@@ -445,8 +424,9 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// We don't care about the error.
 		fi, err := os.Stat(file)
 		if err != nil {
-			fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
-			fmt.Printf(" ** DEBUG: fi: %#v\n", fi)
+			er := fmt.Errorf("DEBUG: ERROR while os.Stat(file): copySrcProcFunc, fileInfo: %v, err: %v", fi, err)
+			proc.errorKernel.errSend(proc, Message{}, er, logWarning)
+
 		}
 
 		// We want to be able to send the reply message when the copying is done,
@@ -558,15 +538,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							ReplyRetries:      initialMessage.ReplyRetries,
 						}
 
-						sam, err := newSubjectAndMessage(msg)
-						if err != nil {
-							er := fmt.Errorf("copySrcProcSubFunc: newSubjectAndMessage failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
-							newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
-							return er
-						}
-
-						proc.newMessagesCh <- sam
+						proc.newMessagesCh <- msg
 
 						resendRetries = 0
 
@@ -628,15 +600,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						ReplyRetries:      initialMessage.ReplyRetries,
 					}
 
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
-						newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
-						return er
-					}
-
-					proc.newMessagesCh <- sam
+					proc.newMessagesCh <- msg
 
 					resendRetries++
 
@@ -692,14 +656,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				ReplyRetries:      message.ReplyRetries,
 			}
 
-			sam, err := newSubjectAndMessage(msg)
-			if err != nil {
-				er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
-				return er
-			}
-
-			proc.newMessagesCh <- sam
+			proc.newMessagesCh <- msg
 		}
 
 		// Open a tmp folder for where to write the received chunks
@@ -794,14 +751,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ReplyRetries:      message.ReplyRetries,
 					}
 
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
-						return er
-					}
-
-					proc.newMessagesCh <- sam
+					proc.newMessagesCh <- msg
 
 				case copyResendLast:
 					// The csa already contains copyStatus copyResendLast when reached here,
@@ -827,14 +777,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ReplyRetries:      message.ReplyRetries,
 					}
 
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
-						return er
-					}
-
-					proc.newMessagesCh <- sam
+					proc.newMessagesCh <- msg
 
 				case copySrcDone:
 					err := func() error {
@@ -847,7 +790,6 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						proc.errorKernel.logDebug(er)
 
 						if _, err := os.Stat(cia.DstDir); os.IsNotExist(err) {
-							// TODO: Add option to set permission here ???
 							err := os.MkdirAll(cia.DstDir, fs.FileMode(cia.FolderPermission))
 							if err != nil {
 								return fmt.Errorf("error: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
@@ -981,14 +923,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								ReplyRetries:      message.ReplyRetries,
 							}
 
-							sam, err := newSubjectAndMessage(msg)
-							if err != nil {
-								er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-								proc.errorKernel.errSend(proc, message, er, logWarning)
-								return er
-							}
-
-							proc.newMessagesCh <- sam
+							proc.newMessagesCh <- msg
 						}
 
 						cancel()
