@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // processes holds all the information about running processes
@@ -114,42 +111,8 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.StartSubHello {
-		// subREQHello is the handler that is triggered when we are receiving a hello
-		// message. To keep the state of all the hello's received from nodes we need
-		// to also start a procFunc that will live as a go routine tied to this process,
-		// where the procFunc will receive messages from the handler when a message is
-		// received, the handler will deliver the message to the procFunc on the
-		// proc.procFuncCh, and we can then read that message from the procFuncCh in
-		// the procFunc running.
-		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			// sayHelloNodes := make(map[Node]struct{})
 
-			for {
-				// Receive a copy of the message sent from the method handler.
-				var m Message
-
-				select {
-				case m = <-procFuncCh:
-				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
-					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er)
-					return nil
-				}
-
-				proc.centralAuth.addPublicKey(proc, m)
-
-				// update the prometheus metrics
-
-				proc.server.centralAuth.pki.nodesAcked.mu.Lock()
-				mapLen := len(proc.server.centralAuth.pki.nodesAcked.keysAndHash.Keys)
-				proc.server.centralAuth.pki.nodesAcked.mu.Unlock()
-				proc.metrics.promHelloNodesTotal.Set(float64(mapLen))
-				proc.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
-
-			}
-		}
-		proc.startup.startProcess(proc, Hello, pf)
+		proc.startup.startProcess(proc, Hello, procFuncHello)
 	}
 
 	if proc.configuration.StartProcesses.IsCentralErrorLogger {
@@ -165,128 +128,17 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.StartPubHello != 0 {
-		pf := func(ctx context.Context, procFuncCh chan Message) error {
-
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartProcesses.StartPubHello))
-			defer ticker.Stop()
-			for {
-
-				// d := fmt.Sprintf("Hello from %v\n", p.node)
-				// Send the ed25519 public key used for signing as the payload of the message.
-				d := proc.server.nodeAuth.SignPublicKey
-
-				m := Message{
-					FileName:   "hello.log",
-					Directory:  "hello-messages",
-					ToNode:     Node(p.configuration.CentralNodeName),
-					FromNode:   Node(proc.node),
-					Data:       []byte(d),
-					Method:     Hello,
-					ACKTimeout: proc.configuration.DefaultMessageTimeout,
-					Retries:    1,
-				}
-
-				proc.newMessagesCh <- m
-
-				select {
-				case <-ticker.C:
-				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
-					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er)
-					return nil
-				}
-			}
-		}
-		proc.startup.startProcess(proc, HelloPublisher, pf)
+		proc.startup.startProcess(proc, HelloPublisher, procFuncHelloPublisher)
 	}
 
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
-		// Define the startup of a publisher that will send KeysRequestUpdate
-		// to central server and ask for publics keys, and to get them deliver back with a request
-		// of type KeysDeliverUpdate.
-		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeysUpdateInterval))
-			defer ticker.Stop()
-			for {
-
-				// Send a message with the hash of the currently stored keys,
-				// so we would know on the subscriber at central if it should send
-				// and update with new keys back.
-
-				proc.nodeAuth.publicKeys.mu.Lock()
-				er := fmt.Errorf(" ----> publisher KeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
-				p.errorKernel.logDebug(er)
-
-				m := Message{
-					FileName:    "publickeysget.log",
-					Directory:   "publickeysget",
-					ToNode:      Node(p.configuration.CentralNodeName),
-					FromNode:    Node(proc.node),
-					Data:        []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]),
-					Method:      KeysRequestUpdate,
-					ReplyMethod: KeysDeliverUpdate,
-					ACKTimeout:  proc.configuration.DefaultMessageTimeout,
-					Retries:     1,
-				}
-				proc.nodeAuth.publicKeys.mu.Unlock()
-
-				proc.newMessagesCh <- m
-
-				select {
-				case <-ticker.C:
-				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
-					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er)
-					return nil
-				}
-			}
-		}
-		proc.startup.startProcess(proc, KeysRequestUpdate, pf)
+		proc.startup.startProcess(proc, KeysRequestUpdate, procFuncKeysRequestUpdate)
 		proc.startup.startProcess(proc, KeysDeliverUpdate, nil)
 	}
 
 	if proc.configuration.StartProcesses.EnableAclUpdates {
-		pf := func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.AclUpdateInterval))
-			defer ticker.Stop()
-			for {
 
-				// Send a message with the hash of the currently stored acl's,
-				// so we would know for the subscriber at central if it should send
-				// and update with new keys back.
-
-				proc.nodeAuth.nodeAcl.mu.Lock()
-				er := fmt.Errorf(" ----> publisher AclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
-				p.errorKernel.logDebug(er)
-
-				m := Message{
-					FileName:    "aclRequestUpdate.log",
-					Directory:   "aclRequestUpdate",
-					ToNode:      Node(p.configuration.CentralNodeName),
-					FromNode:    Node(proc.node),
-					Data:        []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]),
-					Method:      AclRequestUpdate,
-					ReplyMethod: AclDeliverUpdate,
-					ACKTimeout:  proc.configuration.DefaultMessageTimeout,
-					Retries:     1,
-				}
-				proc.nodeAuth.nodeAcl.mu.Unlock()
-
-				proc.newMessagesCh <- m
-
-				select {
-				case <-ticker.C:
-				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
-					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					p.errorKernel.logDebug(er)
-					return nil
-				}
-			}
-		}
-		proc.startup.startProcess(proc, AclRequestUpdate, pf)
+		proc.startup.startProcess(proc, AclRequestUpdate, procFuncAclRequestUpdate)
 		proc.startup.startProcess(proc, AclDeliverUpdate, nil)
 	}
 
@@ -353,7 +205,7 @@ func newStartup(server *server) *startup {
 
 // startProcess will start a process. It takes the initial process, request method,
 // and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
-func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
+func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context, proc process, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
 	p.errorKernel.logDebug(er)
 

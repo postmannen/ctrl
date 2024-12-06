@@ -2,8 +2,10 @@ package ctrl
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -86,6 +88,45 @@ func methodAclRequestUpdate(proc process, message Message, node string) ([]byte,
 
 	// We're not sending an ACK message for this request type.
 	return nil, nil
+}
+
+func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan Message) error {
+	ticker := time.NewTicker(time.Second * time.Duration(proc.configuration.AclUpdateInterval))
+	defer ticker.Stop()
+	for {
+
+		// Send a message with the hash of the currently stored acl's,
+		// so we would know for the subscriber at central if it should send
+		// and update with new keys back.
+
+		proc.nodeAuth.nodeAcl.mu.Lock()
+		er := fmt.Errorf(" ----> publisher AclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+		proc.errorKernel.logDebug(er)
+
+		m := Message{
+			FileName:    "aclRequestUpdate.log",
+			Directory:   "aclRequestUpdate",
+			ToNode:      Node(proc.configuration.CentralNodeName),
+			FromNode:    Node(proc.node),
+			Data:        []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]),
+			Method:      AclRequestUpdate,
+			ReplyMethod: AclDeliverUpdate,
+			ACKTimeout:  proc.configuration.DefaultMessageTimeout,
+			Retries:     1,
+		}
+		proc.nodeAuth.nodeAcl.mu.Unlock()
+
+		proc.newMessagesCh <- m
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			proc.errorKernel.logDebug(er)
+			return nil
+		}
+	}
 }
 
 // ----

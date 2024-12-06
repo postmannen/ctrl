@@ -58,7 +58,7 @@ type process struct {
 	// procFunc's can also be used to wrap in other types which we want to
 	// work with. An example can be handling of metrics which the message
 	// have no notion of, but a procFunc can have that wrapped in from when it was constructed.
-	procFunc func(ctx context.Context, procFuncCh chan Message) error
+	procFunc func(ctx context.Context, proc process, procFuncCh chan Message) error
 	// The channel to send a messages to the procFunc go routine.
 	// This is typically used within the methodHandler for so we
 	// can pass messages between the procFunc and the handler.
@@ -178,7 +178,7 @@ func (p process) startSubscriber() {
 		// Start the procFunc in it's own anonymous func so we are able
 		// to get the return error.
 		go func() {
-			err := p.procFunc(p.ctx, p.procFuncCh)
+			err := p.procFunc(p.ctx, p, p.procFuncCh)
 			if err != nil {
 				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
 				p.errorKernel.errSend(p, Message{}, er, logError)

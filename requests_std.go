@@ -1,11 +1,14 @@
 package ctrl
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // -----
@@ -54,6 +57,76 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
+}
+
+// procFuncHello is the procFunc used with the hello subscriber process.
+// To keep the state of all the hello's received from nodes we need
+// to also start a procFunc that will live as a go routine tied to this process,
+// where the procFunc will receive messages from the handler when a message is
+// received, the handler will deliver the message to the procFunc on the
+// proc.procFuncCh, and we can then read that message from the procFuncCh in
+// the procFunc running.
+func procFuncHello(ctx context.Context, proc process, procFuncCh chan Message) error {
+	// sayHelloNodes := make(map[Node]struct{})
+
+	for {
+		// Receive a copy of the message sent from the method handler.
+		var m Message
+
+		select {
+		case m = <-procFuncCh:
+		case <-ctx.Done():
+			er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
+			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			proc.errorKernel.logDebug(er)
+			return nil
+		}
+
+		proc.centralAuth.addPublicKey(proc, m)
+
+		// update the prometheus metrics
+
+		proc.server.centralAuth.pki.nodesAcked.mu.Lock()
+		mapLen := len(proc.server.centralAuth.pki.nodesAcked.keysAndHash.Keys)
+		proc.server.centralAuth.pki.nodesAcked.mu.Unlock()
+		proc.metrics.promHelloNodesTotal.Set(float64(mapLen))
+		proc.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
+
+	}
+}
+
+func procFuncHelloPublisher(ctx context.Context, proc process, procFuncCh chan Message) error {
+
+	ticker := time.NewTicker(time.Second * time.Duration(proc.configuration.StartProcesses.StartPubHello))
+	defer ticker.Stop()
+	for {
+
+		// d := fmt.Sprintf("Hello from %v\n", p.node)
+		// Send the ed25519 public key used for signing as the payload of the message.
+		d := proc.server.nodeAuth.SignPublicKey
+
+		m := Message{
+			FileName:   "hello.log",
+			Directory:  "hello-messages",
+			ToNode:     Node(proc.configuration.CentralNodeName),
+			FromNode:   Node(proc.node),
+			Data:       []byte(d),
+			Method:     Hello,
+			ACKTimeout: proc.configuration.DefaultMessageTimeout,
+			Retries:    1,
+		}
+
+		proc.newMessagesCh <- m
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			proc.errorKernel.logDebug(er)
+			return nil
+		}
+	}
 }
 
 // ---

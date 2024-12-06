@@ -215,7 +215,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
-		copySrcSubProc.procFunc = copySrcSubProcFunc(copySrcSubProc, cia, cancel, message)
+		copySrcSubProc.procFunc = copySrcSubProcFunc(cia, cancel, message)
 
 		// assign a handler to the sub process
 		copySrcSubProc.handler = copySrcSubHandler()
@@ -335,7 +335,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
-		copyDstSubProc.procFunc = copyDstSubProcFunc(copyDstSubProc, cia, message, cancel)
+		copyDstSubProc.procFunc = copyDstSubProcFunc(cia, message, cancel)
 
 		// assign a handler to the sub process
 		copyDstSubProc.handler = copyDstSubHandler()
@@ -411,8 +411,8 @@ type copySubData struct {
 	Hash        [32]byte
 }
 
-func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.CancelFunc, initialMessage Message) func(context.Context, chan Message) error {
-	pf := func(ctx context.Context, procFuncCh chan Message) error {
+func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialMessage Message) func(context.Context, process, chan Message) error {
+	pf := func(ctx context.Context, proc process, procFuncCh chan Message) error {
 
 		// Check if the realpath of the directory and filename specified in the
 		// message are of type unix socket, and if it is we do not add the extra
@@ -626,9 +626,9 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 	return pf
 }
 
-func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, cancel context.CancelFunc) func(context.Context, chan Message) error {
+func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.CancelFunc) func(context.Context, process, chan Message) error {
 
-	pf := func(ctx context.Context, procFuncCh chan Message) error {
+	pf := func(ctx context.Context, proc process, procFuncCh chan Message) error {
 
 		csa := copySubData{
 			CopyStatus: copyReady,
