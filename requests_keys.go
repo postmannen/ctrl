@@ -2,8 +2,10 @@ package ctrl
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // ---
@@ -117,6 +119,48 @@ func methodKeysRequestUpdate(proc process, message Message, node string) ([]byte
 
 	// We're not sending an ACK message for this request type.
 	return nil, nil
+}
+
+// Define the startup of a publisher that will send KeysRequestUpdate
+// to central server and ask for publics keys, and to get them deliver back with a request
+// of type KeysDeliverUpdate.
+func procFuncKeysRequestUpdate(ctx context.Context, proc process, procFuncCh chan Message) error {
+	ticker := time.NewTicker(time.Second * time.Duration(proc.configuration.KeysUpdateInterval))
+	defer ticker.Stop()
+	for {
+
+		// Send a message with the hash of the currently stored keys,
+		// so we would know on the subscriber at central if it should send
+		// and update with new keys back.
+
+		proc.nodeAuth.publicKeys.mu.Lock()
+		er := fmt.Errorf(" ----> publisher KeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+		proc.errorKernel.logDebug(er)
+
+		m := Message{
+			FileName:    "publickeysget.log",
+			Directory:   "publickeysget",
+			ToNode:      Node(proc.configuration.CentralNodeName),
+			FromNode:    Node(proc.node),
+			Data:        []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]),
+			Method:      KeysRequestUpdate,
+			ReplyMethod: KeysDeliverUpdate,
+			ACKTimeout:  proc.configuration.DefaultMessageTimeout,
+			Retries:     1,
+		}
+		proc.nodeAuth.publicKeys.mu.Unlock()
+
+		proc.newMessagesCh <- m
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			proc.errorKernel.logDebug(er)
+			return nil
+		}
+	}
 }
 
 // ----
