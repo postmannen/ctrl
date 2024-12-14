@@ -1,11 +1,14 @@
+
 # Introduction
 
-- [introduction](./introduction.md)
+- [Introduction](./introduction.md)
+- [General information](./introduction_general_information.md)
   
-# User Guide
+# User Guides
 
 - [Install docker](./user_guide_install_docker.md)
 - [Install host](./user_guide_install_host.md)
+- [Install NATS Server](./install_nats_server.md)
 
 # Core ctrl
 
@@ -19,7 +22,7 @@
 - [{{CTRL_FILE}} variable](./core_messaging_CTRL_FILE.md)
 - [Errors](./core_errors.md)
 
-# Example standard messages
+# Examples standard messages
 
 - [Http Get](./example_standard_reqhttpget.md)
 - [Tail File](./example_standard_reqtailfile.md)
@@ -27,3 +30,7 @@
 - [Cli Command Continously](./example_standard_reqclicommandcont.md)
 - [Copy Src to Dst](./example_standard_reqcopysrc.md)
 - [Send more messages at once](./example_standard_send_more_messages.md)
+
+# Using ctrl
+
+- [ctrl as github action runner](usecase-ctrl-as-github-action-runner)
