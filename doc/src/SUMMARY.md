@@ -2,7 +2,6 @@
 # Introduction
 
 - [Introduction](./introduction.md)
-- [General information](./introduction_general_information.md)
   
 # User Guides
 
