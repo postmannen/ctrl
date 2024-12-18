@@ -49,10 +49,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
-	// --------------------------
-
-	// send the message to the procFuncCh which is running alongside the process
-	// and can hold registries and handle special things for an individual process.
+	// The handling of the public key that is in the message.Data field is handled in the procfunc.
 	proc.procFuncCh <- message
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

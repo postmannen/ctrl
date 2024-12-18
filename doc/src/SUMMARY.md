@@ -20,6 +20,11 @@
 - [{{CTRL_DATA}} variable](./core_messaging_CTRL_DATA.md)
 - [{{CTRL_FILE}} variable](./core_messaging_CTRL_FILE.md)
 - [Errors](./core_errors.md)
+- [central](./core_central.md)
+  - [hello messages](./core_hello_messages.md)
+  - [signing keys](./core_signing_keys.md)
+  - [ACL](./core_acl.md)
+  - [audit log](./core_audit_log.md)
 
 # Examples standard messages
 
