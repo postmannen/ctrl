@@ -127,7 +127,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		er := fmt.Errorf("info: public key value for REGISTERED node %v is the same, doing nothing", msg.FromNode)
+		er := fmt.Errorf("info: public key value for registered node %v is the same, doing nothing", msg.FromNode)
 		proc.errorKernel.logDebug(er)
 		return
 	}
@@ -145,7 +145,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
-	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
+	er := fmt.Errorf("info: new public key for node: %v. Key needs to be authorized by operator to be allowed into the system by using the keysAllow method", msg.FromNode)
 	c.pki.errorKernel.infoSend(proc, msg, er)
 	c.pki.errorKernel.logDebug(er)
 }

@@ -35,9 +35,6 @@ func methodPublicKey(proc process, message Message, node string) ([]byte, error)
 		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
 		case <-ctx.Done():
 		case out := <-outCh:
-
-			// Prepare and queue for sending a new message with the output
-			// of the action executed.
 			newReplyMessage(proc, message, out)
 		}
 	}()
