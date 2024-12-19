@@ -63,7 +63,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 // received, the handler will deliver the message to the procFunc on the
 // proc.procFuncCh, and we can then read that message from the procFuncCh in
 // the procFunc running.
-func procFuncHello(ctx context.Context, proc process, procFuncCh chan Message) error {
+func procFuncHelloSubscriber(ctx context.Context, proc process, procFuncCh chan Message) error {
 	// sayHelloNodes := make(map[Node]struct{})
 
 	for {

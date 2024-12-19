@@ -12,13 +12,13 @@
 # Core ctrl
 
 - [Messaging](./core_messaging_overview.md)
-- [Message fields](./core_messaging_message_fields.md)
-- [Message jetstream/broadcast](./core_messaging_jetstream.md)
-- [Request Methods](./core_request_methods.md)
+  - [Message fields](./core_messaging_message_fields.md)
+  - [Message jetstream/broadcast](./core_messaging_jetstream.md)
+  - [Request Methods](./core_request_methods.md)
+  - [{{CTRL_DATA}} variable](./core_messaging_CTRL_DATA.md)
+  - [{{CTRL_FILE}} variable](./core_messaging_CTRL_FILE.md)
 - [Nats timeouts](./core_nats_timeouts.md)
 - [Startup folder](./core_startup_folder.md)
-- [{{CTRL_DATA}} variable](./core_messaging_CTRL_DATA.md)
-- [{{CTRL_FILE}} variable](./core_messaging_CTRL_FILE.md)
 - [Errors](./core_errors.md)
 - [central](./core_central.md)
   - [hello messages](./core_hello_messages.md)

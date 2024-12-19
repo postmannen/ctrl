@@ -198,7 +198,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			TailFile:          HandlerFunc(methodTailFile),
 			PublicKey:         HandlerFunc(methodPublicKey),
 			KeysRequestUpdate: HandlerFunc(methodKeysRequestUpdate),
-			KeysDeliverUpdate: HandlerFunc(methodKeysDeliverUpdate),
+			KeysDeliverUpdate: HandlerFunc(methodKeysReceiveUpdate),
 			KeysAllow:         HandlerFunc(methodKeysAllow),
 			KeysDelete:        HandlerFunc(methodKeysDelete),
 
