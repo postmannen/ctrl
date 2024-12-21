@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -27,8 +28,6 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 	go func() {
 		defer proc.processes.wg.Done()
 
-		var a []string
-
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodCliCommand: got <1 number methodArgs")
@@ -36,11 +35,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
-		case len(message.MethodArgs) >= 0:
-			a = message.MethodArgs[1:]
 		}
-
-		c := message.MethodArgs[0]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
@@ -70,7 +65,24 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 				}
 			}
 
-			cmd := exec.CommandContext(ctx, c, a...)
+			var cmd *exec.Cmd
+
+			// For the Linux and Darwin operating system we allow to automatically detect
+			// shell interpreter, so the user don't have to type "bash", "-c" as the first
+			// two arguments of the methodArgs.
+			// We use the shell defined in the ShellOnNode variable as interpreter. Since
+			// it expects a "-c" directly after in the command we prefix it to the args.
+			if proc.configuration.ShellOnNode != "" {
+				switch runtime.GOOS {
+				case "linux", "darwin":
+					args := []string{"-c"}
+					args = append(args, message.MethodArgs...)
+
+					cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
+				default:
+					cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs...)
+				}
+			}
 
 			// Check for the use of env variable for CTRL_DATA, and set env if found.
 			if foundEnvData {
@@ -149,8 +161,6 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 			// fmt.Printf(" * DONE *\n")
 		}()
 
-		var a []string
-
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodCliCommand: got <1 number methodArgs")
@@ -158,11 +168,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
-		case len(message.MethodArgs) >= 0:
-			a = message.MethodArgs[1:]
 		}
-
-		c := message.MethodArgs[0]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
@@ -176,7 +182,24 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 		go func() {
 			defer proc.processes.wg.Done()
 
-			cmd := exec.CommandContext(ctx, c, a...)
+			var cmd *exec.Cmd
+
+			// For the Linux and Darwin operating system we allow to automatically detect
+			// shell interpreter, so the user don't have to type "bash", "-c" as the first
+			// two arguments of the methodArgs.
+			// We use the shell defined in the ShellOnNode variable as interpreter. Since
+			// it expects a "-c" directly after in the command we prefix it to the args.
+			if proc.configuration.ShellOnNode != "" {
+				switch runtime.GOOS {
+				case "linux", "darwin":
+					args := []string{"-c"}
+					args = append(args, message.MethodArgs...)
+
+					cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
+				default:
+					cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs...)
+				}
+			}
 
 			// Using cmd.StdoutPipe here so we are continuosly
 			// able to read the out put of the command.

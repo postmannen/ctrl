@@ -61,7 +61,7 @@ func methodOpProcessStart(proc process, message Message, node string) ([]byte, e
 		method := Method(m)
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
-			er := fmt.Errorf("error: OpProcessStart: no such request type defined: %v" + m)
+			er := fmt.Errorf("error: OpProcessStart: no such request type defined: %v", m)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
@@ -119,7 +119,7 @@ func methodOpProcessStop(proc process, message Message, node string) ([]byte, er
 		method := Method(methodString)
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
-			er := fmt.Errorf("error: OpProcessStop: no such request type defined: %v, check that the methodArgs are correct: " + methodString)
+			er := fmt.Errorf("error: OpProcessStop: no such request type defined: %v, check that the methodArgs are correct: ", methodString)
 			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
