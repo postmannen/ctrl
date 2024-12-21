@@ -226,7 +226,9 @@ func NewConfiguration() *Configuration {
 		log.Fatalf("error: the centralNodeName config option or flag cannot be empty, check -help\n")
 	}
 
-	c.ShellOnNode = getShell()
+	if c.ShellOnNode == "" {
+		c.ShellOnNode = getShell()
+	}
 	fmt.Printf("\n******** DETECTED SHELL: %v\n\n", c.ShellOnNode)
 
 	flag.Parse()

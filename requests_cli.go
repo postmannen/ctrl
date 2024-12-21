@@ -3,6 +3,7 @@ package ctrl
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -65,24 +66,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 				}
 			}
 
-			var cmd *exec.Cmd
-
-			// For the Linux and Darwin operating system we allow to automatically detect
-			// shell interpreter, so the user don't have to type "bash", "-c" as the first
-			// two arguments of the methodArgs.
-			// We use the shell defined in the ShellOnNode variable as interpreter. Since
-			// it expects a "-c" directly after in the command we prefix it to the args.
-			if proc.configuration.ShellOnNode != "" {
-				switch runtime.GOOS {
-				case "linux", "darwin":
-					args := []string{"-c"}
-					args = append(args, message.MethodArgs...)
-
-					cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
-				default:
-					cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs...)
-				}
-			}
+			cmd := getCmdAndArgs(ctx, proc, message)
 
 			// Check for the use of env variable for CTRL_DATA, and set env if found.
 			if foundEnvData {
@@ -182,24 +166,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 		go func() {
 			defer proc.processes.wg.Done()
 
-			var cmd *exec.Cmd
-
-			// For the Linux and Darwin operating system we allow to automatically detect
-			// shell interpreter, so the user don't have to type "bash", "-c" as the first
-			// two arguments of the methodArgs.
-			// We use the shell defined in the ShellOnNode variable as interpreter. Since
-			// it expects a "-c" directly after in the command we prefix it to the args.
-			if proc.configuration.ShellOnNode != "" {
-				switch runtime.GOOS {
-				case "linux", "darwin":
-					args := []string{"-c"}
-					args = append(args, message.MethodArgs...)
-
-					cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
-				default:
-					cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs...)
-				}
-			}
+			cmd := getCmdAndArgs(ctx, proc, message)
 
 			// Using cmd.StdoutPipe here so we are continuosly
 			// able to read the out put of the command.
@@ -276,4 +243,29 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
+}
+
+// getCmdAndArgs will get the command and arguments from the message, and return
+// a command to execute with the arguments.
+func getCmdAndArgs(ctx context.Context, proc process, message Message) *exec.Cmd {
+	var cmd *exec.Cmd
+
+	// For the Linux and Darwin operating system we allow to automatically detect
+	// shell interpreter, so the user don't have to type "bash", "-c" as the first
+	// two arguments of the methodArgs.
+	// We use the shell defined in the ShellOnNode variable as interpreter. Since
+	// it expects a "-c" directly after in the command we prefix it to the args.
+	if proc.configuration.ShellOnNode != "" {
+		switch runtime.GOOS {
+		case "linux", "darwin":
+			args := []string{"-c"}
+			args = append(args, message.MethodArgs...)
+
+			cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
+		default:
+			cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs...)
+		}
+	}
+
+	return cmd
 }
