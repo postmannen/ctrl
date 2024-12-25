@@ -1,6 +1,6 @@
 # cliCommand
 
-With **cliCommand** you specify the command to run in **methodArgs** prefixed with the interpreter to use, for example **bash**
+With **cliCommand** you specify the command to run in **methodArgs** prefixed with the interpreter to use, for example with bash **bash** `"bash","-c","tree"`.
 
 On Linux and Darwin, the shell interpreter can also be auto detected by setting the value of **useDetectedShell** in the message to **true**. If set to true the methodArgs only need a single string value with command to run. Example below.
 
@@ -8,7 +8,7 @@ On Linux and Darwin, the shell interpreter can also be auto detected by setting 
 ---
 - toNodes:
     - node2
-  UseDetectedShell: true
+  useDetectedShell: true
   method: cliCommand
   methodArgs:
     - |
