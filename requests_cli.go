@@ -253,10 +253,6 @@ func getCmdAndArgs(ctx context.Context, proc process, message Message) *exec.Cmd
 	// UseDetectedShell defaults to false , or it was not set in message.
 	// Return a cmd based only on what was defined in the message.
 	if !message.UseDetectedShell {
-		fmt.Printf("\n *** UseDetectedShell was set to false: %v\n", message.UseDetectedShell)
-		fmt.Printf("args in q : %q\n", message.MethodArgs)
-		fmt.Printf("args in v : %v\n\n", message.MethodArgs)
-
 		cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs[1:]...)
 		return cmd
 	}
