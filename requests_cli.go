@@ -83,6 +83,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 			err := cmd.Run()
 			if err != nil {
 				er := fmt.Errorf("error: methodCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
+
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
@@ -245,27 +246,45 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 	return ackMsg, nil
 }
 
-// getCmdAndArgs will get the command and arguments from the message, and return
-// a command to execute with the arguments.
+// getCmdAndArgs will return a *exec.Cmd.
 func getCmdAndArgs(ctx context.Context, proc process, message Message) *exec.Cmd {
 	var cmd *exec.Cmd
 
-	// For the Linux and Darwin operating system we allow to automatically detect
-	// shell interpreter, so the user don't have to type "bash", "-c" as the first
-	// two arguments of the methodArgs.
-	// We use the shell defined in the ShellOnNode variable as interpreter. Since
-	// it expects a "-c" directly after in the command we prefix it to the args.
+	// UseDetectedShell defaults to false , or it was not set in message.
+	// Return a cmd based only on what was defined in the message.
+	if !message.UseDetectedShell {
+		fmt.Printf("\n *** UseDetectedShell was set to false: %v\n", message.UseDetectedShell)
+		fmt.Printf("args in q : %q\n", message.MethodArgs)
+		fmt.Printf("args in v : %v\n\n", message.MethodArgs)
+
+		cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs[1:]...)
+		return cmd
+	}
+
+	// UseDetectedShell have been set to true in message.
+	//
+	// Check if a shell have been detected on the node.
 	if proc.configuration.ShellOnNode != "" {
 		switch runtime.GOOS {
+		// If we have a  supported os, return the *exec.Cmd based on the
+		// detected shell on the node, and the args defined in the message.
 		case "linux", "darwin":
 			args := []string{"-c"}
 			args = append(args, message.MethodArgs...)
 
 			cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
+			return cmd
+
+		// Not supported OS, use cmd and args defined in message only.
 		default:
-			cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs...)
+			cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs[1:]...)
+			return cmd
 		}
 	}
+
+	//args := []string{"-c"}
+	//args = append(args, message.MethodArgs...)
+	//cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
 
 	return cmd
 }
