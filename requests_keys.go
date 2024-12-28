@@ -46,7 +46,10 @@ func methodPublicKey(proc process, message Message, node string) ([]byte, error)
 
 // ----
 
-// Handler to get all the public ed25519 keys from a central server.
+// methodKeysRequestUpdate.
+// The nodes publish messages with the hash of all the public keys it currently
+// have stored. If the hash is different than the one we currently have on central
+// we send out an update with all the current keys to the node.
 func methodKeysRequestUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 

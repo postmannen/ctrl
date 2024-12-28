@@ -142,7 +142,11 @@ func (p *processes) Start(proc process) {
 		proc.startup.startProcess(proc, AclDeliverUpdate, nil)
 	}
 
-	if proc.configuration.StartProcesses.IsCentralAuth {
+	if proc.configuration.StartProcesses.IsCentralKey {
+
+	}
+
+	if proc.configuration.StartProcesses.IsCentralAcl {
 		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
 		proc.startup.startProcess(proc, KeysAllow, nil)
 		proc.startup.startProcess(proc, KeysDelete, nil)

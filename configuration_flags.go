@@ -143,8 +143,11 @@ type StartProcesses struct {
 	// Start subscriber for continously delivery of output from cli commands.
 	StartSubCliCommandCont bool `comment:"Start subscriber for continously delivery of output from cli commands."`
 
-	// IsCentralAuth, enable to make this instance take the role as the central auth server
-	IsCentralAuth bool `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
+	// IsCentralKey, will make the node the central key handler for public keys.
+	IsCentralKey bool
+	// IsCentralAcl, enable to make this instance take the role as the central
+	// server that holds all the ACL's, and the handling av the ACL's.
+	IsCentralAcl bool `comment:"IsCentralAcl, enable to make this instance take the role as the central auth server"`
 }
 
 // NewConfiguration will return a *Configuration.
@@ -192,7 +195,8 @@ func NewConfiguration() *Configuration {
 	flag.BoolVar(&c.EnableSocket, "enableSocket", CheckEnv("ENABLE_SOCKET", c.EnableSocket).(bool), "true/false, for enabling the creation of ctrl.sock file")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", CheckEnv("ENABLE_SIGNATURE_CHECK", c.EnableSignatureCheck).(bool), "true/false *TESTING* enable signature checking.")
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", CheckEnv("ENABLE_ACL_CHECK", c.EnableAclCheck).(bool), "true/false *TESTING* enable Acl checking.")
-	flag.BoolVar(&c.StartProcesses.IsCentralAuth, "isCentralAuth", CheckEnv("IS_CENTRAL_AUTH", c.StartProcesses.IsCentralAuth).(bool), "true/false, *TESTING* is this the central auth server")
+	flag.BoolVar(&c.StartProcesses.IsCentralKey, "isCentralKey", CheckEnv("IS_CENTRAL_KEY", c.StartProcesses.IsCentralKey).(bool), "true/false, *TESTING* is this the central public key server")
+	flag.BoolVar(&c.StartProcesses.IsCentralAcl, "isCentralAcl", CheckEnv("IS_CENTRAL_ACL", c.StartProcesses.IsCentralAcl).(bool), "true/false, *TESTING* is this the central acl server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", CheckEnv("ENABLE_DEBUG", c.EnableDebug).(bool), "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
 	flag.StringVar(&c.LogLevel, "logLevel", CheckEnv("LOG_LEVEL", c.LogLevel).(string), "error/info/warning/debug/none")
 	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", CheckEnv("LOG_CONSOLE_TIMESTAMPS", c.LogConsoleTimestamps).(bool), "true/false for enabling or disabling timestamps when printing errors and information to stderr")
@@ -308,7 +312,8 @@ func newConfigurationDefaults() Configuration {
 			StartSubHttpGet:        true,
 			StartSubTailFile:       true,
 			StartSubCliCommandCont: true,
-			IsCentralAuth:          false,
+			IsCentralKey:           false,
+			IsCentralAcl:           false,
 		},
 	}
 	return c
