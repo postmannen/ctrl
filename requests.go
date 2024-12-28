@@ -124,9 +124,11 @@ const (
 
 	// REQPublicKey will get the public ed25519 key from a node.
 	PublicKey Method = "publicKey"
-	// REQKeysRequestUpdate will get all the public keys from central if an update is available.
+	// REQKeysRequestUpdate will receive all the messages of the current hash of all public keys
+	// a node have stored, and send out an update if needed..
 	KeysRequestUpdate Method = "keysRequestUpdate"
-	// REQKeysDeliverUpdate will deliver the public from central to a node.
+	// REQKeysRequestUpdatePublisher send the current hash of the locally stored public keys to
+	// the central key server, and get an update from central if needed.
 	KeysDeliverUpdate Method = "keysDeliverUpdate"
 	// REQKeysAllow
 	KeysAllow Method = "keysAllow"

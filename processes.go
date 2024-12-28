@@ -143,7 +143,9 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.IsCentralKey {
-
+		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
+		proc.startup.startProcess(proc, KeysAllow, nil)
+		proc.startup.startProcess(proc, KeysDelete, nil)
 	}
 
 	if proc.configuration.StartProcesses.IsCentralAcl {
