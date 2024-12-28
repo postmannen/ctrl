@@ -132,7 +132,7 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
-		proc.startup.startProcess(proc, KeysRequestUpdate, procFuncKeysRequestUpdate)
+		proc.startup.startProcess(proc, KeysRequestUpdatePublisher, procFuncKeysRequestUpdate)
 		proc.startup.startProcess(proc, KeysDeliverUpdate, nil)
 	}
 

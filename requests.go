@@ -129,6 +129,8 @@ const (
 	KeysRequestUpdate Method = "keysRequestUpdate"
 	// REQKeysRequestUpdatePublisher send the current hash of the locally stored public keys to
 	// the central key server, and get an update from central if needed.
+	KeysRequestUpdatePublisher Method = "keysRequestUpdatePublisher"
+	// REQKeysDeliverUpdate will deliver the public from central to a node.
 	KeysDeliverUpdate Method = "keysDeliverUpdate"
 	// REQKeysAllow
 	KeysAllow Method = "keysAllow"
@@ -193,16 +195,18 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			// The hello publisher will not subscribe for messages, it will
 			// only start a procFunc, so we we don't need a handler with a method,
 			// so we set it to nil.
-			HelloPublisher:    HandlerFunc(nil),
-			ErrorLog:          HandlerFunc(methodErrorLog),
-			HttpGet:           HandlerFunc(methodHttpGet),
-			HttpGetScheduled:  HandlerFunc(methodHttpGetScheduled),
-			TailFile:          HandlerFunc(methodTailFile),
-			PublicKey:         HandlerFunc(methodPublicKey),
-			KeysRequestUpdate: HandlerFunc(methodKeysRequestUpdate),
-			KeysDeliverUpdate: HandlerFunc(methodKeysReceiveUpdate),
-			KeysAllow:         HandlerFunc(methodKeysAllow),
-			KeysDelete:        HandlerFunc(methodKeysDelete),
+			HelloPublisher:   HandlerFunc(nil),
+			ErrorLog:         HandlerFunc(methodErrorLog),
+			HttpGet:          HandlerFunc(methodHttpGet),
+			HttpGetScheduled: HandlerFunc(methodHttpGetScheduled),
+			TailFile:         HandlerFunc(methodTailFile),
+			PublicKey:        HandlerFunc(methodPublicKey),
+
+			KeysRequestUpdatePublisher: HandlerFunc(methodKeysRequestUpdate),
+			KeysRequestUpdate:          HandlerFunc(nil),
+			KeysDeliverUpdate:          HandlerFunc(methodKeysReceiveUpdate),
+			KeysAllow:                  HandlerFunc(methodKeysAllow),
+			KeysDelete:                 HandlerFunc(methodKeysDelete),
 
 			AclRequestUpdate: HandlerFunc(methodAclRequestUpdate),
 			AclDeliverUpdate: HandlerFunc(methodAclDeliverUpdate),
