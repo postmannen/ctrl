@@ -87,6 +87,8 @@ type Message struct {
 	PreviousMessage *Message
 	// Schedule
 	Schedule []int `json:"schedule" yaml:"schedule"`
+	// Use auto detection of shell for cliCommands
+	UseDetectedShell bool `json:"useDetectedShell" yaml:"useDetectedShell"`
 }
 
 // --- Subject

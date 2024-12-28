@@ -112,7 +112,7 @@ func (p *processes) Start(proc process) {
 
 	if proc.configuration.StartProcesses.StartSubHello {
 
-		proc.startup.startProcess(proc, Hello, procFuncHello)
+		proc.startup.startProcess(proc, Hello, procFuncHelloSubscriber)
 	}
 
 	if proc.configuration.StartProcesses.IsCentralErrorLogger {

@@ -127,25 +127,25 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		er := fmt.Errorf("info: public key value for REGISTERED node %v is the same, doing nothing", msg.FromNode)
+		er := fmt.Errorf("info: public key value for registered node %v is the same, doing nothing", msg.FromNode)
 		proc.errorKernel.logDebug(er)
 		return
 	}
 
 	c.pki.nodeNotAckedPublicKeys.mu.Lock()
-	existingNotAckedKey, ok := c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
-	// We only want to send one notification to the error kernel about new key detection,
-	// so we check if the values are the same as the one we already got before we continue
-	// with registering and logging for the the new key.
-	if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
-		c.pki.nodeNotAckedPublicKeys.mu.Unlock()
-		return
-	}
+	// existingNotAckedKey, ok := c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
+	// // We only want to send one notification to the error kernel about new key detection,
+	// // so we check if the values are the same as the one we already got before we continue
+	// // with registering and logging for the the new key.
+	// if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
+	// 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
+	// 	return
+	// }
 
 	c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
-	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
+	er := fmt.Errorf("info: new public key for node: %v. Key needs to be authorized by operator to be allowed into the system by using the keysAllow method", msg.FromNode)
 	c.pki.errorKernel.infoSend(proc, msg, er)
 	c.pki.errorKernel.logDebug(er)
 }
@@ -294,7 +294,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 
 	b, err := cbor.Marshal(sortedNodesAndKeys)
 	if err != nil {
-		er := fmt.Errorf("error: methodKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
+		er := fmt.Errorf("error: updateHash, failed to marshal slice, and will not update hash for public keys:  %v", err)
 		c.pki.errorKernel.errSend(proc, message, er, logError)
 
 		return

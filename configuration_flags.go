@@ -2,9 +2,12 @@ package ctrl
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -16,6 +19,8 @@ import (
 // an if check should be added to the checkConfigValues function
 // to set default values when reading from config file.
 type Configuration struct {
+	// Shell on the operating system to use when executing cliCommands
+	ShellOnNode string
 	// ConfigFolder, the location for the configuration folder on disk
 	ConfigFolder string `comment:"ConfigFolder, the location for the configuration folder on disk"`
 	// The folder where the socket file should live
@@ -152,6 +157,7 @@ func NewConfiguration() *Configuration {
 	}
 
 	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/ctrl/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
+	flag.StringVar(&c.ShellOnNode, "shellOnNode", CheckEnv("SHELL_ON_NODE", c.ShellOnNode).(string), "set a value to override the default shell used as interpreter for running cliCommand's on node.")
 	flag.StringVar(&c.SocketFolder, "socketFolder", CheckEnv("SOCKET_FOLDER", c.SocketFolder).(string), "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.ReadFolder, "readFolder", CheckEnv("READ_FOLDER", c.ReadFolder).(string), "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", CheckEnv("TCP_LISTENER", c.TCPListener).(string), "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
@@ -220,14 +226,32 @@ func NewConfiguration() *Configuration {
 		log.Fatalf("error: the centralNodeName config option or flag cannot be empty, check -help\n")
 	}
 
+	if c.ShellOnNode == "" {
+		c.ShellOnNode = getShell()
+	}
+	fmt.Printf("\n******** DETECTED SHELL: %v\n\n", c.ShellOnNode)
+
 	flag.Parse()
 
 	return &c
 }
 
+func getShell() string {
+	out, err := exec.Command("echo", os.ExpandEnv("$SHELL")).Output()
+	if err != nil {
+		log.Fatalf("error: unable to detect shell: %v\n", err)
+	}
+
+	shell := string(out)
+	shell = strings.TrimSuffix(shell, "\n")
+
+	return string(shell)
+}
+
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
+		ShellOnNode:                "",
 		ConfigFolder:               "./etc/",
 		SocketFolder:               "./tmp",
 		ReadFolder:                 "./readfolder",

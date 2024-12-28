@@ -35,9 +35,6 @@ func methodPublicKey(proc process, message Message, node string) ([]byte, error)
 		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
 		case <-ctx.Done():
 		case out := <-outCh:
-
-			// Prepare and queue for sending a new message with the output
-			// of the action executed.
 			newReplyMessage(proc, message, out)
 		}
 	}()
@@ -166,7 +163,7 @@ func procFuncKeysRequestUpdate(ctx context.Context, proc process, procFuncCh cha
 // ----
 
 // Handler to receive the public keys from a central server.
-func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
+func methodKeysReceiveUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
@@ -198,11 +195,11 @@ func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte
 
 			err := json.Unmarshal(message.Data, &keysAndHash)
 			if err != nil {
-				er := fmt.Errorf("error: REQKeysDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: methodKeysReceiveUpdate : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
-			er := fmt.Errorf("<---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v", keysAndHash)
+			er := fmt.Errorf("<---- methodKeysReceiveUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v", keysAndHash)
 			proc.errorKernel.logDebug(er)
 
 			// If the received map was empty we also want to delete all the locally stored keys,
@@ -216,7 +213,7 @@ func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte
 			proc.nodeAuth.publicKeys.mu.Unlock()
 
 			if err != nil {
-				er := fmt.Errorf("error: REQKeysDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: methodKeysReceiveUpdate : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
@@ -225,18 +222,12 @@ func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte
 
 			err = proc.nodeAuth.publicKeys.saveToFile()
 			if err != nil {
-				er := fmt.Errorf("error: REQKeysDeliverUpdate : save to file failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: methodKeysReceiveUpdate : save to file failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
-
-			// Prepare and queue for sending a new message with the output
-			// of the action executed.
-			// newReplyMessage(proc, message, out)
 		}
 	}()
 
-	// Send back an ACK message.
-	// ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return nil, nil
 }
 

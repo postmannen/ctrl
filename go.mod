@@ -7,7 +7,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/google/uuid v1.3.0
-	github.com/hpcloud/tail v1.0.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.2
@@ -16,6 +15,7 @@ require (
 	github.com/nats-io/nkeys v0.4.7
 	github.com/pkg/profile v1.7.0
 	github.com/prometheus/client_golang v1.14.0
+	github.com/tenebris-tech/tail v1.0.5
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/crypto v0.18.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
@@ -43,6 +43,5 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
-	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )

@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hpcloud/tail"
+	"github.com/tenebris-tech/tail"
 )
 
 func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
@@ -159,6 +159,9 @@ func methodTailFile(proc process, message Message, node string) ([]byte, error) 
 			for {
 				select {
 				case line := <-t.Lines:
+					if line == nil {
+						return
+					}
 					outCh <- []byte(line.Text + "\n")
 				case <-ctx.Done():
 					return

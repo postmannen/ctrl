@@ -1,6 +1,28 @@
 # cliCommand
 
-In JSON.
+With **cliCommand** you specify the command to run in **methodArgs** prefixed with the interpreter to use, for example with bash **bash** `"bash","-c","tree"`.
+
+On Linux and Darwin, the shell interpreter can also be auto detected by setting the value of **useDetectedShell** in the message to **true**. If set to true the methodArgs only need a single string value with command to run. Example below.
+
+```yaml
+---
+- toNodes:
+    - node2
+  useDetectedShell: true
+  method: cliCommand
+  methodArgs:
+    - |
+      rm -rf ./data & systemctl restart ctrl
+
+  replyMethod: fileAppend
+  ACKTimeout: 30
+  retries: 1
+  ACKTimeout: 30
+  directory: system
+  fileName: system.log
+```
+
+## Example in JSON
 
 ```json
 [
@@ -17,6 +39,8 @@ In JSON.
     }
 ]
 ```
+
+## Example in YAML
 
 In YAML.
 

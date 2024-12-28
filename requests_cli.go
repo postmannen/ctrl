@@ -3,8 +3,10 @@ package ctrl
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -27,8 +29,6 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 	go func() {
 		defer proc.processes.wg.Done()
 
-		var a []string
-
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodCliCommand: got <1 number methodArgs")
@@ -36,11 +36,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
-		case len(message.MethodArgs) >= 0:
-			a = message.MethodArgs[1:]
 		}
-
-		c := message.MethodArgs[0]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
@@ -70,7 +66,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 				}
 			}
 
-			cmd := exec.CommandContext(ctx, c, a...)
+			cmd := getCmdAndArgs(ctx, proc, message)
 
 			// Check for the use of env variable for CTRL_DATA, and set env if found.
 			if foundEnvData {
@@ -87,6 +83,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 			err := cmd.Run()
 			if err != nil {
 				er := fmt.Errorf("error: methodCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
+
 				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
@@ -149,8 +146,6 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 			// fmt.Printf(" * DONE *\n")
 		}()
 
-		var a []string
-
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodCliCommand: got <1 number methodArgs")
@@ -158,11 +153,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
-		case len(message.MethodArgs) >= 0:
-			a = message.MethodArgs[1:]
 		}
-
-		c := message.MethodArgs[0]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
@@ -176,7 +167,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 		go func() {
 			defer proc.processes.wg.Done()
 
-			cmd := exec.CommandContext(ctx, c, a...)
+			cmd := getCmdAndArgs(ctx, proc, message)
 
 			// Using cmd.StdoutPipe here so we are continuosly
 			// able to read the out put of the command.
@@ -253,4 +244,43 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
+}
+
+// getCmdAndArgs will return a *exec.Cmd.
+func getCmdAndArgs(ctx context.Context, proc process, message Message) *exec.Cmd {
+	var cmd *exec.Cmd
+
+	// UseDetectedShell defaults to false , or it was not set in message.
+	// Return a cmd based only on what was defined in the message.
+	if !message.UseDetectedShell {
+		cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs[1:]...)
+		return cmd
+	}
+
+	// UseDetectedShell have been set to true in message.
+	//
+	// Check if a shell have been detected on the node.
+	if proc.configuration.ShellOnNode != "" {
+		switch runtime.GOOS {
+		// If we have a  supported os, return the *exec.Cmd based on the
+		// detected shell on the node, and the args defined in the message.
+		case "linux", "darwin":
+			args := []string{"-c"}
+			args = append(args, message.MethodArgs...)
+
+			cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
+			return cmd
+
+		// Not supported OS, use cmd and args defined in message only.
+		default:
+			cmd = exec.CommandContext(ctx, message.MethodArgs[0], message.MethodArgs[1:]...)
+			return cmd
+		}
+	}
+
+	//args := []string{"-c"}
+	//args = append(args, message.MethodArgs...)
+	//cmd = exec.CommandContext(ctx, proc.configuration.ShellOnNode, args...)
+
+	return cmd
 }

@@ -49,10 +49,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
-	// --------------------------
-
-	// send the message to the procFuncCh which is running alongside the process
-	// and can hold registries and handle special things for an individual process.
+	// The handling of the public key that is in the message.Data field is handled in the procfunc.
 	proc.procFuncCh <- message
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -66,7 +63,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 // received, the handler will deliver the message to the procFunc on the
 // proc.procFuncCh, and we can then read that message from the procFuncCh in
 // the procFunc running.
-func procFuncHello(ctx context.Context, proc process, procFuncCh chan Message) error {
+func procFuncHelloSubscriber(ctx context.Context, proc process, procFuncCh chan Message) error {
 	// sayHelloNodes := make(map[Node]struct{})
 
 	for {
