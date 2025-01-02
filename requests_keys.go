@@ -60,6 +60,7 @@ func methodKeysRequestUpdate(proc process, message Message, node string) ([]byte
 	//   time a node had done an update.
 
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
+	_ = node
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -166,7 +167,7 @@ func procFuncKeysRequestUpdate(ctx context.Context, proc process, procFuncCh cha
 // ----
 
 // Handler to receive the public keys from a central server.
-func methodKeysReceiveUpdate(proc process, message Message, node string) ([]byte, error) {
+func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)

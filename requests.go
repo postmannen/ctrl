@@ -127,9 +127,6 @@ const (
 	// REQKeysRequestUpdate will receive all the messages of the current hash of all public keys
 	// a node have stored, and send out an update if needed..
 	KeysRequestUpdate Method = "keysRequestUpdate"
-	// REQKeysRequestUpdatePublisher send the current hash of the locally stored public keys to
-	// the central key server, and get an update from central if needed.
-	KeysRequestUpdatePublisher Method = "keysRequestUpdatePublisher"
 	// REQKeysDeliverUpdate will deliver the public from central to a node.
 	KeysDeliverUpdate Method = "keysDeliverUpdate"
 	// REQKeysAllow
@@ -202,11 +199,10 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			TailFile:         Handler(methodTailFile),
 			PublicKey:        Handler(methodPublicKey),
 
-			KeysRequestUpdatePublisher: Handler(methodKeysRequestUpdate),
-			KeysRequestUpdate:          Handler(nil),
-			KeysDeliverUpdate:          Handler(methodKeysReceiveUpdate),
-			KeysAllow:                  Handler(methodKeysAllow),
-			KeysDelete:                 Handler(methodKeysDelete),
+			KeysRequestUpdate: Handler(methodKeysRequestUpdate),
+			KeysDeliverUpdate: Handler(methodKeysDeliverUpdate),
+			KeysAllow:         Handler(methodKeysAllow),
+			KeysDelete:        Handler(methodKeysDelete),
 
 			AclRequestUpdate: Handler(methodAclRequestUpdate),
 			AclDeliverUpdate: Handler(methodAclDeliverUpdate),

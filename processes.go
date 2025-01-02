@@ -132,7 +132,8 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
-		proc.startup.startProcess(proc, KeysRequestUpdatePublisher, procFuncKeysRequestUpdate)
+		// The key update on the client is only a proc func that publish requests.
+		proc.startup.startProcess(proc, None, procFuncKeysRequestUpdate)
 		proc.startup.startProcess(proc, KeysDeliverUpdate, nil)
 	}
 
