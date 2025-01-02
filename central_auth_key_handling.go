@@ -127,7 +127,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		er := fmt.Errorf("info: public key value for registered node %v is the same, doing nothing", msg.FromNode)
+		er := fmt.Errorf("info: received hello, where public key value for registered node %v is the same, doing nothing", msg.FromNode)
 		proc.errorKernel.logDebug(er)
 		return
 	}

@@ -169,6 +169,7 @@ func (s *server) jetstreamConsume() {
 	filterSubjectValues := []string{
 		fmt.Sprintf("NODES.%v", s.nodeName),
 		"NODES.all",
+		"NODES.keys",
 	}
 
 	// Check if there are more to consume defined in flags/env.
