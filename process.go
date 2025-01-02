@@ -535,7 +535,7 @@ func executeHandler(p process, message Message, thisNode string) {
 	}
 
 	switch {
-	case !runAsScheduled:
+	case !runAsScheduled && p.handler != nil:
 
 		go func() {
 			_, err = p.handler(p, message, thisNode)

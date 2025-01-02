@@ -124,7 +124,8 @@ const (
 
 	// REQPublicKey will get the public ed25519 key from a node.
 	PublicKey Method = "publicKey"
-	// REQKeysRequestUpdate will get all the public keys from central if an update is available.
+	// REQKeysRequestUpdate will receive all the messages of the current hash of all public keys
+	// a node have stored, and send out an update if needed..
 	KeysRequestUpdate Method = "keysRequestUpdate"
 	// REQKeysDeliverUpdate will deliver the public from central to a node.
 	KeysDeliverUpdate Method = "keysDeliverUpdate"
@@ -162,7 +163,7 @@ const (
 	AclImport = "aclImport"
 )
 
-type HandlerFunc func(proc process, message Message, node string) ([]byte, error)
+type Handler func(proc process, message Message, node string) ([]byte, error)
 
 // The mapping of all the method constants specified, what type
 // it references.
@@ -173,50 +174,51 @@ type HandlerFunc func(proc process, message Message, node string) ([]byte, error
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 
 	ma := MethodsAvailable{
-		Methodhandlers: map[Method]HandlerFunc{
-			Initial:        HandlerFunc(methodInitial),
-			OpProcessList:  HandlerFunc(methodOpProcessList),
-			OpProcessStart: HandlerFunc(methodOpProcessStart),
-			OpProcessStop:  HandlerFunc(methodOpProcessStop),
-			CliCommand:     HandlerFunc(methodCliCommand),
-			CliCommandCont: HandlerFunc(methodCliCommandCont),
-			Console:        HandlerFunc(methodConsole),
-			FileAppend:     HandlerFunc(methodFileAppend),
-			File:           HandlerFunc(methodToFile),
-			CopySrc:        HandlerFunc(methodCopySrc),
-			CopyDst:        HandlerFunc(methodCopyDst),
-			SUBCopySrc:     HandlerFunc(methodSUB),
-			SUBCopyDst:     HandlerFunc(methodSUB),
-			Hello:          HandlerFunc(methodHello),
+		Methodhandlers: map[Method]Handler{
+			Initial:        Handler(methodInitial),
+			OpProcessList:  Handler(methodOpProcessList),
+			OpProcessStart: Handler(methodOpProcessStart),
+			OpProcessStop:  Handler(methodOpProcessStop),
+			CliCommand:     Handler(methodCliCommand),
+			CliCommandCont: Handler(methodCliCommandCont),
+			Console:        Handler(methodConsole),
+			FileAppend:     Handler(methodFileAppend),
+			File:           Handler(methodToFile),
+			CopySrc:        Handler(methodCopySrc),
+			CopyDst:        Handler(methodCopyDst),
+			SUBCopySrc:     Handler(methodSUB),
+			SUBCopyDst:     Handler(methodSUB),
+			Hello:          Handler(methodHello),
 			// The hello publisher will not subscribe for messages, it will
 			// only start a procFunc, so we we don't need a handler with a method,
 			// so we set it to nil.
-			HelloPublisher:    HandlerFunc(nil),
-			ErrorLog:          HandlerFunc(methodErrorLog),
-			HttpGet:           HandlerFunc(methodHttpGet),
-			HttpGetScheduled:  HandlerFunc(methodHttpGetScheduled),
-			TailFile:          HandlerFunc(methodTailFile),
-			PublicKey:         HandlerFunc(methodPublicKey),
-			KeysRequestUpdate: HandlerFunc(methodKeysRequestUpdate),
-			KeysDeliverUpdate: HandlerFunc(methodKeysReceiveUpdate),
-			KeysAllow:         HandlerFunc(methodKeysAllow),
-			KeysDelete:        HandlerFunc(methodKeysDelete),
+			HelloPublisher:   Handler(nil),
+			ErrorLog:         Handler(methodErrorLog),
+			HttpGet:          Handler(methodHttpGet),
+			HttpGetScheduled: Handler(methodHttpGetScheduled),
+			TailFile:         Handler(methodTailFile),
+			PublicKey:        Handler(methodPublicKey),
 
-			AclRequestUpdate: HandlerFunc(methodAclRequestUpdate),
-			AclDeliverUpdate: HandlerFunc(methodAclDeliverUpdate),
+			KeysRequestUpdate: Handler(methodKeysRequestUpdate),
+			KeysDeliverUpdate: Handler(methodKeysDeliverUpdate),
+			KeysAllow:         Handler(methodKeysAllow),
+			KeysDelete:        Handler(methodKeysDelete),
 
-			AclAddCommand:                 HandlerFunc(methodAclAddCommand),
-			AclDeleteCommand:              HandlerFunc(methodAclDeleteCommand),
-			AclDeleteSource:               HandlerFunc(methodAclDeleteSource),
-			AclGroupNodesAddNode:          HandlerFunc(methodAclGroupNodesAddNode),
-			AclGroupNodesDeleteNode:       HandlerFunc(methodAclGroupNodesDeleteNode),
-			AclGroupNodesDeleteGroup:      HandlerFunc(methodAclGroupNodesDeleteGroup),
-			AclGroupCommandsAddCommand:    HandlerFunc(methodAclGroupCommandsAddCommand),
-			AclGroupCommandsDeleteCommand: HandlerFunc(methodAclGroupCommandsDeleteCommand),
-			AclGroupCommandsDeleteGroup:   HandlerFunc(methodAclGroupCommandsDeleteGroup),
-			AclExport:                     HandlerFunc(methodAclExport),
-			AclImport:                     HandlerFunc(methodAclImport),
-			Test:                          HandlerFunc(methodTest),
+			AclRequestUpdate: Handler(methodAclRequestUpdate),
+			AclDeliverUpdate: Handler(methodAclDeliverUpdate),
+
+			AclAddCommand:                 Handler(methodAclAddCommand),
+			AclDeleteCommand:              Handler(methodAclDeleteCommand),
+			AclDeleteSource:               Handler(methodAclDeleteSource),
+			AclGroupNodesAddNode:          Handler(methodAclGroupNodesAddNode),
+			AclGroupNodesDeleteNode:       Handler(methodAclGroupNodesDeleteNode),
+			AclGroupNodesDeleteGroup:      Handler(methodAclGroupNodesDeleteGroup),
+			AclGroupCommandsAddCommand:    Handler(methodAclGroupCommandsAddCommand),
+			AclGroupCommandsDeleteCommand: Handler(methodAclGroupCommandsDeleteCommand),
+			AclGroupCommandsDeleteGroup:   Handler(methodAclGroupCommandsDeleteGroup),
+			AclExport:                     Handler(methodAclExport),
+			AclImport:                     Handler(methodAclImport),
+			Test:                          Handler(methodTest),
 		},
 	}
 
@@ -226,7 +228,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 // getHandler will check the methodsAvailable map, and return the
 // method handler for the method given
 // as input argument.
-func (m Method) getHandler(method Method) HandlerFunc {
+func (m Method) getHandler(method Method) Handler {
 	ma := m.GetMethodsAvailable()
 	mh, _ := ma.CheckIfExists(method)
 	// mh := ma.Methodhandlers[method]
@@ -274,13 +276,13 @@ func methodSUB(proc process, message Message, node string) ([]byte, error) {
 // MethodsAvailable holds a map of all the different method types and the
 // associated handler to that method type.
 type MethodsAvailable struct {
-	Methodhandlers map[Method]HandlerFunc
+	Methodhandlers map[Method]Handler
 }
 
 // Check if exists will check if the Method is defined. If true the bool
 // value will be set to true, and the methodHandler function for that type
 // will be returned.
-func (ma MethodsAvailable) CheckIfExists(m Method) (HandlerFunc, bool) {
+func (ma MethodsAvailable) CheckIfExists(m Method) (Handler, bool) {
 	// First check if it is a sub process.
 	if strings.HasPrefix(string(m), "sub") {
 		// Strip of the uuid after the method name.

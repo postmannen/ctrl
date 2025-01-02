@@ -132,7 +132,8 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
-		proc.startup.startProcess(proc, KeysRequestUpdate, procFuncKeysRequestUpdate)
+		// The key update on the client is only a proc func that publish requests.
+		proc.startup.startProcess(proc, None, procFuncKeysRequestUpdate)
 		proc.startup.startProcess(proc, KeysDeliverUpdate, nil)
 	}
 
@@ -142,7 +143,13 @@ func (p *processes) Start(proc process) {
 		proc.startup.startProcess(proc, AclDeliverUpdate, nil)
 	}
 
-	if proc.configuration.StartProcesses.IsCentralAuth {
+	if proc.configuration.StartProcesses.IsCentralKey {
+		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
+		proc.startup.startProcess(proc, KeysAllow, nil)
+		proc.startup.startProcess(proc, KeysDelete, nil)
+	}
+
+	if proc.configuration.StartProcesses.IsCentralAcl {
 		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
 		proc.startup.startProcess(proc, KeysAllow, nil)
 		proc.startup.startProcess(proc, KeysDelete, nil)
