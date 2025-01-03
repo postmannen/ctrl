@@ -2,6 +2,12 @@
 
 ctrl can be used to collect collect metrics from various systems. It can for example scrape/read some defined metrics with one node, and deliver the result to another node where you can expose the metrics directly using ctrl's builtin http server, or you could for example inject the metrics data to some database if that is desired. It is totally up to you.
 
+</style>
+</head>
+<body>
+<p align="center"><img src="https://github.com/postmannen/ctrl/blob/main/doc/usecase-prometheus-collector.svg?raw=true" /></p>
+</body>
+
 The example that follows will scrape prometheus metrics with two ctrl nodes, deliver them to a third node called **metrics**, and expose them with the builtin http server. Prometheus can then be used to read all the metrics from the various nodes on the **metrics** node.
 
 Before you start, make sure to read the **User Guides** section for how to start up a NATS broker, and for general information about setting up ctrl.
