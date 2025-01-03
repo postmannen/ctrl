@@ -1,0 +1,91 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.17 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.17">
+  <diagram name="Page-1" id="nlSWXV44TWduW5NrCRzE">
+    <mxGraphModel dx="812" dy="603" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-1" value="central" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="570" y="50" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-3" value="operator" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="230" y="50" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-4" value="linux1" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="175" y="410" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-5" value="linux1" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="410" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-6" value="linux1" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="410" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-9" value="NATS Server" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="220" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-10" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="295" y="120" as="sourcePoint" />
+            <mxPoint x="400" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-12" value="command&lt;br&gt;Upgrade all servers,&lt;br&gt;and restart" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#7EA6E0;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="305" y="120" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-13" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="410" y="290" as="sourcePoint" />
+            <mxPoint x="250" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-14" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="490" y="290" as="sourcePoint" />
+            <mxPoint x="490" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-15" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="530" y="290" as="sourcePoint" />
+            <mxPoint x="730" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-17" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="360" y="80" as="sourcePoint" />
+            <mxPoint x="560" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-18" value="to audit log" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#7EA6E0;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="440" y="40" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-19" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="210" y="380" as="sourcePoint" />
+            <mxPoint x="390" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-20" value="result" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#7EA6E0;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="280" y="280" width="25" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-21" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="469" y="400" as="sourcePoint" />
+            <mxPoint x="469" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-23" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="760" y="380" as="sourcePoint" />
+            <mxPoint x="550" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-28" value="result" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#7EA6E0;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="457.5" y="320" width="25" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JB4UHpmZ01gNuVjmXd_b-29" value="result" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#7EA6E0;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="640" y="270" width="25" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -111,6 +111,7 @@ ctrl supports both the use of flags with env variables. An .env file can also be
 |-----|-------|------------|
 |toNode | `string` | A single node to send a message to|
 |toNodes | `string array` | A comma separated list of nodes to send a message to|
+|jetstreamToNode| `string array` | JetstreamToNode, the topic used to prefix the stream name with the format NODES.\<JetstreamToNode> |
 |method | `string` | The request method to use |
 |methodArgs | `string array` | The arguments to use for the method |
 |replyMethod | `string` | The method to use for the reply message |

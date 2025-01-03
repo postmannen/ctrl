@@ -11,6 +11,7 @@
 
 # Core ctrl
 
+- [Core overview](./core_overview.md)
 - [Messaging](./core_messaging_overview.md)
   - [Message fields](./core_messaging_message_fields.md)
   - [Message jetstream/broadcast](./core_messaging_jetstream.md)
@@ -37,4 +38,5 @@
 
 # Using ctrl
 
-- [ctrl as github action runner](usecase-ctrl-as-github-action-runner)
+- [ctrl as github action runner](usecase-ctrl-as-github-action-runner.md)
+- [ctrl as prometheus collector](usecase-ctrl-as-prometheus-collector.md)

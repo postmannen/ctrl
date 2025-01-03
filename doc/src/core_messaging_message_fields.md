@@ -1,5 +1,28 @@
 # Message fields
 
+## Schema for the message structure to use with ctrl
+
+|Field Name | Value Type | Description|
+|-----|-------|------------|
+|toNode | `string` | A single node to send a message to|
+|toNodes | `string array` | A comma separated list of nodes to send a message to|
+|jetstreamToNode| `string array` | JetstreamToNode, the topic used to prefix the stream name with the format NODES.\<JetstreamToNode> |
+|method | `string` | The request method to use |
+|methodArgs | `string array` | The arguments to use for the method |
+|replyMethod | `string` | The method to use for the reply message |
+|replyMethodArgs | `string array` | The arguments to use for the reply method |
+|ACKTimeout | `int` | The time to wait for a received acknowledge (ACK). 0 for no acknowledge|
+|retries | `int` | The number of times to retry if no ACK was received |
+|replyACKTimeout | `int` | The timeout to wait for an ACK message before we retry |
+|replyRetries | `int` | The number of times to retry if no ACK was received for repply messages |
+|methodTimeout | `int` | The timeout in seconds for how long we wait for a method to complete |
+|replyMethodTimeout | `int` | The timeout in seconds for how long we wait for a method to complete for repply messages |
+|directory | `string` | The directory for where to store the data of the repply message |
+|fileName | `string` | The name of the file for where we store the data of the reply message |
+|schedule | [int type value for interval in seconds, int type value for total run time in seconds] | Schedule a message to re run at interval |
+
+## More detailed description of the fields
+
 ```yaml
 toNode : "some-node"
 ```
@@ -22,9 +45,7 @@ The actual data in the message. This is the field where we put the returned data
 method : cliCommand
 ```
 
-What request method type to use, like cliCommand, httpGet..
-
-All [methods](./core_request_methods.md).
+What request method type to use, like cliCommand, httpGet, [all methods](./core_request_methods.md).
 
 ```yaml
   methodArgs :
