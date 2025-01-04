@@ -78,7 +78,6 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	conf.DatabaseFolder = testFolder
 	conf.StartProcesses.IsCentralErrorLogger = true
 	conf.StartProcesses.IsCentralAcl = true
-	conf.EnableDebug = false
 	conf.LogLevel = "none"
 
 	ctrlServer, err := NewServer(&conf, "test")
