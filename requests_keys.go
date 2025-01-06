@@ -50,7 +50,7 @@ func methodPublicKey(proc process, message Message, node string) ([]byte, error)
 // The nodes publish messages with the hash of all the public keys it currently
 // have stored. If the hash is different than the one we currently have on central
 // we send out an update with all the current keys to the node.
-func methodKeysRequestUpdate(proc process, message Message, node string) ([]byte, error) {
+func methodKeysUpdateRequest(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -144,8 +144,8 @@ func procFuncKeysRequestUpdate(ctx context.Context, proc process, procFuncCh cha
 			ToNode:      Node(proc.configuration.CentralNodeName),
 			FromNode:    Node(proc.node),
 			Data:        []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]),
-			Method:      KeysRequestUpdate,
-			ReplyMethod: KeysDeliverUpdate,
+			Method:      KeysUpdateRequest,
+			ReplyMethod: KeysUpdateReceive,
 			ACKTimeout:  proc.configuration.DefaultMessageTimeout,
 			Retries:     1,
 		}
@@ -167,7 +167,7 @@ func procFuncKeysRequestUpdate(ctx context.Context, proc process, procFuncCh cha
 // ----
 
 // Handler to receive the public keys from a central server.
-func methodKeysDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
+func methodKeysUpdateReceive(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
@@ -357,7 +357,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		proc.errorKernel.logDebug(er)
 		msg := Message{
 			ToNode:      n,
-			Method:      KeysDeliverUpdate,
+			Method:      KeysUpdateReceive,
 			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
@@ -396,7 +396,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		proc.errorKernel.logDebug(er)
 		msg := Message{
 			ToNode:      n,
-			Method:      KeysDeliverUpdate,
+			Method:      KeysUpdateReceive,
 			Data:        b,
 			ReplyMethod: None,
 			ACKTimeout:  0,

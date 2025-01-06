@@ -147,7 +147,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 
 	er := fmt.Errorf("info: new public key for node: %v. Key needs to be authorized by operator to be allowed into the system by using the keysAllow method", msg.FromNode)
 	c.pki.errorKernel.infoSend(proc, msg, er)
-	c.pki.errorKernel.logDebug(er)
+	c.pki.errorKernel.logInfo(er)
 }
 
 // deletePublicKeys to the db if the node do not exist, or if it is a new value.

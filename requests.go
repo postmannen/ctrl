@@ -124,11 +124,11 @@ const (
 
 	// REQPublicKey will get the public ed25519 key from a node.
 	PublicKey Method = "publicKey"
-	// REQKeysRequestUpdate will receive all the messages of the current hash of all public keys
+	// KeysUpdateRequest will receive all the messages of the current hash of all public keys
 	// a node have stored, and send out an update if needed..
-	KeysRequestUpdate Method = "keysRequestUpdate"
-	// REQKeysDeliverUpdate will deliver the public from central to a node.
-	KeysDeliverUpdate Method = "keysDeliverUpdate"
+	KeysUpdateRequest Method = "keysUpdateRequest"
+	// KeysUpdateReceive,deliver the public key from central to a node.
+	KeysUpdateReceive Method = "keysUpdateReceive"
 	// REQKeysAllow
 	KeysAllow Method = "keysAllow"
 	// REQKeysDelete
@@ -199,8 +199,8 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			TailFile:         Handler(methodTailFile),
 			PublicKey:        Handler(methodPublicKey),
 
-			KeysRequestUpdate: Handler(methodKeysRequestUpdate),
-			KeysDeliverUpdate: Handler(methodKeysDeliverUpdate),
+			KeysUpdateRequest: Handler(methodKeysUpdateRequest),
+			KeysUpdateReceive: Handler(methodKeysUpdateReceive),
 			KeysAllow:         Handler(methodKeysAllow),
 			KeysDelete:        Handler(methodKeysDelete),
 

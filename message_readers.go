@@ -2,7 +2,6 @@ package ctrl
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -106,11 +105,7 @@ func (s *server) readStartupFolder() {
 
 		}
 
-		j, err := json.MarshalIndent(messages, "", "   ")
-		if err != nil {
-			log.Printf("test error: %v\n", err)
-		}
-		er = fmt.Errorf("%v", string(j))
+		er = fmt.Errorf("read from startup folder: %v", messages)
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
 		s.messageDeliverLocalCh <- messages
