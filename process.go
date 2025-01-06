@@ -490,13 +490,11 @@ func (p process) callHandler(message Message, thisNode string) {
 
 	// Call the handler if ACL/signature checking returns true.
 	go func() {
-		// ----
 		conf := p.nodeAuth.configuration
 		doHandler := false
 		var er error
 
 		switch {
-
 		// If no checking enabled we should just allow the message.
 		case !conf.EnableSignatureCheck && !conf.EnableAclCheck:
 			doHandler = true
@@ -504,29 +502,25 @@ func (p process) callHandler(message Message, thisNode string) {
 		// If only sig check enabled, and sig OK, we should allow the message.
 		case conf.EnableSignatureCheck && !conf.EnableAclCheck:
 			sigOK := p.nodeAuth.verifySignature(message)
-
-			er = fmt.Errorf("callHandler: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v", sigOK, message.Method)
-
 			if sigOK {
 				doHandler = true
 			}
+
+			er = fmt.Errorf("callHandler: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v", sigOK, message.Method)
 
 		// If both sig and acl check enabled, and sig and acl OK, we should allow the message.
 		case conf.EnableSignatureCheck && conf.EnableAclCheck:
 			sigOK := p.nodeAuth.verifySignature(message)
 			aclOK := p.nodeAuth.verifyAcl(message)
-
-			er = fmt.Errorf("callHandler:both signature and acl checking enabled, allow the message if sigOK and aclOK, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
-
 			if sigOK && aclOK {
 				doHandler = true
 			}
 
+			er = fmt.Errorf("callHandler:both signature and acl checking enabled, allow the message if sigOK and aclOK, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
+
 		default:
 			er = fmt.Errorf("callHandler: None of the verify flags matched, not doing handler for message, method=%v", message.Method)
 		}
-
-		// ----
 
 		p.errorKernel.logDebug(er)
 
@@ -544,6 +538,7 @@ func (p process) callHandler(message Message, thisNode string) {
 }
 
 // executeHandler will call the handler for the Request type defined in the message.
+// Will also take care of executing a method as scheduled.
 func executeHandler(p process, message Message, thisNode string) {
 	var err error
 
@@ -561,12 +556,6 @@ func executeHandler(p process, message Message, thisNode string) {
 
 	case interval > 0 && totalTime > 0:
 		runAsScheduled = true
-	}
-
-	if p.configuration.EnableAclCheck {
-		// Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler.
-		er := fmt.Errorf("info: subscriberHandler: Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler: %v", true)
-		p.errorKernel.logDebug(er)
 	}
 
 	switch {
