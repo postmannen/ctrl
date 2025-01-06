@@ -132,6 +132,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 		return
 	}
 
+	notAckedNodes := []Node{}
 	c.pki.nodeNotAckedPublicKeys.mu.Lock()
 	// existingNotAckedKey, ok := c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
 	// // We only want to send one notification to the error kernel about new key detection,
@@ -143,9 +144,14 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	// }
 
 	c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
+
+	for k := range c.pki.nodeNotAckedPublicKeys.KeyMap {
+		notAckedNodes = append(notAckedNodes, k)
+	}
+
 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
-	er := fmt.Errorf("info: new public key for node: %v. Key needs to be authorized by operator to be allowed into the system by using the keysAllow method", msg.FromNode)
+	er := fmt.Errorf("addPublicKey: key(s) needs to be allowed by operator for nodes: %v", notAckedNodes)
 	c.pki.errorKernel.infoSend(proc, msg, er)
 	c.pki.errorKernel.logInfo(er)
 }
