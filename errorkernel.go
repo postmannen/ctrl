@@ -205,7 +205,6 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- Message) error {
 			}()
 
 		default:
-			// fmt.Printf(" * case default\n")
 		}
 	}
 }
@@ -254,6 +253,17 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 	}
 
 	e.errorCh <- ev
+
+	switch logLevel {
+	case logError:
+		e.logError(err)
+	case logInfo:
+		e.logInfo(err)
+	case logWarning:
+		e.logWarn(err)
+	case logDebug:
+		e.logDebug(err)
+	}
 }
 
 // infoSend will just send an info message to the errorCentral.

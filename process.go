@@ -196,7 +196,6 @@ func (p process) startSubscriber() {
 		if err != nil {
 			er := fmt.Errorf("error: spawnWorker: got <-ctx.Done, but unable to unsubscribe natsSubscription failed: %v", err)
 			p.errorKernel.errSend(p, Message{}, er, logError)
-			p.errorKernel.logDebug(er)
 		}
 
 		p.processes.active.mu.Lock()
@@ -531,7 +530,6 @@ func (p process) callHandler(message Message, thisNode string) {
 			// ACL/Signature checking failed.
 			er := fmt.Errorf("error: subscriberHandler: ACL were verified not-OK, doing nothing")
 			p.errorKernel.errSend(p, message, er, logWarning)
-			p.errorKernel.logDebug(er)
 		}
 	}()
 
@@ -566,7 +564,6 @@ func executeHandler(p process, message Message, thisNode string) {
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				p.errorKernel.errSend(p, message, er, logError)
-				p.errorKernel.logDebug(er)
 			}
 		}()
 
@@ -583,7 +580,6 @@ func executeHandler(p process, message Message, thisNode string) {
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				p.errorKernel.errSend(p, message, er, logError)
-				p.errorKernel.logDebug(er)
 			}
 		}()
 
@@ -609,7 +605,6 @@ func executeHandler(p process, message Message, thisNode string) {
 					if err != nil {
 						er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 						p.errorKernel.errSend(p, message, er, logError)
-						p.errorKernel.logDebug(er)
 					}
 				}()
 			}
