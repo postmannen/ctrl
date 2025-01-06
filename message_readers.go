@@ -105,7 +105,7 @@ func (s *server) readStartupFolder() {
 
 		}
 
-		er = fmt.Errorf("read from startup folder: %v", messages)
+		er = fmt.Errorf("%v", messages)
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
 		s.messageDeliverLocalCh <- messages
