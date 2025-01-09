@@ -207,6 +207,15 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		}
 	}
 
+	// Check if tmp folder for socket exists, if not create it
+	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(configuration.DatabaseFolder, 0770)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to create database folder directory %v: %v", configuration.DatabaseFolder, err)
+		}
+	}
+
 	//var nodeAuth *nodeAuth
 	//if configuration.EnableSignatureCheck {
 	nodeAuth := newNodeAuth(configuration, errorKernel)
@@ -258,7 +267,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		if configuration.SubscribersDataFolder == "" {
 			return nil, fmt.Errorf("error: subscribersDataFolder value is empty, you need to provide the config or the flag value at startup %v: %v", configuration.SubscribersDataFolder, err)
 		}
-		err := os.Mkdir(configuration.SubscribersDataFolder, 0770)
+		err := os.MkdirAll(configuration.SubscribersDataFolder, 0770)
 		if err != nil {
 			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", configuration.SubscribersDataFolder, err)
 		}

@@ -326,26 +326,16 @@ func methodKeysAllow(proc process, message Message, node string) ([]byte, error)
 // also able to send an update to them as well.
 func pushKeys(proc process, message Message, nodes []Node) error {
 	er := fmt.Errorf("info: beginning of pushKeys, nodes=%v", nodes)
-	var knh []byte
 	proc.errorKernel.logDebug(er)
 
-	err := func() error {
-		proc.centralAuth.pki.nodesAcked.mu.Lock()
-		defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
+	proc.centralAuth.pki.nodesAcked.mu.Lock()
+	defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
 
-		b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
-		if err != nil {
-			er := fmt.Errorf("error: methodKeysAllow, failed to marshal keys map: %v", err)
-			return er
-		}
-
-		copy(knh, b)
-
-		return nil
-	}()
-
+	// Create the data payload of the current allowed keys.
+	b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
 	if err != nil {
-		return err
+		er := fmt.Errorf("error: methodKeysAllow, failed to marshal keys map: %v", err)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	// proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Lock()
@@ -358,7 +348,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		msg := Message{
 			ToNode:      n,
 			Method:      KeysUpdateReceive,
-			Data:        knh,
+			Data:        b,
 			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
@@ -368,9 +358,6 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		er = fmt.Errorf("----> pushKeys: SENDING KEYS TO NODE=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
 	}
-
-	proc.centralAuth.pki.nodesAcked.mu.Lock()
-	defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
 
 	// Concatenate the current nodes in the keysAndHash map and the nodes
 	// we got from the function argument when this function was called.
@@ -390,7 +377,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		msg := Message{
 			ToNode:      n,
 			Method:      KeysUpdateReceive,
-			Data:        knh,
+			Data:        b,
 			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
