@@ -490,20 +490,29 @@ func (p process) callHandler(message Message, thisNode string) {
 	// Call the handler if ACL/signature checking returns true.
 	go func() {
 		conf := p.nodeAuth.configuration
-		doHandler := false
 		var er error
+
+		fmt.Printf("*** --- DEBUG: from: %v, method: %v, EnableSignatureCheck=%v, EnableAclCheck=%v\n", message.FromNode, message.Method, conf.EnableSignatureCheck, conf.EnableAclCheck)
 
 		switch {
 		// If no checking enabled we should just allow the message.
 		case !conf.EnableSignatureCheck && !conf.EnableAclCheck:
-			doHandler = true
+			fmt.Printf(" *** DEBUG: NO CHECK OF SIG OR ACL FLAG ENABLED, EXECUTING HANDLER:  %v\n", message.Method)
+			executeHandler(p, message, thisNode)
+			return
 
 		// If only sig check enabled, and sig OK, we should allow the message.
 		case conf.EnableSignatureCheck && !conf.EnableAclCheck:
+			fmt.Printf("--------------------DEBUG1-----------------------: %v\n", message.Method)
 			sigOK := p.nodeAuth.verifySignature(message)
+			fmt.Printf("--------------------DEBUG2-----------------------: %v\n", message.Method)
+			fmt.Printf(" *** DEBUG: CHECK SIG TRUE: %v\n", message.Method)
 			if sigOK {
-				doHandler = true
+				fmt.Printf(" *** DEBUG: CHECK SIG TRUE EVALUATED TO TRUE, EXECUTING HANDLER: %v\n", message.Method)
+				executeHandler(p, message, thisNode)
+				return
 			}
+			fmt.Printf(" *** DEBUG: CHECK SIG TRUE EVALUATED TO FALSE: %v\n", message.Method)
 
 			er = fmt.Errorf("callHandler: Only signature checking enabled, sigOK=%v, method %v", sigOK, message.Method)
 
@@ -511,27 +520,27 @@ func (p process) callHandler(message Message, thisNode string) {
 		case conf.EnableSignatureCheck && conf.EnableAclCheck:
 			sigOK := p.nodeAuth.verifySignature(message)
 			aclOK := p.nodeAuth.verifyAcl(message)
+			fmt.Printf(" *** DEBUG: CHECK SIG AND ACK TRUE: %v\n", message.Method)
 			if sigOK && aclOK {
-				doHandler = true
+				fmt.Printf(" *** DEBUG: CHECK SIG AND ACK TRUE EVALUATED TO FALSE, EXECUTING HANDLER: %v\n", message.Method)
+				executeHandler(p, message, thisNode)
+				return
 			}
+			fmt.Printf(" *** DEBUG: CHECK SIG AND ACK TRUE EVALUATED TO FALSE: %v\n", message.Method)
 
 			er = fmt.Errorf("callHandler:both signature and acl checking enabled, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
 
 		default:
 			er = fmt.Errorf("callHandler: None of the verify flags matched, not doing handler for message, method=%v", message.Method)
+			fmt.Printf(" *** DEBUG: WRONG CHECKING FLAGS FOR ACL OR SIG: %v\n", message.Method)
 		}
 
 		p.errorKernel.logDebug(er)
 
-		switch doHandler {
-		case true:
-			executeHandler(p, message, thisNode)
-		case false:
-			// ACL/Signature checking failed.
-			er := fmt.Errorf("error: subscriberHandler: ACL or Signature were verified not-OK, doing nothing")
-			p.errorKernel.errSend(p, message, er, logWarning)
-			fmt.Printf("\n *** DEBUG: %v\n\n", er)
-		}
+		er = fmt.Errorf("error: subscriberHandler: ACL or Signature were verified not-OK, doing nothing")
+		p.errorKernel.errSend(p, message, er, logWarning)
+		fmt.Printf("*** DEBUG: %v\n", er)
+
 	}()
 
 }

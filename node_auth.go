@@ -405,8 +405,9 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 		FileAppend:     {},
 	}
 
-	// If the method is not found in the map, we return that the signature
-	// was verified to true to allow the method to be executed.
+	// We only want to signature checking on the methods found
+	// in the map, we return that the signature was verified
+	// to true to allow the method to be executed.
 	if _, ok := signatureCheckMap[m.Method]; !ok {
 		er := fmt.Errorf("verifySignature: will not do signature check for method: %v", m.Method)
 		n.errorKernel.logInfo(er)
@@ -418,15 +419,22 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	var ok bool
 
 	err := func() error {
+		fmt.Printf(" ********************* DEBUG1 BEFORE LOCK: %v\n", m.Method)
 		n.publicKeys.mu.Lock()
+		defer n.publicKeys.mu.Unlock()
+		fmt.Printf(" ********************* DEBUG2 LOCK: %v\n", m.Method)
+
 		pubKey := n.publicKeys.keysAndHash.Keys[m.FromNode]
 		if len(pubKey) != 32 {
 			err := fmt.Errorf("length of publicKey not equal to 32: %v", len(pubKey))
+			fmt.Printf(" ********************* DEBUG3 LOCK: %v, ERROR: %v\n", m.Method, err)
 			return err
 		}
 
+		fmt.Printf(" ********************* DEBUG4 LOCK: %v\n", m.Method)
+
 		ok = ed25519.Verify(pubKey, []byte(argsStringified), m.ArgSignature)
-		n.publicKeys.mu.Unlock()
+		fmt.Printf(" ********************* DEBUG AFTER LOCK: %v\n", m.Method)
 
 		return nil
 	}()

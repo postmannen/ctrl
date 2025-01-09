@@ -283,6 +283,7 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 
 func (e *errorKernel) logError(err error) {
 	if e.configuration.LogLevel == string(logError) {
+		fmt.Printf(" ,,,,,,,,,,,,,,,,,,,,,,,,, LOGGING ERROR: %v\n", err)
 		slog.Error("error", err)
 	}
 }
