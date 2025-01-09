@@ -358,22 +358,15 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		msg := Message{
 			ToNode:      n,
 			Method:      KeysUpdateReceive,
+			Data:        knh,
 			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
 
 		proc.newMessagesCh <- msg
 
-		er = fmt.Errorf("----> methodKeysAllow: SENDING KEYS TO NODE=%v", message.FromNode)
+		er = fmt.Errorf("----> pushKeys: SENDING KEYS TO NODE=%v", message.FromNode)
 		proc.errorKernel.logDebug(er)
-	}
-
-	// Create the data payload of the current allowed keys.
-	b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
-
-	if err != nil {
-		er := fmt.Errorf("error: methodKeysAllow, failed to marshal keys map: %v", err)
-		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	proc.centralAuth.pki.nodesAcked.mu.Lock()
@@ -397,7 +390,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		msg := Message{
 			ToNode:      n,
 			Method:      KeysUpdateReceive,
-			Data:        b,
+			Data:        knh,
 			ReplyMethod: None,
 			ACKTimeout:  0,
 		}
