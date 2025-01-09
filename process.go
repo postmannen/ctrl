@@ -505,7 +505,7 @@ func (p process) callHandler(message Message, thisNode string) {
 				doHandler = true
 			}
 
-			er = fmt.Errorf("callHandler: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v", sigOK, message.Method)
+			er = fmt.Errorf("callHandler: Only signature checking enabled, sigOK=%v, method %v", sigOK, message.Method)
 
 		// If both sig and acl check enabled, and sig and acl OK, we should allow the message.
 		case conf.EnableSignatureCheck && conf.EnableAclCheck:
@@ -515,7 +515,7 @@ func (p process) callHandler(message Message, thisNode string) {
 				doHandler = true
 			}
 
-			er = fmt.Errorf("callHandler:both signature and acl checking enabled, allow the message if sigOK and aclOK, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
+			er = fmt.Errorf("callHandler:both signature and acl checking enabled, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
 
 		default:
 			er = fmt.Errorf("callHandler: None of the verify flags matched, not doing handler for message, method=%v", message.Method)
@@ -528,8 +528,9 @@ func (p process) callHandler(message Message, thisNode string) {
 			executeHandler(p, message, thisNode)
 		case false:
 			// ACL/Signature checking failed.
-			er := fmt.Errorf("error: subscriberHandler: ACL were verified not-OK, doing nothing")
+			er := fmt.Errorf("error: subscriberHandler: ACL or Signature were verified not-OK, doing nothing")
 			p.errorKernel.errSend(p, message, er, logWarning)
+			fmt.Printf("\n *** DEBUG: %v\n\n", er)
 		}
 	}()
 

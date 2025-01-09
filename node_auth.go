@@ -391,9 +391,24 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 
 // verifySignature
 func (n *nodeAuth) verifySignature(m Message) bool {
-	// NB: Only enable signature checking for REQCliCommand for now.
-	if m.Method != CliCommand {
-		er := fmt.Errorf("verifySignature: not REQCliCommand and will not do signature check, method: %v", m.Method)
+	signatureCheckMap := map[Method]struct{}{
+		OpProcessList:  {},
+		OpProcessStart: {},
+		OpProcessStop:  {},
+		CliCommand:     {},
+		CliCommandCont: {},
+		TailFile:       {},
+		HttpGet:        {},
+		CopySrc:        {},
+		Console:        {},
+		File:           {},
+		FileAppend:     {},
+	}
+
+	// If the method is not found in the map, we return that the signature
+	// was verified to true to allow the method to be executed.
+	if _, ok := signatureCheckMap[m.Method]; !ok {
+		er := fmt.Errorf("verifySignature: will not do signature check for method: %v", m.Method)
 		n.errorKernel.logInfo(er)
 		return true
 	}
