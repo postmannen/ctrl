@@ -134,14 +134,6 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 
 	notAckedNodes := []Node{}
 	c.pki.nodeNotAckedPublicKeys.mu.Lock()
-	// existingNotAckedKey, ok := c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
-	// // We only want to send one notification to the error kernel about new key detection,
-	// // so we check if the values are the same as the one we already got before we continue
-	// // with registering and logging for the the new key.
-	// if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
-	// 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
-	// 	return
-	// }
 
 	c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
 

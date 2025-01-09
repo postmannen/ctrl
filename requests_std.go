@@ -63,6 +63,8 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 // received, the handler will deliver the message to the procFunc on the
 // proc.procFuncCh, and we can then read that message from the procFuncCh in
 // the procFunc running.
+// The public key of a node are sent in the data field of the hello message,
+// so we also handle the logic with registering keys from here.
 func procFuncHelloSubscriber(ctx context.Context, proc process, procFuncCh chan Message) error {
 	// sayHelloNodes := make(map[Node]struct{})
 
