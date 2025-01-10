@@ -199,7 +199,6 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 
 // dbUpdatePublicKey will update the public key for a node in the db.
 func (p *pki) dbUpdatePublicKey(node string, value []byte) error {
-	fmt.Printf("\n ***** DEBUG: %v\n\n", p.db)
 	err := p.db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket
 		bu, err := tx.CreateBucketIfNotExists([]byte(p.bucketNamePublicKeys))

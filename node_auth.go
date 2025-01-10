@@ -419,22 +419,17 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	var ok bool
 
 	err := func() error {
-		fmt.Printf(" ********************* DEBUG1 BEFORE LOCK: %v\n", m.Method)
 		n.publicKeys.mu.Lock()
 		defer n.publicKeys.mu.Unlock()
-		fmt.Printf(" ********************* DEBUG2 LOCK: %v\n", m.Method)
 
 		pubKey := n.publicKeys.keysAndHash.Keys[m.FromNode]
 		if len(pubKey) != 32 {
 			err := fmt.Errorf("length of publicKey not equal to 32: %v", len(pubKey))
-			fmt.Printf(" ********************* DEBUG3 LOCK: %v, ERROR: %v\n", m.Method, err)
+
 			return err
 		}
 
-		fmt.Printf(" ********************* DEBUG4 LOCK: %v\n", m.Method)
-
 		ok = ed25519.Verify(pubKey, []byte(argsStringified), m.ArgSignature)
-		fmt.Printf(" ********************* DEBUG AFTER LOCK: %v\n", m.Method)
 
 		return nil
 	}()

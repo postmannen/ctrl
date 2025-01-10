@@ -282,27 +282,21 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 }
 
 func (e *errorKernel) logError(err error) {
-	if e.configuration.LogLevel == string(logError) {
-		fmt.Printf(" ,,,,,,,,,,,,,,,,,,,,,,,,, LOGGING ERROR: %v\n", err)
-		slog.Error("error", err)
-	}
+	slog.Error("error", err)
+
 }
 
 func (e *errorKernel) logInfo(err error) {
-	if e.configuration.LogLevel == string(logInfo) {
-		slog.Info(err.Error())
-	}
+	slog.Info(err.Error())
 }
 
 func (e *errorKernel) logWarn(err error) {
-	if e.configuration.LogLevel == string(logWarning) {
-		slog.Warn(err.Error())
-	}
+	slog.Warn("warn", err.Error())
 }
 
 func (e *errorKernel) logDebug(err error) {
 	if e.configuration.LogLevel == string(logDebug) {
-		slog.Debug(err.Error())
+		slog.Debug("debug", err.Error())
 	}
 }
 
