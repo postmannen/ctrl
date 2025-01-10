@@ -256,13 +256,13 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 
 	switch logLevel {
 	case logError:
-		e.logError("error", err)
+		e.logError(err.Error())
 	case logInfo:
-		e.logInfo("info", err)
+		e.logInfo(err.Error())
 	case logWarning:
-		e.logWarn("warn", err)
+		e.logWarn(err.Error())
 	case logDebug:
-		e.logDebug("debug", err)
+		e.logDebug(err.Error())
 	}
 }
 
