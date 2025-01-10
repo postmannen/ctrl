@@ -86,7 +86,9 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 // Handle appending data to file.
 func methodFileAppend(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(true, proc, message)
-	proc.errorKernel.errSend(proc, message, err, logWarning)
+	if err != nil {
+		proc.errorKernel.errSend(proc, message, err, logWarning)
+	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -98,7 +100,9 @@ func methodFileAppend(proc process, message Message, node string) ([]byte, error
 // exist.
 func methodToFile(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(false, proc, message)
-	proc.errorKernel.errSend(proc, message, err, logWarning)
+	if err != nil {
+		proc.errorKernel.errSend(proc, message, err, logWarning)
+	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
