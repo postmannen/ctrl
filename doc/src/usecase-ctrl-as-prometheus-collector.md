@@ -55,6 +55,8 @@ LOG_LEVEL=info
 START_PUB_HELLO=60
 ```
 
+Create 2-3 (node1,node2,node3) nodes which will be the nodes that scrape some metrics on some host.
+
 ##### Startup folder
 
 Each ctrl instance started will have a **startup** folder in it's running directory. Messages in the startup folder will be read at startup, and handled by ctrl.
@@ -69,7 +71,7 @@ Put the following message in the **startup** folder on all the nodes that will c
     # Deliver the message locally
     - local
   # Set the node where we send the reply with the result
-  fromNode: central
+  fromNode: metrics
   method: httpGet
   methodArgs:
     - http://localhost:9100/metrics

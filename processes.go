@@ -134,7 +134,7 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.StartProcesses.EnableKeyUpdates {
 		// The key update on the client is only a proc func that publish requests.
 		proc.startup.startProcess(proc, None, procFuncKeysRequestUpdate)
-		proc.startup.startProcess(proc, KeysDeliverUpdate, nil)
+		proc.startup.startProcess(proc, KeysUpdateReceive, nil)
 	}
 
 	if proc.configuration.StartProcesses.EnableAclUpdates {
@@ -144,13 +144,13 @@ func (p *processes) Start(proc process) {
 	}
 
 	if proc.configuration.StartProcesses.IsCentralKey {
-		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
+		proc.startup.startProcess(proc, KeysUpdateRequest, nil)
 		proc.startup.startProcess(proc, KeysAllow, nil)
 		proc.startup.startProcess(proc, KeysDelete, nil)
 	}
 
 	if proc.configuration.StartProcesses.IsCentralAcl {
-		proc.startup.startProcess(proc, KeysRequestUpdate, nil)
+		proc.startup.startProcess(proc, KeysUpdateRequest, nil)
 		proc.startup.startProcess(proc, KeysAllow, nil)
 		proc.startup.startProcess(proc, KeysDelete, nil)
 		proc.startup.startProcess(proc, AclRequestUpdate, nil)
@@ -213,8 +213,7 @@ func newStartup(server *server) *startup {
 // startProcess will start a process. It takes the initial process, request method,
 // and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
 func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context, proc process, procFuncCh chan Message) error) {
-	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
-	p.errorKernel.logDebug(er)
+	p.errorKernel.logDebug("starting subscriber", "node", m, p.node)
 
 	var sub Subject
 	switch {
@@ -235,15 +234,13 @@ func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context,
 
 // Print the content of the processes map.
 func (p *processes) printProcessesMap() {
-	er := fmt.Errorf("output of processes map : ")
-	p.errorKernel.logDebug(er)
+	p.errorKernel.logDebug("output of processes map : ")
 
 	{
 		p.active.mu.Lock()
 
 		for pName, proc := range p.active.procNames {
-			er := fmt.Errorf("info: proc - procName in map: %v , id: %v, subject: %v", pName, proc.processID, proc.subject.name())
-			proc.errorKernel.logDebug(er)
+			p.errorKernel.logDebug("process map", "name", pName, "ID", proc.processID, "subject", proc.subject.name())
 		}
 
 		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))

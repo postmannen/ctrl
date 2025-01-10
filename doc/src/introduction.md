@@ -6,6 +6,12 @@ In operations ctrl can be used to send a set of commands to execute to a node, a
 
 In forensics ctrl can be used to execute commands with tools to gather information needed. If the tools are not already present on an end ctrl node, ctrl can be used to copy the tools to that node, and then ctrl can run them to gather information.
 
+</style>
+</head>
+<body>
+<p align="center"><img src="https://github.com/postmannen/ctrl/blob/main/doc/core-messaging.svg?raw=true" /></p>
+</body>
+
 ## Usecases
 
 Some example usecases are:

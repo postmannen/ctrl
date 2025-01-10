@@ -207,6 +207,15 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		}
 	}
 
+	// Check if tmp folder for socket exists, if not create it
+	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(configuration.DatabaseFolder, 0770)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to create database folder directory %v: %v", configuration.DatabaseFolder, err)
+		}
+	}
+
 	//var nodeAuth *nodeAuth
 	//if configuration.EnableSignatureCheck {
 	nodeAuth := newNodeAuth(configuration, errorKernel)
@@ -258,13 +267,12 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		if configuration.SubscribersDataFolder == "" {
 			return nil, fmt.Errorf("error: subscribersDataFolder value is empty, you need to provide the config or the flag value at startup %v: %v", configuration.SubscribersDataFolder, err)
 		}
-		err := os.Mkdir(configuration.SubscribersDataFolder, 0770)
+		err := os.MkdirAll(configuration.SubscribersDataFolder, 0770)
 		if err != nil {
 			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", configuration.SubscribersDataFolder, err)
 		}
 
-		er := fmt.Errorf("info: creating subscribers data folder at %v", configuration.SubscribersDataFolder)
-		s.errorKernel.logDebug(er)
+		s.errorKernel.logDebug("NewServer: creating subscribers data folder at", "path", configuration.SubscribersDataFolder)
 	}
 
 	return &s, nil
@@ -567,16 +575,14 @@ func (s *server) routeMessagesToPublisherProcess() {
 
 					fh, err := os.Open(filePathToOpen)
 					if err != nil {
-						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument: %v", err)
-						s.errorKernel.logError(er)
+						s.errorKernel.logError("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
 						return
 					}
 					defer fh.Close()
 
 					b, err := io.ReadAll(fh)
 					if err != nil {
-						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to read file %v given as CTRL_FILE argument: %v", filePathToOpen, err)
-						s.errorKernel.logError(er)
+						s.errorKernel.logError("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
 						return
 					}
 
@@ -630,7 +636,6 @@ func (s *server) messageSerializeAndCompress(msg Message) ([]byte, error) {
 	bSerialized, err := cbor.Marshal(msg)
 	if err != nil {
 		er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-		s.errorKernel.logDebug(er)
 		return nil, er
 	}
 

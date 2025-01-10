@@ -27,8 +27,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
 
-		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug("methodHello: Creating subscribers data folder at ", "foldertree", folderTree)
 	}
 
 	// Open file and write data.
@@ -63,6 +62,8 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 // received, the handler will deliver the message to the procFunc on the
 // proc.procFuncCh, and we can then read that message from the procFuncCh in
 // the procFunc running.
+// The public key of a node are sent in the data field of the hello message,
+// so we also handle the logic with registering keys from here.
 func procFuncHelloSubscriber(ctx context.Context, proc process, procFuncCh chan Message) error {
 	// sayHelloNodes := make(map[Node]struct{})
 
@@ -73,9 +74,8 @@ func procFuncHelloSubscriber(ctx context.Context, proc process, procFuncCh chan 
 		select {
 		case m = <-procFuncCh:
 		case <-ctx.Done():
-			er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
-			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("procFuncHelloSubscriber: stopped handleFunc for: subscriber", "subject", proc.subject.name())
+
 			return nil
 		}
 
@@ -118,9 +118,8 @@ func procFuncHelloPublisher(ctx context.Context, proc process, procFuncCh chan M
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
-			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("procFuncHelloPublisher: stopped handleFunc for: publisher", "subject", proc.subject.name())
+
 			return nil
 		}
 	}
@@ -143,8 +142,7 @@ func methodErrorLog(proc process, message Message, node string) ([]byte, error) 
 			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
 
-		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug("methodErrorLog: Creating subscribers data folder", "foldertree", folderTree)
 	}
 
 	// Open file and write data.

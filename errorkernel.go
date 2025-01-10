@@ -142,7 +142,7 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- Message) error {
 			case logError:
 				slog.Error("error", fmt.Errorf("%v", er))
 			case logInfo:
-				slog.Info(er)
+				slog.Info("info", fmt.Errorf("%v", er))
 			case logWarning:
 				slog.Warn(er)
 			case logDebug:
@@ -205,7 +205,6 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- Message) error {
 			}()
 
 		default:
-			// fmt.Printf(" * case default\n")
 		}
 	}
 }
@@ -254,6 +253,17 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 	}
 
 	e.errorCh <- ev
+
+	switch logLevel {
+	case logError:
+		e.logError(err.Error())
+	case logInfo:
+		e.logInfo(err.Error())
+	case logWarning:
+		e.logWarn(err.Error())
+	case logDebug:
+		e.logDebug(err.Error())
+	}
 }
 
 // infoSend will just send an info message to the errorCentral.
@@ -271,28 +281,21 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 	e.errorCh <- ev
 }
 
-func (e *errorKernel) logError(err error) {
-	if e.configuration.LogLevel == string(logError) {
-		slog.Error("error", err)
-	}
+func (e *errorKernel) logError(msg string, args ...any) {
+	slog.Error(msg, args...)
 }
 
-func (e *errorKernel) logInfo(err error) {
-	if e.configuration.LogLevel == string(logInfo) {
-		slog.Info(err.Error())
-	}
+func (e *errorKernel) logInfo(msg string, args ...any) {
+	slog.Info(msg, args...)
 }
 
-func (e *errorKernel) logWarn(err error) {
-	if e.configuration.LogLevel == string(logWarning) {
-		slog.Warn(err.Error())
-	}
+func (e *errorKernel) logWarn(msg string, args ...any) {
+	slog.Warn(msg, args...)
 }
 
-func (e *errorKernel) logDebug(err error) {
-	if e.configuration.LogLevel == string(logDebug) {
-		slog.Debug(err.Error())
-	}
+// TODO: Make this into structured logging
+func (e *errorKernel) logDebug(msg string, args ...any) {
+	slog.Debug(msg, args...)
 }
 
 // errorAction is used to tell the process who sent the error

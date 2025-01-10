@@ -2,11 +2,11 @@
 
 Run ctrl as a docker container in a github workflow. This can for example be as part of a CI/CD pipeline, or for content versioning.
 
-This howto will show the steps involved to get ctrl up and running as Github Action Runner. First we start with setting up a NATS Server, we then setup the local ctrl node **node1**, and then the node that will be started as a Github Action Runner.
+Or with other words.. you have a github repository that holds the instructions for what ctrl should do. There is a github action attached to it. When the repository is updated, the github action will start a ctrl container (runner) which will read the instructions you pushed to the repository. The runner will then effectuate to instructions on all the nodes and the commands defined in the instructions.
 
-This howto assumes that you have a nats-server setup, and at least one ctrl node instance up running. How to setup a **nats-server** and a **ctrl node** on a computer/server can be found in the **User Guides** section of the documentation.
+This howto assumes that you have a nats-server setup, and at least one ctrl node instance up running. How to setup a basic **nats-server** and a **ctrl node** on a computer/server/container can be found in the **User Guides** section of the documentation.
 
-In the examples below I've used the name **node1** as an example for the node that will receive the message when the github repository are updated.
+In the examples below I've used the name **node1** as an example for the node that will receive the message when the github repository are updated, but this could be any number of nodes you'd like.
  
 ## Github Action Runner setup
 

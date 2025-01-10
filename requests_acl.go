@@ -14,8 +14,7 @@ import (
 
 // Handler to get all acl's from a central server.
 func methodAclRequestUpdate(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- subscriber methodAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- subscriber methodAclRequestUpdate received from node with hash", "fromNode", message.FromNode, "hash", message.Data)
 
 	// fmt.Printf("\n --- subscriber methodAclRequestUpdate: the message brought to handler : %+v\n", message)
 
@@ -46,23 +45,20 @@ func methodAclRequestUpdate(proc process, message Message, node string) ([]byte,
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				er := fmt.Errorf("info: subscriber methodAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v", message.FromNode, message.Data)
-				proc.errorKernel.logDebug(er)
+				proc.errorKernel.logDebug("methodAclRequestUpdate: got acl hash from node with hash", "fromNode", message.FromNode, "hash", message.Data)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
-				er = fmt.Errorf("info: subscriber methodAclRequestUpdate:  the central acl hash=%v", hash32)
-				proc.errorKernel.logDebug(er)
+				proc.errorKernel.logDebug("methodAclRequestUpdate:  the central acl hash", "hash", hash32)
+
 				if bytes.Equal(hash, message.Data) {
-					er := fmt.Errorf("info: subscriber methodAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
-					proc.errorKernel.logDebug(er)
+					proc.errorKernel.logDebug("info: subscriber methodAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
 					return
 				}
 
-				er = fmt.Errorf("info: subscriber methodAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
-				proc.errorKernel.logDebug(er)
+				proc.errorKernel.logDebug("info: subscriber methodAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
 
 				// Generate JSON for Message.Data
 
@@ -78,8 +74,7 @@ func methodAclRequestUpdate(proc process, message Message, node string) ([]byte,
 					proc.errorKernel.errSend(proc, message, er, logWarning)
 				}
 
-				er = fmt.Errorf("----> subscriber methodAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v", message.FromNode, hdh)
-				proc.errorKernel.logDebug(er)
+				proc.errorKernel.logDebug("----> subscriber methodAclRequestUpdate: SENDING ACL'S TO NODE", "node", message.FromNode, "serializedAndHash", hdh)
 
 				newReplyMessage(proc, message, js)
 			}()
@@ -100,8 +95,7 @@ func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan
 		// and update with new keys back.
 
 		proc.nodeAuth.nodeAcl.mu.Lock()
-		er := fmt.Errorf(" ----> publisher AclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug(" ----> publisher AclRequestUpdate: sending our current hash", "hash", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
 
 		m := Message{
 			FileName:    "aclRequestUpdate.log",
@@ -121,9 +115,8 @@ func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+			proc.errorKernel.logDebug("stopped handleFunc for publisher", "subject", proc.subject.name())
 			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-			proc.errorKernel.logDebug(er)
 			return nil
 		}
 	}
@@ -133,8 +126,7 @@ func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan
 
 // Handler to receive the acls from a central server.
 func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- subscriber methodAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf)
+	proc.errorKernel.logDebug("<--- subscriber methodAclDeliverUpdate received from", "fromNode", message.FromNode, "data", message.Data)
 
 	// fmt.Printf("\n --- subscriber methodAclRequestUpdate: the message received on handler : %+v\n\n", message)
 
@@ -210,8 +202,7 @@ func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte,
 // ---
 
 func methodAclAddCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclAddCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -272,8 +263,7 @@ func methodAclAddCommand(proc process, message Message, node string) ([]byte, er
 // ---
 
 func methodAclDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclDeleteCommand received", "fromnode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -334,8 +324,7 @@ func methodAclDeleteCommand(proc process, message Message, node string) ([]byte,
 // ---
 
 func methodAclDeleteSource(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclDeleteSource received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclDeleteSource received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -395,8 +384,7 @@ func methodAclDeleteSource(proc process, message Message, node string) ([]byte, 
 // ---
 
 func methodAclGroupNodesAddNode(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclGroupNodesAddNode received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -456,8 +444,7 @@ func methodAclGroupNodesAddNode(proc process, message Message, node string) ([]b
 // ---
 
 func methodAclGroupNodesDeleteNode(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclGroupNodesDeleteNode received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -517,8 +504,7 @@ func methodAclGroupNodesDeleteNode(proc process, message Message, node string) (
 // ---
 
 func methodAclGroupNodesDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclGroupNodesDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclGroupNodesDeleteGroup received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -577,8 +563,7 @@ func methodAclGroupNodesDeleteGroup(proc process, message Message, node string) 
 // ---
 
 func methodAclGroupCommandsAddCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclGroupCommandsAddCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclGroupCommandsAddCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -638,8 +623,7 @@ func methodAclGroupCommandsAddCommand(proc process, message Message, node string
 // ---
 
 func methodAclGroupCommandsDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclGroupCommandsDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclGroupCommandsDeleteCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -699,8 +683,7 @@ func methodAclGroupCommandsDeleteCommand(proc process, message Message, node str
 // ---
 
 func methodAclGroupCommandsDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclGroupCommandsDeleteGroup received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -759,8 +742,7 @@ func methodAclGroupCommandsDeleteGroup(proc process, message Message, node strin
 // ---
 
 func methodAclExport(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclExport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclExport received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -815,8 +797,7 @@ func methodAclExport(proc process, message Message, node string) ([]byte, error)
 // ---
 
 func methodAclImport(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- methodAclImport received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- methodAclImport received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
