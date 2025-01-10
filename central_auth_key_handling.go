@@ -320,15 +320,13 @@ func (p *pki) dbViewHash() ([]byte, error) {
 		//Open a bucket to get key's and values from.
 		bu := tx.Bucket([]byte("hash"))
 		if bu == nil {
-			er := fmt.Errorf("info: no db hash bucket exist")
-			p.errorKernel.logWarn(er)
+			p.errorKernel.logWarn("no db hash bucket exist", "bucket", "hash")
 			return nil
 		}
 
 		v := bu.Get([]byte("hash"))
 		if len(v) == 0 {
-			er := fmt.Errorf("info: view: hash key not found")
-			p.errorKernel.logWarn(er)
+			p.errorKernel.logWarn("dbViewHash: get bucket equals", "length", 0)
 			return nil
 		}
 

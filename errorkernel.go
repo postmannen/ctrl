@@ -260,7 +260,7 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 	case logInfo:
 		e.logInfo("info", err)
 	case logWarning:
-		e.logWarn(err)
+		e.logWarn("warn", err)
 	case logDebug:
 		e.logDebug(err)
 	}
@@ -289,8 +289,8 @@ func (e *errorKernel) logInfo(msg string, args ...any) {
 	slog.Info(msg, args...)
 }
 
-func (e *errorKernel) logWarn(err error) {
-	slog.Warn("warn", err.Error())
+func (e *errorKernel) logWarn(msg string, args ...any) {
+	slog.Warn(msg, args...)
 }
 
 func (e *errorKernel) logDebug(err error) {
