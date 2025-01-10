@@ -272,8 +272,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", configuration.SubscribersDataFolder, err)
 		}
 
-		er := fmt.Errorf("info: creating subscribers data folder at %v", configuration.SubscribersDataFolder)
-		s.errorKernel.logDebug(er)
+		s.errorKernel.logDebug("NewServer: creating subscribers data folder at", "path", configuration.SubscribersDataFolder)
 	}
 
 	return &s, nil
@@ -637,7 +636,6 @@ func (s *server) messageSerializeAndCompress(msg Message) ([]byte, error) {
 	bSerialized, err := cbor.Marshal(msg)
 	if err != nil {
 		er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-		s.errorKernel.logDebug(er)
 		return nil, er
 	}
 

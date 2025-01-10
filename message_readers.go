@@ -339,8 +339,7 @@ func (s *server) readFolder() {
 
 				if event.Op == fsnotify.Create || event.Op == fsnotify.Write {
 					time.Sleep(time.Millisecond * 250)
-					er := fmt.Errorf("readFolder: got file event, name: %v, op: %v", event.Name, event.Op)
-					s.errorKernel.logDebug(er)
+					s.errorKernel.logDebug("readFolder: got file event", "name", event.Name, "op", event.Op)
 
 					func() {
 						fh, err := os.Open(event.Name)
@@ -384,16 +383,14 @@ func (s *server) readFolder() {
 							if messages[i].JetstreamToNode != "" {
 
 								s.jetstreamPublishCh <- messages[i]
-								er = fmt.Errorf("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh: %#v", messages)
-								s.errorKernel.logDebug(er)
+								s.errorKernel.logDebug("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh", "messages", messages)
 
 								continue
 							}
 
 							s.newMessagesCh <- messages[i]
 
-							er = fmt.Errorf("readFolder: read new message in readfolder and putting it on s.samToSendCh: %#v", messages)
-							s.errorKernel.logDebug(er)
+							s.errorKernel.logDebug("readFolder: read new message in readfolder and putting it on s.samToSendCh", "messages", messages)
 						}
 
 						// Send the SAM struct to be picked up by the ring buffer.

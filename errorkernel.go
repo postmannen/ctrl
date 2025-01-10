@@ -262,7 +262,7 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 	case logWarning:
 		e.logWarn("warn", err)
 	case logDebug:
-		e.logDebug(err)
+		e.logDebug("debug", err)
 	}
 }
 
@@ -294,10 +294,8 @@ func (e *errorKernel) logWarn(msg string, args ...any) {
 }
 
 // TODO: Make this into structured logging
-func (e *errorKernel) logDebug(err error) {
-	if e.configuration.LogLevel == string(logDebug) {
-		slog.Debug("debug", err.Error())
-	}
+func (e *errorKernel) logDebug(msg string, args ...any) {
+	slog.Debug(msg, args...)
 }
 
 // errorAction is used to tell the process who sent the error

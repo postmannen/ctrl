@@ -108,8 +108,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		// The value will be replaced
 		folderPermission := uint64(0755)
 
-		er := fmt.Errorf("info: before switch: FolderPermission defined in message for socket: %04o", folderPermission)
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug("methodCopySrc: before switch: FolderPermission defined in message for socket: %04o", "folderPermission", folderPermission)
 		// Verify and check the methodArgs
 
 		if len(message.MethodArgs) < 3 {
@@ -146,8 +145,8 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 				proc.errorKernel.logError("methodCopySrc: failed to parse uint", "error", err)
 			}
 
-			er := fmt.Errorf("info: FolderPermission defined in message for socket: %v, converted = %v", message.MethodArgs[5], folderPermission)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("methodCopySrc: FolderPermission defined in message for socket", "socket", message.MethodArgs[5], "converted", folderPermission)
+
 			if err != nil {
 				er := fmt.Errorf("error: methodCopySrc: unable to convert folderPermission into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er, logWarning)
@@ -184,8 +183,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		fileInfo, err := os.Stat(SrcFilePath)
 		if err != nil {
 			// errCh <- fmt.Errorf("error: methodCopySrc: failed to open file: %v, %v", SrcFilePath, err)
-			er := fmt.Errorf("error: copySrcSubProcFunc: failed to stat file: %v", err)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("error: copySrcSubProcFunc: failed to stat", "file", err)
 			return
 		}
 
@@ -319,8 +317,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			er := fmt.Errorf("methodCopyDst: subprocesses already existed, will not start another subscriber for %v", pn)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
 
 			// HERE!!!
 			// If the process name already existed we return here before any
@@ -361,11 +358,9 @@ func copySrcSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			er := fmt.Errorf(" * copySrcHandler ended: %v", proc.processName)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("copySrcHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			er := fmt.Errorf("copySrcHandler: passing message over to procFunc: %v", proc.processName)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
 		}
 
 		return nil, nil
@@ -379,11 +374,10 @@ func copyDstSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			er := fmt.Errorf(" * copyDstHandler ended: %v", proc.processName)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("copyDstHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			er := fmt.Errorf("copyDstHandler: passing message over to procFunc: %v", proc.processName)
-			proc.errorKernel.logDebug(er)
+			proc.errorKernel.logDebug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
+
 		}
 
 		return nil, nil
@@ -464,8 +458,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 		for {
 			select {
 			case <-ctx.Done():
-				er := fmt.Errorf(" info: canceling copySrcProcFunc : %v", proc.processName)
-				proc.errorKernel.logDebug(er)
+				proc.errorKernel.logDebug("copySrcProcFunc: canceling procFunc", "processName", proc.processName)
 				return nil
 
 			// Pick up the message recived by the copySrcSubHandler.
@@ -678,8 +671,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 		for {
 			select {
 			case <-ctx.Done():
-				er := fmt.Errorf(" * copyDstProcFunc ended: %v", proc.processName)
-				proc.errorKernel.logDebug(er)
+				proc.errorKernel.logDebug("copyDstProcFunc: procFunc ended: %v", "processName", proc.processName)
 				return nil
 			case message := <-procFuncCh:
 				var csa copySubData
@@ -694,8 +686,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 				// trigger the resend of the last message in the switch below.
 				hash := sha256.Sum256(csa.CopyData)
 				if hash != csa.Hash {
-					er := fmt.Errorf("error: copyDstSubProcFunc: hash of received message is not correct for: %v", cia.DstMethod)
-					proc.errorKernel.logDebug(er)
+					proc.errorKernel.logDebug("copyDstSubProcFunc: hash of received message is not correct for", "DstMethod", cia.DstMethod)
 
 					csa.CopyStatus = copyResendLast
 				}
@@ -785,16 +776,14 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 						filePath := filepath.Join(cia.DstDir, cia.DstFile)
 
 						// HERE:
-						er := fmt.Errorf("info: Before creating folder: cia.FolderPermission: %04o", cia.FolderPermission)
-						proc.errorKernel.logDebug(er)
+						proc.errorKernel.logDebug("copyDstSubProcFunc: Before creating folder: cia.FolderPermission: %04o", "FolderPermission", cia.FolderPermission)
 
 						if _, err := os.Stat(cia.DstDir); os.IsNotExist(err) {
 							err := os.MkdirAll(cia.DstDir, fs.FileMode(cia.FolderPermission))
 							if err != nil {
-								return fmt.Errorf("error: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
+								return fmt.Errorf("copyDstSubProcFunc: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
 							}
-							er := fmt.Errorf("info: Created folder: with cia.FolderPermission: %04o", cia.FolderPermission)
-							proc.errorKernel.logDebug(er)
+							proc.errorKernel.logDebug("copyDstSubProcFunc: Created folder: with cia.FolderPermission: %04o", "folderPermission", cia.FolderPermission)
 						}
 
 						// Rename the file so we got a backup.
@@ -892,8 +881,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 							proc.errorKernel.errSend(proc, message, er, logWarning)
 						}
 
-						er = fmt.Errorf("info: copy: successfully wrote all split chunk files into file=%v", filePath)
-						proc.errorKernel.logDebug(er)
+						proc.errorKernel.logDebug("copyDstSubProcFunc: copy: successfully wrote all split chunk files into", "file", filePath)
 
 						// Signal back to src that we are done, so it can cancel the process.
 						{

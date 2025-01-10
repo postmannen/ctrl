@@ -80,8 +80,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	// Open the database file for persistent storage of public keys.
 	db, err := bolt.Open(databaseFilepath, 0660, nil)
 	if err != nil {
-		er := fmt.Errorf("newPKI: error: failed to open db: %v", err)
-		errorKernel.logDebug(er)
+		errorKernel.logDebug("newPKI: error: failed to open db", "error", err)
 		return &p
 	}
 
@@ -90,16 +89,14 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	// Get public keys from db storage.
 	keys, err := p.dbDumpPublicKey()
 	if err != nil {
-		er := fmt.Errorf("newPKI: dbPublicKeyDump failed, probably empty db: %v", err)
-		errorKernel.logDebug(er)
+		errorKernel.logDebug("newPKI: dbPublicKeyDump failed, probably empty db", "error", err)
 	}
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
 		p.nodesAcked.keysAndHash.Keys = keys
 		for k, v := range keys {
-			er := fmt.Errorf("newPKI: public keys db contains: %v, %v", k, []byte(v))
-			errorKernel.logDebug(er)
+			errorKernel.logDebug("newPKI: public keys db contains", "key", k, "value", []byte(v))
 		}
 	}
 
@@ -127,8 +124,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		er := fmt.Errorf("info: public key value for registered node %v is the same, doing nothing", msg.FromNode)
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug("addPublicKey: public key value for registered node is the same, doing nothing", "node", msg.FromNode)
 		return
 	}
 
@@ -166,35 +162,8 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 	}
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
-	proc.errorKernel.logDebug(er)
 	c.pki.errorKernel.infoSend(proc, msg, er)
 }
-
-// // dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
-// func (c *centralAuth) dbGetPublicKey(node string) ([]byte, error) {
-// 	var value []byte
-// 	// View is a help function to get values out of the database.
-// 	err := c.db.View(func(tx *bolt.Tx) error {
-// 		//Open a bucket to get key's and values from.
-// 		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
-// 		if bu == nil {
-// 			log.Printf("info: no db bucket exist: %v\n", c.bucketNamePublicKeys)
-// 			return nil
-// 		}
-//
-// 		v := bu.Get([]byte(node))
-// 		if len(v) == 0 {
-// 			log.Printf("info: view: key not found\n")
-// 			return nil
-// 		}
-//
-// 		value = v
-//
-// 		return nil
-// 	})
-//
-// 	return value, err
-// }
 
 // dbUpdatePublicKey will update the public key for a node in the db.
 func (p *pki) dbUpdatePublicKey(node string, value []byte) error {
@@ -227,7 +196,6 @@ func (p *pki) dbDeletePublicKeys(bucket string, nodes []string) error {
 			err := bu.Delete([]byte(n))
 			if err != nil {
 				er := fmt.Errorf("error: delete key in bucket %v failed: %v", bucket, err)
-				p.errorKernel.logDebug(er)
 				return er
 			}
 		}

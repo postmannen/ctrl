@@ -23,8 +23,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	// data to the socket instead of writing it to a normal file.
 	fi, err := os.Stat(file)
 	if err == nil && !os.IsNotExist(err) {
-		er := fmt.Errorf("info: reqWriteFileOrSocket: failed to stat file, but will continue: %v", folderTree)
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug("reqWriteFileOrSocket: failed to stat file, but will continue", "folderTree", folderTree)
 	}
 
 	if fi != nil && fi.Mode().Type() == fs.ModeSocket {
@@ -53,8 +52,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 			return er
 		}
 
-		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logDebug(er)
+		proc.errorKernel.logDebug("reqWriteFileOrSocket: Creating subscribers data folder at", "folderTree", folderTree)
 	}
 
 	var fileFlag int
@@ -112,8 +110,7 @@ func methodToFile(proc process, message Message, node string) ([]byte, error) {
 // return the output of the command run back to the calling publisher
 // as a new message.
 func methodTailFile(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(inf)
+	proc.errorKernel.logDebug("<--- TailFile REQUEST received", "fromNode", message.FromNode, "data", message.Data)
 
 	proc.processes.wg.Add(1)
 	go func() {

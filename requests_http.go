@@ -11,8 +11,7 @@ import (
 
 // handler to do a Http Get.
 func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- REQHttpGet received", "fromNode", message.FromNode, "data", message.Data)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -112,8 +111,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 // handler to do a Http Get Scheduled.
 // The second element of the MethodArgs slice holds the timer defined in seconds.
 func methodHttpGetScheduled(proc process, message Message, node string) ([]byte, error) {
-	er := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logDebug(er)
+	proc.errorKernel.logDebug("<--- REQHttpGetScheduled received", "fromNode", message.FromNode, "data", message.Data)
 
 	proc.processes.wg.Add(1)
 	go func() {

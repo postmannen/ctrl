@@ -108,8 +108,7 @@ func (n *nodeAcl) loadFromFile() error {
 	if _, err := os.Stat(n.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		er := fmt.Errorf("acl: loadFromFile: no acl file found at %v", n.filePath)
-		n.errorKernel.logDebug(er)
+		n.errorKernel.logDebug("nodeAcl:loadFromFile: no acl file found", "file", n.filePath)
 		return nil
 	}
 
@@ -131,8 +130,7 @@ func (n *nodeAcl) loadFromFile() error {
 		return err
 	}
 
-	er := fmt.Errorf("nodeAcl: loadFromFile: Loaded existing acl's from file: %v", n.aclAndHash.Hash)
-	n.errorKernel.logDebug(er)
+	n.errorKernel.logDebug("nodeAcl: loadFromFile: Loaded existing acl's from file", "hash", n.aclAndHash.Hash)
 
 	return nil
 }
@@ -234,8 +232,7 @@ func (p *publicKeys) loadFromFile() error {
 		return err
 	}
 
-	er := fmt.Errorf("nodeAuth: loadFromFile: Loaded existing keys from file: %v", p.keysAndHash.Hash)
-	p.errorKernel.logDebug(er)
+	p.errorKernel.logDebug("nodeAuth: loadFromFile: Loaded existing keys from file", "hash", p.keysAndHash.Hash)
 
 	return nil
 }
