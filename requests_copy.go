@@ -143,8 +143,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 			var err error
 			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
 			if err != nil {
-				er := fmt.Errorf("methodCopySrc: failed to parse uint, %v", err)
-				proc.errorKernel.logError(er)
+				proc.errorKernel.logError("methodCopySrc: failed to parse uint", "error", err)
 			}
 
 			er := fmt.Errorf("info: FolderPermission defined in message for socket: %v, converted = %v", message.MethodArgs[5], folderPermission)

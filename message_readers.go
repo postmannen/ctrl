@@ -319,16 +319,14 @@ func (s *server) readFolder() {
 	if _, err := os.Stat(s.configuration.ReadFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(s.configuration.ReadFolder, 0770)
 		if err != nil {
-			er := fmt.Errorf("error: failed to create readfolder folder: %v", err)
-			s.errorKernel.logError(er)
+			s.errorKernel.logError("readfolder: failed to create readfolder", "error", err)
 			os.Exit(1)
 		}
 	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		er := fmt.Errorf("main: failed to create new logWatcher: %v", err)
-		s.errorKernel.logError(er)
+		s.errorKernel.logError("readfolder: failed to create new logWatcher", "error", err)
 		os.Exit(1)
 	}
 
@@ -427,8 +425,7 @@ func (s *server) readFolder() {
 	// Add a path.
 	err = watcher.Add(s.configuration.ReadFolder)
 	if err != nil {
-		er := fmt.Errorf("startLogsWatcher: failed to add watcher: %v", err)
-		s.errorKernel.logError(er)
+		s.errorKernel.logError("readFolder: start logs watcher: failed to add watcher", "error", err)
 		os.Exit(1)
 	}
 }
@@ -440,8 +437,7 @@ func (s *server) readFolder() {
 func (s *server) readTCPListener() {
 	ln, err := net.Listen("tcp", s.configuration.TCPListener)
 	if err != nil {
-		er := fmt.Errorf("error: readTCPListener: failed to start tcp listener: %v", err)
-		s.errorKernel.logError(er)
+		s.errorKernel.logError("readTCPListener: failed to start tcp listener", "error", err)
 		os.Exit(1)
 	}
 	// Loop, and wait for new connections.
@@ -547,8 +543,7 @@ func (s *server) readHttpListener() {
 	go func() {
 		n, err := net.Listen("tcp", s.configuration.HTTPListener)
 		if err != nil {
-			er := fmt.Errorf("error: startMetrics: failed to open prometheus listen port: %v", err)
-			s.errorKernel.logError(er)
+			s.errorKernel.logError("readHttpListener: failed to open listen port", "error", err)
 			os.Exit(1)
 		}
 		mux := http.NewServeMux()
@@ -556,8 +551,7 @@ func (s *server) readHttpListener() {
 
 		err = http.Serve(n, mux)
 		if err != nil {
-			er := fmt.Errorf("error: startMetrics: failed to start http.Serve: %v", err)
-			s.errorKernel.logError(er)
+			s.errorKernel.logError("readHttpListener: failed to start http.Serve", "error", err)
 			os.Exit(1)
 		}
 	}()

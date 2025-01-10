@@ -54,8 +54,7 @@ func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAu
 
 	err := n.loadSigningKeys()
 	if err != nil {
-		er := fmt.Errorf("newNodeAuth: %v", err)
-		errorKernel.logError(er)
+		errorKernel.logError("newNodeAuth", "error", err)
 		os.Exit(1)
 	}
 
@@ -96,9 +95,7 @@ func newNodeAcl(c *Configuration, errorKernel *errorKernel) *nodeAcl {
 
 	err := n.loadFromFile()
 	if err != nil {
-		er := fmt.Errorf("error: newNodeAcl: loading acl's from file: %v", err)
-		errorKernel.logError(er)
-		// os.Exit(1)
+		errorKernel.logError("newNodeAcl: loading acl's from file", "file", err)
 	}
 
 	return &n
@@ -202,9 +199,7 @@ func newPublicKeys(c *Configuration, errorKernel *errorKernel) *publicKeys {
 
 	err := p.loadFromFile()
 	if err != nil {
-		er := fmt.Errorf("error: newPublicKeys: loading public keys from file: %v", err)
-		errorKernel.logError(er)
-		// os.Exit(1)
+		errorKernel.logError("newPublicKeys: loading public keys from file", "file", err)
 	}
 
 	return &p
@@ -435,7 +430,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	}()
 
 	if err != nil {
-		n.errorKernel.logError(err)
+		n.errorKernel.logError("verifySignature", "error", err)
 	}
 
 	er := fmt.Errorf("info: verifySignature, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
@@ -461,8 +456,7 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
 	if !ok {
-		er := fmt.Errorf("verifyAcl: The fromNode=%v was not found in the acl", m.FromNode)
-		n.errorKernel.logError(er)
+		n.errorKernel.logError("verifyAcl: The fromNode was not found in the acl", "fromNode", m.FromNode)
 		return false
 	}
 

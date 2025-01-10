@@ -256,7 +256,7 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 
 	switch logLevel {
 	case logError:
-		e.logError(err)
+		e.logError("error", err)
 	case logInfo:
 		e.logInfo(err)
 	case logWarning:
@@ -281,9 +281,8 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 	e.errorCh <- ev
 }
 
-func (e *errorKernel) logError(err error) {
-	slog.Error("error", err)
-
+func (e *errorKernel) logError(msg string, args ...any) {
+	slog.Error(msg, args...)
 }
 
 func (e *errorKernel) logInfo(err error) {

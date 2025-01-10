@@ -576,16 +576,14 @@ func (s *server) routeMessagesToPublisherProcess() {
 
 					fh, err := os.Open(filePathToOpen)
 					if err != nil {
-						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument: %v", err)
-						s.errorKernel.logError(er)
+						s.errorKernel.logError("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
 						return
 					}
 					defer fh.Close()
 
 					b, err := io.ReadAll(fh)
 					if err != nil {
-						er := fmt.Errorf("error: routeMessagesToPublisherProcess: failed to read file %v given as CTRL_FILE argument: %v", filePathToOpen, err)
-						s.errorKernel.logError(er)
+						s.errorKernel.logError("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
 						return
 					}
 
