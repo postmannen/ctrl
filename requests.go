@@ -111,9 +111,6 @@ const (
 	ErrorLog Method = "errorLog"
 	// Http Get
 	HttpGet Method = "httpGet"
-	// Http Get Scheduled
-	// The second element of the MethodArgs slice holds the timer defined in seconds.
-	HttpGetScheduled Method = "httpGetScheduled"
 	// Tail file
 	TailFile Method = "tailFile"
 	// REQNone is used when there should be no reply.
@@ -192,12 +189,11 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			// The hello publisher will not subscribe for messages, it will
 			// only start a procFunc, so we we don't need a handler with a method,
 			// so we set it to nil.
-			HelloPublisher:   Handler(nil),
-			ErrorLog:         Handler(methodErrorLog),
-			HttpGet:          Handler(methodHttpGet),
-			HttpGetScheduled: Handler(methodHttpGetScheduled),
-			TailFile:         Handler(methodTailFile),
-			PublicKey:        Handler(methodPublicKey),
+			HelloPublisher: Handler(nil),
+			ErrorLog:       Handler(methodErrorLog),
+			HttpGet:        Handler(methodHttpGet),
+			TailFile:       Handler(methodTailFile),
+			PublicKey:      Handler(methodPublicKey),
 
 			KeysUpdateRequest: Handler(methodKeysUpdateRequest),
 			KeysUpdateReceive: Handler(methodKeysUpdateReceive),
