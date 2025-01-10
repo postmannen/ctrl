@@ -212,8 +212,7 @@ func (p *publicKeys) loadFromFile() error {
 	if _, err := os.Stat(p.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		er := fmt.Errorf("no public keys file found at %v, new file will be created", p.filePath)
-		p.errorKernel.logInfo(er)
+		p.errorKernel.logInfo("publicKeys: loadFromFile: no public keys file found, new file will be created", "file", p.filePath)
 		return nil
 	}
 
@@ -316,8 +315,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 		n.SignPublicKey = pub
 		n.SignPrivateKey = priv
 
-		er := fmt.Errorf("info: no signing keys found, generating new keys")
-		n.errorKernel.logInfo(er)
+		n.errorKernel.logInfo("loadSigningKeys: no signing keys found, generating new keys")
 
 		// We got the new generated keys now, so we can return.
 		return nil
@@ -404,8 +402,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	// in the map, we return that the signature was verified
 	// to true to allow the method to be executed.
 	if _, ok := signatureCheckMap[m.Method]; !ok {
-		er := fmt.Errorf("verifySignature: will not do signature check for method: %v", m.Method)
-		n.errorKernel.logInfo(er)
+		n.errorKernel.logInfo("verifySignature: will not do signature check for method", "method", m.Method)
 		return true
 	}
 
@@ -433,8 +430,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 		n.errorKernel.logError("verifySignature", "error", err)
 	}
 
-	er := fmt.Errorf("info: verifySignature, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
-	n.errorKernel.logInfo(er)
+	n.errorKernel.logInfo("verifySignature:", "result", ok, "fromNode", m.FromNode, "method", m.Method)
 
 	return ok
 }
@@ -443,8 +439,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 func (n *nodeAuth) verifyAcl(m Message) bool {
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != CliCommand {
-		er := fmt.Errorf("verifyAcl: not REQCliCommand and will not do acl check, method: %v", m.Method)
-		n.errorKernel.logInfo(er)
+		n.errorKernel.logInfo("verifyAcl: we shall not do acl check on method", "method", m.Method)
 		return true
 	}
 
@@ -462,20 +457,17 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	_, ok = cmdMap[command("*")]
 	if ok {
-		er := fmt.Errorf("verifyAcl: The acl said \"*\", all commands allowed from node=%v", m.FromNode)
-		n.errorKernel.logInfo(er)
+		n.errorKernel.logInfo("verifyAcl: The acl said \"*\", all commands allowed from node", "fromNode", m.FromNode)
 		return true
 	}
 
 	_, ok = cmdMap[command(argsStringified)]
 	if !ok {
-		er := fmt.Errorf("verifyAcl: The command=%v was NOT FOUND in the acl", m.MethodArgs)
-		n.errorKernel.logInfo(er)
+		n.errorKernel.logInfo("verifyAcl: The command was NOT FOUND in the acl", "methodArgs", m.MethodArgs)
 		return false
 	}
 
-	er := fmt.Errorf("verifyAcl: the command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
-	n.errorKernel.logInfo(er)
+	n.errorKernel.logInfo("verifyAcl: the command was FOUND in the acl", "result", ok, "fromNode", m.FromNode, "method", m.Method)
 
 	return true
 }

@@ -142,7 +142,7 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- Message) error {
 			case logError:
 				slog.Error("error", fmt.Errorf("%v", er))
 			case logInfo:
-				slog.Info(er)
+				slog.Info("info", fmt.Errorf("%v", er))
 			case logWarning:
 				slog.Warn(er)
 			case logDebug:
@@ -258,7 +258,7 @@ func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel log
 	case logError:
 		e.logError("error", err)
 	case logInfo:
-		e.logInfo(err)
+		e.logInfo("info", err)
 	case logWarning:
 		e.logWarn(err)
 	case logDebug:
@@ -285,8 +285,8 @@ func (e *errorKernel) logError(msg string, args ...any) {
 	slog.Error(msg, args...)
 }
 
-func (e *errorKernel) logInfo(err error) {
-	slog.Info(err.Error())
+func (e *errorKernel) logInfo(msg string, args ...any) {
+	slog.Info(msg, args...)
 }
 
 func (e *errorKernel) logWarn(err error) {

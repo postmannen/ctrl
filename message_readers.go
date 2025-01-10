@@ -42,13 +42,11 @@ func (s *server) readStartupFolder() {
 	}
 
 	for _, fp := range filePaths {
-		er := fmt.Errorf("info: ranging filepaths, current filePath contains: %v", fp)
-		s.errorKernel.logInfo(er)
+		s.errorKernel.logInfo("readStartupFolder: ranging filepaths, current filePath contains", "filepath", fp)
 	}
 
 	for _, filePath := range filePaths {
-		er := fmt.Errorf("info: reading and working on file from startup folder %v", filePath)
-		s.errorKernel.logInfo(er)
+		s.errorKernel.logInfo("readStartupFolder: reading and working on file from startup folder ", "file", filePath)
 
 		// Read the content of each file.
 		readBytes, err := func(filePath string) ([]byte, error) {
@@ -105,7 +103,7 @@ func (s *server) readStartupFolder() {
 
 		}
 
-		er = fmt.Errorf("%v", messages)
+		er := fmt.Errorf("%v", messages)
 		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
 		s.messageDeliverLocalCh <- messages

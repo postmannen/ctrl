@@ -81,8 +81,7 @@ func newSchemaMain(configuration *Configuration, errorKernel *errorKernel) *sche
 	// Load ACLMap from disk if present.
 	func() {
 		if _, err := os.Stat(s.ACLMapFilePath); os.IsNotExist(err) {
-			er := fmt.Errorf("info: newSchemaMain: no file for ACLMap found, will create new one, %v: %v", s.ACLMapFilePath, err)
-			errorKernel.logInfo(er)
+			errorKernel.logInfo("newSchemaMain: no file for ACLMap found, will create new one", "file", s.ACLMapFilePath, "error", err)
 
 			// If no aclmap is present on disk we just return from this
 			// function without loading any values.
