@@ -293,6 +293,7 @@ func (e *errorKernel) logWarn(msg string, args ...any) {
 	slog.Warn(msg, args...)
 }
 
+// TODO: Make this into structured logging
 func (e *errorKernel) logDebug(err error) {
 	if e.configuration.LogLevel == string(logDebug) {
 		slog.Debug("debug", err.Error())
