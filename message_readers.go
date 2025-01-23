@@ -345,7 +345,7 @@ func (s *server) readFolder() {
 						fh, err := os.Open(event.Name)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: failed to open readFile from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logDebug)
 							return
 						}
 

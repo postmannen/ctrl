@@ -180,6 +180,10 @@ func (p *processes) Start(proc process) {
 	}
 
 	proc.startup.startProcess(proc, PublicKey, nil)
+
+	// TODO: Create configuration flags for enabling processes.
+	proc.startup.startProcess(proc, PortSrc, nil)
+	proc.startup.startProcess(proc, PortDst, nil)
 }
 
 // Stop all subscriber processes.

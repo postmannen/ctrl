@@ -40,3 +40,4 @@
 
 - [ctrl as github action runner](usecase-ctrl-as-github-action-runner.md)
 - [ctrl as prometheus collector](usecase-ctrl-as-prometheus-collector.md)
+- [ctrl as tcp forwarder for ssh](usecase-ctrl-as-tcp-forwarder-for-ssh.md)

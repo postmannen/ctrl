@@ -1,0 +1,335 @@
+// request_dummy.go
+//
+// request_dummy.go are put here as an example for how a process via it's
+// method can spawn new sub processes. The only purpose of the 'main' method
+// is to to prepare and start one or more sub processes that will handle the
+// actual logic.
+//
+// Sub processes can be either short lived to do some work, like copying a
+// file, or long lived like a server that listens for incoming connections
+// to serve a web page.
+
+package ctrl
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"strconv"
+	"time"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/google/uuid"
+)
+
+type dummyInitialData struct {
+	UUID                 string
+	SourceNode           Node
+	SourceSubMethod      Method
+	SourcePort           string
+	DestinationNode      Node
+	DestinationSubMethod Method
+	DestinationPort      string
+	MaxSessionTimeout    int
+}
+
+// The method that will handle the initial message, and setup whats needed for an outbound connection.
+func methodDummySrc(proc process, message Message, node string) ([]byte, error) {
+
+	go func() {
+		defer proc.processes.wg.Done()
+
+		// Message example to start an outbound connection
+		// ---
+		// - toNode:
+		//     - node1
+		//   method: dummySrc
+		//   methodArgs:
+		//     - node1			# destination node
+		//     - 8080			# destination port
+		//     - 100 			# max session timeout
+		//   replymethod: console
+
+		const (
+			arg0_DestinationNode   = 0
+			arg1_DestinationPort   = 1
+			arg2_MaxSessionTimeout = 2
+		)
+
+		wantMethodArgs := "want: (0)destination-node, (1)destination-port, (2)max-session-timeout"
+
+		pid := dummyInitialData{
+			UUID:       uuid.New().String(),
+			SourceNode: proc.node,
+		}
+
+		proc.processes.wg.Add(1)
+		if len(message.MethodArgs) < 2 {
+			slog.Error("methodDummySrc: got <2 number methodArgs", "want", wantMethodArgs)
+			return
+		}
+
+		// Destination node
+		if message.MethodArgs[arg0_DestinationNode] == "" {
+			slog.Error("methodDummySrc: no destination node specified in method args", "want", wantMethodArgs)
+			return
+		}
+		pid.DestinationNode = Node(message.MethodArgs[arg0_DestinationNode])
+
+		// Destination port
+		if message.MethodArgs[arg1_DestinationPort] == "" {
+			slog.Error("methodDummySrc: no destination port specified in method args", "want", wantMethodArgs)
+			return
+		}
+		pid.DestinationPort = message.MethodArgs[arg1_DestinationPort]
+
+		// Max session timeout
+		if message.MethodArgs[arg2_MaxSessionTimeout] == "" {
+			slog.Error("methodDummySrc: no max session time specified in method args", "want", wantMethodArgs)
+			return
+		}
+		n, err := strconv.Atoi(message.MethodArgs[arg2_MaxSessionTimeout])
+		if err != nil {
+			slog.Error("methodDummySrc: unable to convert max session timeout from string to int", "error", err)
+			return
+		}
+		pid.MaxSessionTimeout = n
+
+		// Create a child context to use with the procFunc with timeout set to the max allowed total copy time
+		// specified in the message.
+		var ctx context.Context
+		var cancel context.CancelFunc
+		func() {
+			ctx, cancel = context.WithTimeout(proc.ctx, time.Second*time.Duration(pid.MaxSessionTimeout))
+		}()
+
+		srcSubProcessName := fmt.Sprintf("%v.%v", SUBDummySrc, pid.UUID)
+		pid.SourceSubMethod = Method(srcSubProcessName)
+
+		// Create a new subprocess that will handle the network source side.
+		subject := newSubjectNoVerifyHandler(pid.SourceSubMethod, node)
+		dummySrcSubProc := newSubProcess(ctx, proc.server, subject)
+
+		// Attach a procfunc to the sub process that will do the actual logic with the network source port.
+		//
+		// TODO: We need to initiate the network connection here to
+		// get hold of the source port, and send that over to the
+		// destination node.
+		// NB: assign pid.SourcePort a value.
+		dummySrcSubProc.procFunc = dummySrcSubProcFunc(pid, message, cancel)
+
+		// Assign a handler to the sub process for receiving messages for the subprocess.
+		dummySrcSubProc.handler = dummySrcSubHandler()
+
+		// Start sub process. The process will be killed when the context expires.
+		go dummySrcSubProc.start()
+
+		// Prepare the naming for the dst method here so we can have all the
+		// information in the pid from the beginning at both ends and not have
+		// to generate naming on the destination node.
+		dstSubProcessName := fmt.Sprintf("%v.%v", SUBDummyDst, pid.UUID)
+		pid.DestinationSubMethod = Method(dstSubProcessName)
+
+		fmt.Printf("DEBUG: methodDummySrc, pid: %+v\n", pid)
+
+		// Marshal the data payload to send to the dst.
+		cb, err := cbor.Marshal(pid)
+		if err != nil {
+			er := fmt.Errorf("error: methodDummySrc: cbor marshalling failed: %v, message: %v", err, message)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
+			cancel()
+		}
+
+		// Send a message to the the destination node, to also start up a sub
+		// process there.
+
+		msg := Message{
+			ToNode:          pid.DestinationNode,
+			Method:          DummyDst,
+			Data:            cb,
+			ACKTimeout:      message.ACKTimeout,
+			Retries:         message.Retries,
+			ReplyMethod:     Console, // TODO: Adding for debug output
+			ReplyACKTimeout: message.ReplyACKTimeout,
+			ReplyRetries:    message.ReplyRetries,
+		}
+
+		proc.newMessagesCh <- msg
+
+		replyData := fmt.Sprintf("info: succesfully started dummy source process: procName=%v, srcNode=%v, sourcePort=%v, dstNode=%v, starting sub process=%v", dummySrcSubProc.processName, node, pid.SourcePort, pid.DestinationNode, srcSubProcessName)
+
+		newReplyMessage(proc, message, []byte(replyData))
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+func methodDummyDst(proc process, message Message, node string) ([]byte, error) {
+	var subProcessName string
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+
+		// Get the status message sent from source.
+		var pid dummyInitialData
+		err := cbor.Unmarshal(message.Data, &pid)
+		if err != nil {
+			er := fmt.Errorf("error: methodDummyDst: failed to cbor Unmarshal data: %v, message=%v", err, message)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
+			return
+		}
+
+		fmt.Printf(" *** DEBUG: MaxSessionTimeout: %v\n", pid.MaxSessionTimeout)
+
+		// Create a child context to use with the procFunc
+		var ctx context.Context
+		var cancel context.CancelFunc
+		func() {
+			ctx, cancel = context.WithTimeout(proc.ctx, time.Second*time.Duration(pid.MaxSessionTimeout))
+		}()
+
+		// Start preparing to start a sub process.
+		sub := newSubjectNoVerifyHandler(pid.DestinationSubMethod, node)
+
+		// But first...
+		// Check if we already got a sub process registered and started with
+		// the processName. If true, return here and don't start up another
+		// process.
+		//
+		// This check is put in here if a message for some reason are
+		// received more than once. The reason that this might happen can be
+		// that a message for the same copy request was received earlier, but
+		// was unable to start up within the timeout specified. The Sender of
+		// that request will then resend the message, but at the time that
+		// second message is received the subscriber process started for the
+		// previous message is then fully up and running, so we just discard
+		// that second message in those cases.
+
+		pn := processNameGet(sub.name())
+		// fmt.Printf("\n\n *** DEBUG: processNameGet: %v\n\n", pn)
+
+		proc.processes.active.mu.Lock()
+		_, ok := proc.processes.active.procNames[pn]
+		proc.processes.active.mu.Unlock()
+
+		if ok {
+			proc.errorKernel.logDebug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
+
+			// If the process name already existed we return here before any
+			// new information is registered in the process map and we avoid
+			// having to clean that up later.
+			return
+		}
+
+		// Create a new sub process.
+		dummyDstSubProc := newSubProcess(ctx, proc.server, sub)
+
+		// Give the sub process a procFunc that will do the actual networking within a procFunc,
+		dummyDstSubProc.procFunc = dummyDstSubProcFunc(pid, message, cancel)
+
+		// assign a handler to the sub process
+		dummyDstSubProc.handler = dummyDstSubHandler()
+
+		// The process will be killed when the context expires.
+		go dummyDstSubProc.start()
+
+		replyData := fmt.Sprintf("info: succesfully initiated dummy destination process: procName=%v, srcNode=%v, starting sub process=%v for the actual copying", dummyDstSubProc.processName, node, subProcessName)
+
+		newReplyMessage(proc, message, []byte(replyData))
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+func dummySrcSubHandler() func(process, Message, string) ([]byte, error) {
+	h := func(proc process, message Message, node string) ([]byte, error) {
+
+		select {
+		case <-proc.ctx.Done():
+			proc.errorKernel.logDebug("copySrcHandler: process ended", "processName", proc.processName)
+		case proc.procFuncCh <- message:
+			proc.errorKernel.logDebug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
+		}
+
+		return nil, nil
+	}
+
+	return h
+}
+
+func dummyDstSubHandler() func(process, Message, string) ([]byte, error) {
+	h := func(proc process, message Message, node string) ([]byte, error) {
+
+		select {
+		case <-proc.ctx.Done():
+			proc.errorKernel.logDebug("copyDstHandler: process ended", "processName", proc.processName)
+		case proc.procFuncCh <- message:
+			proc.errorKernel.logDebug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
+
+		}
+
+		return nil, nil
+	}
+
+	return h
+}
+
+func dummySrcSubProcFunc(pid dummyInitialData, initialMessage Message, cancel context.CancelFunc) func(context.Context, process, chan Message) error {
+	pf := func(ctx context.Context, proc process, procFuncCh chan Message) error {
+		fmt.Printf("STARTED PROCFUNC: %v\n", proc.subject.name())
+		defer fmt.Println("dummySrcProcFunc: canceled procFunc", "processName", proc.processName)
+
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("dummySrcProcFunc: canceling procFunc", "processName", proc.processName)
+				return nil
+
+			// Pick up the message recived by the copySrcSubHandler.
+			case message := <-procFuncCh:
+				_ = message
+
+				for i := 0; i < 20; i++ {
+					fmt.Printf("dst: %v\n", i)
+					time.Sleep(time.Second * 1)
+				}
+			}
+		}
+
+	}
+
+	return pf
+}
+
+func dummyDstSubProcFunc(pid dummyInitialData, message Message, cancel context.CancelFunc) func(context.Context, process, chan Message) error {
+
+	pf := func(ctx context.Context, proc process, procFuncCh chan Message) error {
+		fmt.Printf("STARTED PROCFUNC: %v\n", proc.subject.name())
+		defer fmt.Println("dummyDstProcFunc: canceled procFunc", "processName", proc.processName)
+
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("dummyDstProcFunc: got <-ctx.Done() cancelling procFunc", "processName", proc.processName)
+				return nil
+
+			// Pick up the message recived by the copySrcSubHandler.
+			case message := <-procFuncCh:
+				_ = message
+
+				for i := 0; i < 20; i++ {
+					fmt.Printf("dst: %v\n", i)
+					time.Sleep(time.Second * 1)
+				}
+			}
+		}
+
+	}
+
+	return pf
+}

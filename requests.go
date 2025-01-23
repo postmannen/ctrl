@@ -104,6 +104,17 @@ const (
 	SUBCopySrc Method = "subCopySrc"
 	// Write the destination copied to some node.
 	SUBCopyDst Method = "subCopyDst"
+
+	PortSrc    Method = "portSrc"
+	PortDst    Method = "PortDst"
+	SUBPortSrc Method = "subPortSrc"
+	SUBPortDst Method = "subPortDst"
+
+	DummySrc    Method = "dummySrc"
+	DummyDst    Method = "dummyDst"
+	SUBDummySrc Method = "subDummySrc"
+	SUBDummyDst Method = "subDummyDst"
+
 	// Hello I'm here message.
 	Hello          Method = "hello"
 	HelloPublisher Method = "helloPublisher"
@@ -185,6 +196,10 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			CopyDst:        Handler(methodCopyDst),
 			SUBCopySrc:     Handler(methodSUB),
 			SUBCopyDst:     Handler(methodSUB),
+			PortSrc:        Handler(methodPortSrc),
+			PortDst:        Handler(methodPortDst),
+			SUBPortSrc:     Handler(methodSUB),
+			SUBPortDst:     Handler(methodSUB),
 			Hello:          Handler(methodHello),
 			// The hello publisher will not subscribe for messages, it will
 			// only start a procFunc, so we we don't need a handler with a method,
@@ -258,7 +273,7 @@ func methodInitial(proc process, message Message, node string) ([]byte, error) {
 // ----
 
 // place holder method used for sub processes.
-// Methods used in sub processes are defined within the the requests
+// Methods used in sub processes are defined within the requests
 // they are spawned in, so this type is primarily for us to use the
 // same logic with sub process requests as we do with normal requests.
 func methodSUB(proc process, message Message, node string) ([]byte, error) {

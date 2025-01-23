@@ -1,0 +1,301 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.17 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.17" pages="4">
+  <diagram id="v0fDrbftQkuLOIMYALoA" name="key distribution flow">
+    <mxGraphModel dx="812" dy="603" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-1" target="tMiANJ_N9iX26Bk4R87N-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-1" value="node sends public key to central" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-2" target="tMiANJ_N9iX26Bk4R87N-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-2" value="ask if allowed to be put in central db" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="344" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-4" target="tMiANJ_N9iX26Bk4R87N-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-4" value="store key in not-acked db on central" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-5" target="tMiANJ_N9iX26Bk4R87N-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-5" value="create hash of all keys in db" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-11" target="tMiANJ_N9iX26Bk4R87N-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-11" value="operator allows the key onto central db" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="430" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-12" value="push the db with the hash to all nodes&lt;br&gt;&lt;br&gt;NB: should it be pushed to both ack&#39;ed and not ack&#39;ed nodes ?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="620" width="120" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-20" target="tMiANJ_N9iX26Bk4R87N-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-20" value="new key&lt;div&gt;detected in hello message&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="50" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-22" target="tMiANJ_N9iX26Bk4R87N-23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-22" value="keys update&lt;div&gt;receive&lt;/div&gt;&lt;div&gt;(node)&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="50" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-25" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-23" target="tMiANJ_N9iX26Bk4R87N-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-27" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-23" target="tMiANJ_N9iX26Bk4R87N-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-23" value="if length == 0" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-24" value="delete all keys" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="490" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tMiANJ_N9iX26Bk4R87N-26" target="tMiANJ_N9iX26Bk4R87N-28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-26" value="update and replace all keys" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="270" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-28" value="save to local file" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-30" value="keys allow&lt;div&gt;(central)&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="50" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tMiANJ_N9iX26Bk4R87N-32" value="get node name from operator to allow" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="WOR5zTzofjd4Fm8wHdib-1" value="move the node from the not-acked map to the ack&#39;ed map" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="270" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="WOR5zTzofjd4Fm8wHdib-2" value="create a new hash of all the nodes with keys in map" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="WOR5zTzofjd4Fm8wHdib-3" value="push updated map to all nodes" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="460" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="SR1WNxjGEkNWK4Vj7WTd" name="Page-3">
+    <mxGraphModel dx="812" dy="603" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="Miw9yFcv0oz29-3Sloob" name="portSrc-Dst">
+    <mxGraphModel dx="1160" dy="861" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-32" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-5" target="eCXqwsX-LsBgD2zF08TC-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-5" value="&lt;div&gt;read session info,&lt;br&gt;and start dst sub process&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="260" width="210" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-9" target="eCXqwsX-LsBgD2zF08TC-25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-9" value="main process, methodPortSrc:&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;create session info from methodArgs like dst ip:port to connect to, and also uuid&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;startSub Process for src&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="260" width="210" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-10" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-39" target="eCXqwsX-LsBgD2zF08TC-9">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="285" y="140" as="sourcePoint" />
+            <mxPoint x="490" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-11" value="&lt;div&gt;read messages from destination,&lt;/div&gt;&lt;div&gt;extract the data field, and put&lt;/div&gt;&lt;div&gt;it on the tcp connection to&amp;nbsp;&lt;/div&gt;&lt;div&gt;source&lt;/div&gt;&lt;br&gt;read tcp stream from source&lt;div&gt;put them in a message and send&lt;/div&gt;&lt;div&gt;to destination&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="590" width="210" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-15" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-9" target="eCXqwsX-LsBgD2zF08TC-5">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="510" y="360" as="sourcePoint" />
+            <mxPoint x="560" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-16" value="send session info to dst node&lt;br&gt;to create a sub process that&lt;br&gt;will connect to the tcp endpoint" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="eCXqwsX-LsBgD2zF08TC-15">
+          <mxGeometry x="-0.0114" y="-3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-17" value="read tcp stream from destination&lt;div&gt;put them in a message and send&lt;/div&gt;&lt;div&gt;to source&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;read messages from source,&lt;/div&gt;&lt;div&gt;extract the data field, and put&lt;/div&gt;&lt;div&gt;it on the tcp connection to&amp;nbsp;&lt;/div&gt;&lt;div&gt;destination&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="590" width="210" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1065" y="669.9999999999998" as="sourcePoint" />
+            <mxPoint x="1065" y="669.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-23" value="send data to source port" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="740" y="639.9999999999998" as="sourcePoint" />
+            <mxPoint x="390" y="639.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-24" target="eCXqwsX-LsBgD2zF08TC-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-24" value="start local tcp listener&lt;div&gt;using dst port&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="225" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-25" target="eCXqwsX-LsBgD2zF08TC-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-25" value="Start sub src process&lt;br&gt;sub process, methodPortSrc+UUID:&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="225" y="400" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-30" target="eCXqwsX-LsBgD2zF08TC-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-30" value="tcp service endpoint&lt;br&gt;ip:port" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="785" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-31" target="eCXqwsX-LsBgD2zF08TC-30">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-31" value="&lt;span style=&quot;font-size: 11px; text-wrap: nowrap; background-color: rgb(24, 20, 29);&quot;&gt;Start sub dst process&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="785" y="400" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-39" value="MESSAGE:&lt;div&gt;toNode: node1&lt;/div&gt;&lt;div&gt;method: portsrc&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;methodArgs:&lt;/div&gt;&lt;div&gt;- dstNode: node2&lt;/div&gt;&lt;div&gt;-&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="212.5" y="60" width="145" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-41" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="739.9999999999998" as="sourcePoint" />
+            <mxPoint x="740" y="739.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-42" value="send data to destination port" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="eCXqwsX-LsBgD2zF08TC-41">
+          <mxGeometry x="-0.3499" relative="1" as="geometry">
+            <mxPoint x="56" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-45" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Sending Data&lt;/h1&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Add a structure to use in the data field of the message with 2 fields.&lt;/div&gt;&lt;div&gt;1. The actual data in bytes&lt;/div&gt;&lt;div&gt;2. Status messages like&amp;nbsp; &amp;nbsp; &amp;nbsp; disconnect, done, etc...&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;With sub processes on both sides we check the status messages to understand what to do with the connection.&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="495" y="400" width="180" height="217" as="geometry" />
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-47" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-11" target="eCXqwsX-LsBgD2zF08TC-45">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="560" as="sourcePoint" />
+            <mxPoint x="450" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eCXqwsX-LsBgD2zF08TC-49" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="eCXqwsX-LsBgD2zF08TC-17" target="eCXqwsX-LsBgD2zF08TC-45">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="710" y="590" as="sourcePoint" />
+            <mxPoint x="760" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="_iMASUMRkJR4dl4_wDkr" name="port example">
+    <mxGraphModel dx="2418" dy="928" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="k5I41uUsAggWzrHWQhdS-15" value="" style="shape=mxgraph.cisco.computers_and_peripherals.pc;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="860" y="490.5" width="220" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-4" value="" style="shape=mxgraph.cisco.computers_and_peripherals.pc;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="50" y="490.5" width="220" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-1" value="ctrl&lt;div style=&quot;font-size: 20px;&quot;&gt;node1&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="180" y="220" width="120" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-3" value="ctrl&lt;div style=&quot;font-size: 20px;&quot;&gt;node2&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="870" y="220" width="120" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-14" value="Start TCP Listener&amp;nbsp;&lt;div style=&quot;font-size: 20px;&quot;&gt;localhost:10022&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="134" y="719.5" width="132" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-16" value="Connect TCP&lt;div style=&quot;font-size: 20px;&quot;&gt;192.168.1.99:22&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="875" y="719.5" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-17" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;exitX=1.034;exitY=0.826;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="k5I41uUsAggWzrHWQhdS-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="520" y="700" as="sourcePoint" />
+            <mxPoint x="555.0000000000002" y="520.2901399067289" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-18" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="675.5000000000002" y="520.2949962658702" as="sourcePoint" />
+            <mxPoint x="870" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-20" value="" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="400" y="470" width="60" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-21" value="" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="750" y="470" width="60" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-22" value="TCP packet encapsulated in NATS message" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;position2=0.42;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="370" y="320" width="120" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-23" value="TCP packet encapsulated in NATS message" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;position2=0.42;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="720" y="320" width="120" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-24" value="NATS&lt;div&gt;Server&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=21;" vertex="1" parent="1">
+          <mxGeometry x="555" y="220" width="120" height="490" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-25" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;exitX=1.021;exitY=0.172;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="k5I41uUsAggWzrHWQhdS-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="280" as="sourcePoint" />
+            <mxPoint x="866" y="282" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-26" value="" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.envelope_(message);" vertex="1" parent="1">
+          <mxGeometry x="400" y="240" width="60" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-27" value="Initial message to&lt;div style=&quot;font-size: 20px;&quot;&gt;connect a tcp stream from node1 on tcp port 10022&lt;br style=&quot;font-size: 20px;&quot;&gt;to&lt;br style=&quot;font-size: 20px;&quot;&gt;node2 tcp 192.168.1.99:22&lt;br&gt;and allow tcp forwarding&lt;/div&gt;" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;position2=0.42;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="320" y="30" width="250" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-28" value="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=40;" vertex="1" parent="1">
+          <mxGeometry x="230" y="270" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-29" value="2" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=40;" vertex="1" parent="1">
+          <mxGeometry x="230" y="500" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-32" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.diag_round_rect;dx=6;whiteSpace=wrap;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="-70" y="581" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-33" value="SSH Client&lt;div style=&quot;font-size: 20px;&quot;&gt;connect to&lt;/div&gt;&lt;div style=&quot;font-size: 20px;&quot;&gt;localhost:10022&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="-55.5" y="606" width="125" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-34" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.diag_round_rect;dx=6;whiteSpace=wrap;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="560" width="120" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-35" value="SSH Server&lt;div style=&quot;font-size: 20px;&quot;&gt;at&lt;/div&gt;&lt;div style=&quot;font-size: 20px;&quot;&gt;192.168.1:99&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="1034.5" y="562" width="125" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-37" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fillColor=#60a917;strokeColor=#2D7600;" edge="1" parent="1" target="k5I41uUsAggWzrHWQhdS-35">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="625" as="sourcePoint" />
+            <mxPoint x="520" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="k5I41uUsAggWzrHWQhdS-38" value="&lt;font style=&quot;font-size: 30px;&quot;&gt;SSH Connection&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="k5I41uUsAggWzrHWQhdS-37">
+          <mxGeometry x="-0.1926" y="1" relative="1" as="geometry">
+            <mxPoint x="-43" y="-4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
