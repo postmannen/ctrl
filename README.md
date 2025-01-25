@@ -144,6 +144,7 @@ ctrl supports both the use of flags with env variables. An .env file can also be
 |console | Print to stdout or stderr|
 |fileAppend | Append to file, can also write to unix sockets|
 |file | Write to file, can also write to unix sockets|
+|portSrc | Forward tcp conntections between ctrl nodes|
 
 ## History
 
