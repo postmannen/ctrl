@@ -9,7 +9,7 @@ We want to connect with ssh to node2, but it is not directly available from the 
 </style>
 </head>
 <body>
-<p align="center"><img src="https://github.com/postmannen/ctrl/blob/main/doc/usecase-portforward-ssh.svg?raw=true" /></p>
+<p align="center"><img src="https://github.com/postmannen/ctrl/blob/main/doc/portforward-ssh.svg?raw=true" /></p>
 </body>
 
 ## Steps
