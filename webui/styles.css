@@ -1,0 +1,319 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f6fa;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.split-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+  padding-left: 60px;
+}
+
+.left-panel {
+  min-width: 200px;
+  padding: 20px;
+  overflow-y: auto;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  width: 50%; /* Set initial width */
+}
+
+.right-panel {
+  flex: 1; /* Take remaining space */
+  padding: 20px;
+  background-color: #2c3e50;
+  min-width: 200px;
+}
+
+#outputArea {
+  width: 100%;
+  height: 100%;
+  background-color: #34495e;
+  color: #ecf0f1;
+  font-family: "Courier New", monospace;
+  padding: 15px;
+  border: none;
+  border-radius: 4px;
+  resize: none;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+form {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dcdde1;
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.method-args input,
+.method-args textarea {
+  margin-bottom: 10px;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+.active-connections {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#connectionsList {
+  display: grid;
+  gap: 20px;
+}
+
+.connection-item {
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.connection-info {
+  flex-grow: 1;
+}
+
+.connection-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.button-group button {
+  flex: 1;
+}
+
+.splitter {
+  width: 8px;
+  background-color: #cbd5e0;
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  user-select: none; /* Prevent text selection while dragging */
+}
+
+.splitter:hover,
+.splitter.dragging {
+  background-color: #3498db;
+}
+
+/* Hamburger Menu Styles */
+.hamburger-menu {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  cursor: pointer;
+}
+
+.hamburger-icon {
+  width: 30px;
+  height: 20px;
+  position: relative;
+  cursor: pointer;
+}
+
+.hamburger-icon span {
+  display: block;
+  position: absolute;
+  height: 3px;
+  width: 100%;
+  background: #2c3e50;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon span:nth-child(1) {
+  top: 0;
+}
+.hamburger-icon span:nth-child(2) {
+  top: 8px;
+}
+.hamburger-icon span:nth-child(3) {
+  top: 16px;
+}
+
+.menu-open .hamburger-icon span:nth-child(1) {
+  transform: rotate(45deg);
+  top: 8px;
+}
+
+.menu-open .hamburger-icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-open .hamburger-icon span:nth-child(3) {
+  transform: rotate(-45deg);
+  top: 8px;
+}
+
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: -250px;
+  width: 250px;
+  height: 100vh;
+  background: #2c3e50;
+  padding-top: 60px;
+  transition: left 0.3s ease;
+  z-index: 99;
+}
+
+.menu-open .side-menu {
+  left: 0;
+}
+
+.side-menu a {
+  display: block;
+  padding: 15px 25px;
+  color: white;
+  text-decoration: none;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.side-menu a:hover {
+  background: #34495e;
+}
+
+.side-menu a.active {
+  background: #3498db;
+}
+
+.settings-container {
+  padding: 20px;
+  margin-left: 60px; /* Space for the hamburger menu */
+}
+
+.settings-container h1 {
+  margin-bottom: 30px;
+  color: #2c3e50;
+  font-family: "Courier New", monospace;
+  font-size: 24px;
+}
+
+#settingsForm {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.settings-button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 10px 0;
+}
+
+.settings-button:hover {
+  background-color: #45a049;
+}
+
+.clear-button {
+  background-color: #e74c3c;
+  margin-left: 10px;
+}
+
+.clear-button:hover {
+  background-color: #c0392b;
+}
+
+.nkeys-group {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+}
+
+.nkeys-group input[readonly] {
+  background-color: #f5f5f5;
+  cursor: text;
+}
+
+/* Checkbox styling */
+.nkeys-group .form-group label[for="useNkeys"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nkeys-group .form-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}

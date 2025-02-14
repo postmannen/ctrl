@@ -169,6 +169,9 @@ const (
 	AclExport = "aclExport"
 	// REQAclImport
 	AclImport = "aclImport"
+
+	// WebUI is used to send messages to the web ui.
+	WebUI Method = "webUI"
 )
 
 type Handler func(proc process, message Message, node string) ([]byte, error)
@@ -230,6 +233,8 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			AclExport:                     Handler(methodAclExport),
 			AclImport:                     Handler(methodAclImport),
 			Test:                          Handler(methodTest),
+
+			WebUI: Handler(nil),
 		},
 	}
 
@@ -353,17 +358,18 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		// are injected f.ex. on a socket, and there they are directly converted into separate
 		// node messages. With other words a message in the system are only for single nodes,
 		// so we don't have to worry about the ToNodes field when creating reply messages.
-		FromNode:      message.ToNode,
-		Data:          outData,
-		Method:        message.ReplyMethod,
-		MethodArgs:    message.ReplyMethodArgs,
-		MethodTimeout: message.ReplyMethodTimeout,
-		IsReply:       true,
-		RetryWait:     message.RetryWait,
-		ACKTimeout:    message.ReplyACKTimeout,
-		Retries:       message.ReplyRetries,
-		Directory:     message.Directory,
-		FileName:      message.FileName,
+		FromNode:           message.ToNode,
+		Data:               outData,
+		Method:             message.ReplyMethod,
+		MethodArgs:         message.ReplyMethodArgs,
+		MethodTimeout:      message.ReplyMethodTimeout,
+		IsReply:            true,
+		RetryWait:          message.RetryWait,
+		ACKTimeout:         message.ReplyACKTimeout,
+		Retries:            message.ReplyRetries,
+		Directory:          message.Directory,
+		FileName:           message.FileName,
+		MethodInstructions: message.ReplyMethodInstructions,
 
 		// Put in a copy of the initial request message, so we can use it's properties if
 		// needed to for example create the file structure naming on the subscriber.

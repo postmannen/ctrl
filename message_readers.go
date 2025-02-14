@@ -543,6 +543,9 @@ func (s *server) readHttpListener() {
 		}
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", s.readHTTPlistenerHandler)
+		// TODO: Make this configurable, and move it out of the readHttpListener function,
+		// make a separate conf flag and function for it.
+		mux.Handle("/webui/", http.StripPrefix("/webui/", http.FileServer(http.Dir("/Users/bt/ctrl/webui"))))
 
 		err = http.Serve(n, mux)
 		if err != nil {

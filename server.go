@@ -631,6 +631,16 @@ func (s *server) exposeDataFolder() {
 // messageSerializeAndCompress will serialize and compress the Message, and
 // return the result as a []byte.
 func (s *server) messageSerializeAndCompress(msg Message) ([]byte, error) {
+	// NB: Implementing json encoding for WebUI messages for now.
+	if msg.Method == WebUI {
+		bSerialized, err := json.Marshal(msg)
+		if err != nil {
+			er := fmt.Errorf("error: messageDeliverNats: json encode message failed: %v", err)
+			return nil, er
+		}
+		fmt.Printf("JSON JSON JSON JSON JSON JSON JSON JSON JSON JSON JSON JSON \n")
+		return bSerialized, nil
+	}
 
 	// encode the message structure into cbor
 	bSerialized, err := cbor.Marshal(msg)
@@ -657,6 +667,7 @@ func (s *server) messageDeserializeAndUncompress(msgData []byte) (Message, error
 	// 	er := fmt.Errorf("info: subscriberHandlerJetstream: nats message received from %v, with subject %v ", headerFromNode, msg.Subject())
 	// 	s.errorKernel.logDebug(er)
 	// }
+	msgData2 := msgData
 
 	zr, err := zstd.NewReader(nil)
 	if err != nil {
@@ -665,9 +676,19 @@ func (s *server) messageDeserializeAndUncompress(msgData []byte) (Message, error
 	}
 	msgData, err = zr.DecodeAll(msgData, nil)
 	if err != nil {
-		er := fmt.Errorf("error: subscriberHandlerJetstream: zstd decoding failed: %v", err)
+		// er := fmt.Errorf("error: subscriberHandlerJetstream: zstd decoding failed: %v", err)
 		zr.Close()
-		return Message{}, er
+
+		// Not zstd encoded, try to decode as JSON. This is for messages from the WebUI.
+		var msg Message
+		fmt.Printf("DEBUG: msgData2: %v\n", string(msgData2))
+		err = json.Unmarshal(msgData2, &msg)
+		if err != nil {
+			return Message{}, err
+		}
+
+		// JSON decoded, return the message
+		return msg, nil
 	}
 
 	zr.Close()

@@ -89,6 +89,12 @@ type Message struct {
 	Schedule []int `json:"schedule" yaml:"schedule"`
 	// Use auto detection of shell for cliCommands
 	UseDetectedShell bool `json:"useDetectedShell" yaml:"useDetectedShell"`
+	// MethodInstructions is a string that contains eventual extra instructions
+	// for the method that is used when the method is executed.
+	MethodInstructions []string `json:"methodInstructions" yaml:"methodInstructions"`
+	// ReplyMethodInstructions is a string that contains eventual extra instructions
+	// for the method that is used when the reply method is executed for the reply message.
+	ReplyMethodInstructions []string `json:"replyMethodInstructions" yaml:"replyMethodInstructions"`
 }
 
 // --- Subject

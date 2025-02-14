@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings - Command Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="hamburger-menu">
+      <div class="hamburger-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+
+    <nav class="side-menu">
+      <a href="index.html">Command</a>
+      <a href="#" id="fileTemplatesLink">File Templates</a>
+      <a href="settings.html" class="active">Settings</a>
+    </nav>
+
+    <div class="settings-container">
+      <h1>Settings</h1>
+      <button id="generateNkeysBtn" class="settings-button">
+        Generate Nkeys
+      </button>
+      <div class="form-group nkeys-group">
+        <div class="form-group">
+          <label for="nkeysSeedRaw">Nkeys SeedRaw:</label>
+          <input
+            type="text"
+            id="nkeysSeedRaw"
+            placeholder="Enter seed raw value..."
+          />
+          <button id="updateKeysBtn" class="settings-button">
+            Update Keys
+          </button>
+        </div>
+        <div class="form-group">
+          <label for="nkeysSeed">Nkeys Seed:</label>
+          <input type="text" id="nkeysSeed" readonly />
+        </div>
+        <div class="form-group">
+          <label for="nkeysPublic">Nkeys Public:</label>
+          <input type="text" id="nkeysPublic" readonly />
+        </div>
+        <div class="form-group">
+          <label for="useNkeys">
+            <input type="checkbox" id="useNkeys" />
+            Use Nkeys
+          </label>
+        </div>
+      </div>
+      <form id="settingsForm">
+        <div class="form-group">
+          <label for="natsServer">NATS Server URL:</label>
+          <input type="text" id="natsServer" value="ws://localhost:4223" />
+        </div>
+        <div class="form-group">
+          <label for="defaultNode">Default Node:</label>
+          <input type="text" id="defaultNode" value="btdev1" />
+        </div>
+      </form>
+      <button id="saveSettingsBtn" class="settings-button">
+        Save Settings
+      </button>
+      <button id="clearAllBtn" class="settings-button clear-button">
+        Clear All Information
+      </button>
+    </div>
+
+    <script type="module" src="settings.js"></script>
+  </body>
+</html>
