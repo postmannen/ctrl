@@ -27,6 +27,10 @@
   - [ACL](./core_acl.md)
   - [audit log](./core_audit_log.md)
 
+# WebUI
+
+- [WebUI Overview](./webui_overview.md)
+
 # Examples standard messages
 
 - [Http Get](./example_standard_reqhttpget.md)

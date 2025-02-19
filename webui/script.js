@@ -5,6 +5,8 @@
 // import { createUser, fromPublic, fromSeed } from "https://esm.run/@nats-io/nkeys";
 
 import { wsconnect, nkeyAuthenticator } from "https://esm.run/@nats-io/nats-core";
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+import { flamegraph } from 'https://cdn.jsdelivr.net/npm/d3-flame-graph@4.1.3/+esm';
 
 const commandForm = document.getElementById('commandForm');
 const generateBtn = document.getElementById('generateBtn');
@@ -13,10 +15,17 @@ const writeFileBtn = document.getElementById('writeFileBtn');
 const outputArea = document.getElementById('outputArea');
 const fileTemplatesLink = document.getElementById('fileTemplatesLink');
 const fileTemplatesPopup = document.getElementById('fileTemplatesPopup');
+const graphLink = document.getElementById('graphLink');
+const graphPopup = document.getElementById('graphPopup');
+const flameGraphLink = document.getElementById('flameGraphLink');
+const flameGraphPopup = document.getElementById('flameGraphPopup');
 
 let nc;
 let filesList = new Map();
 let settings2;
+let helloNodesList = new Map();
+let nodeList = [];
+let nodeInfoMap = new Map(); // Store node information
 
 document.addEventListener('DOMContentLoaded', async function() {
     const outputArea = document.getElementById('outputArea');
@@ -118,6 +127,53 @@ document.addEventListener('DOMContentLoaded', async function() {
                         localStorage.setItem('filelist', JSON.stringify(filelist));
                     }
 
+                    if (ctrlMsgMethodInstructions[0] === "helloNodesList") {
+                        nodeList = ctrlMsgData.split("\n")
+                            .filter(name => name.trim()); // Remove empty entries
+                        console.log("DEBUG: nodeList:", nodeList);
+
+                        // -------------------------------
+                        // For each file in the list, we send a message to the central node
+                        for (const file of nodeList) {
+                            if (!file.trim()) continue; // Skip empty lines
+
+                            console.log("DEBUG: Requesting content for file:", file);
+                            // Send a command to get the content of each file
+                            const js2 = {
+                                "toNodes": ["central"],
+                                "useDetectedShell": false,
+                                "method": "cliCommand",
+                                "methodArgs": ["/bin/bash","-c","cat data/hello-messages/"+file+"/hello.log"],
+                                "methodTimeout": 3,
+                                "fromNode": settings2.defaultNode,
+                                "replyMethod": "webUI",
+                                "replyMethodInstructions": ["helloNodeContent",file],
+                                "ACKTimeout": 0
+                            };
+                            nc.publish("central.cliCommand", JSON.stringify(js2));
+                        }
+                        // -------------------------------
+                        
+                        // Always initialize graph
+                        initGraph();
+                    }
+
+                    if (ctrlMsgMethodInstructions[0] === "helloNodeContent") {
+                        const node = ctrlMsgMethodInstructions[1];
+                        const nodeContent = ctrlMsgData;
+                        console.log("----HELLO NODE CONTENT------: helloNodeContent", node, nodeContent);
+                        
+                        try {
+                            // Store the raw content instead of parsing as JSON
+                            nodeInfoMap.set(node, { content: nodeContent });
+                            
+                            // Always update graph
+                            initGraph();
+                        } catch (error) {
+                            console.error("Error handling node content:", error);
+                        }
+                    }
+
                     outputArea.value += `Received message on ${msg.subject}:\n${ctrlMsgData}\n`;
                     
                     // Scroll to bottom
@@ -140,6 +196,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                 outputArea.value += "\nNATS connection closed\n";
             }
         });
+
+        // After successful NATS connection, request initial node list
+        const js2 = {
+            "toNodes": ["central"],
+            "useDetectedShell": false,
+            "method": "cliCommand",
+            "methodArgs": ["/bin/bash","-c","ls -1 data/hello-messages/"],
+            "methodTimeout": 3,
+            "fromNode": settings2.defaultNode,
+            "replyMethod": "webUI",
+            "replyMethodInstructions": ["helloNodesList"],
+            "ACKTimeout": 0
+        };
+        nc.publish("central.cliCommand", JSON.stringify(js2));
 
     } catch (err) {
         outputArea.value += `Failed to connect to NATS server: ${err.message}\n`;
@@ -173,6 +243,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     }, true);
 
     initSplitter();
+
+    // Add extras section toggle functionality
+    const extrasToggle = document.querySelector('.extras-toggle');
+    if (extrasToggle) {
+        extrasToggle.addEventListener('click', function() {
+            const extrasContent = document.querySelector('.extras-content');
+            if (extrasContent) {
+                extrasContent.classList.toggle('collapsed');
+                // Update arrow direction
+                const arrow = this.querySelector('.arrow');
+                if (arrow) {
+                    arrow.textContent = extrasContent.classList.contains('collapsed') ? '▼' : '▲';
+                }
+            }
+        });
+    }
+
+    // Add auto-resize to the third method argument textarea
+    const methodArg3 = document.querySelector('.method-arg:last-child');
+    if (methodArg3) {
+        // Set initial height to one line
+        methodArg3.style.height = '2.4em'; // Approximately one line of text
+        methodArg3.style.resize = 'none';   // Disable manual resize
+        
+        // Add input event listener for auto-resize
+        methodArg3.addEventListener('input', function() {
+            autoResizeTextarea(this);
+        });
+    }
 }); 
 
 function generateCommandData() {
@@ -469,3 +568,502 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Add this after your other event listeners
+
+// Add the graph initialization function
+function initGraph() {
+    // Update single container
+    const containerId = "#graphContainer2";
+    // Clear any existing graph
+    d3.select(containerId).selectAll("*").remove();
+    
+    // Only proceed if we have nodes
+    if (!nodeList || nodeList.length === 0) {
+        console.log("No nodes to display");
+        return;
+    }
+
+    // Set up the SVG container
+    const container = document.querySelector(containerId);
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    const svg = d3.select(containerId)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    // Create nodes data from nodeList
+    const nodes = nodeList.map(nodeId => ({
+        id: nodeId,
+        group: nodeId === "central" ? 1 : 2,
+        status: "active",
+        connections: nodeId === "central" ? nodeList.length - 1 : 1,
+        uptime: "calculating...",
+        role: nodeId === "central" ? "central node" : "edge node"
+    }));
+
+    // Create links - connect all non-central nodes to central
+    const links = nodes
+        .filter(node => node.id !== "central")
+        .map(node => ({
+            source: "central",
+            target: node.id,
+            value: 1
+        }));
+
+    // Create the force simulation
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    // Add the links
+    const link = svg.append("g")
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("class", "link");
+
+    // Update the tooltip initialization
+    const tooltip = d3.select(containerId)
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0)
+        .style("position", "absolute")
+        .style("background-color", "white")
+        .style("padding", "5px")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "4px")
+        .style("pointer-events", "auto")
+        .style("z-index", "1000");
+
+    // Update node selection to include hover behavior
+    const node = svg.append("g")
+        .selectAll("g")
+        .data(nodes)
+        .join("g")
+        .attr("class", d => `node ${d.id}`)
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended))
+        .on("mouseover", function(event, d) {
+            // Clear any existing tooltips first
+            d3.select(containerId + " .tooltip")
+                .style("opacity", 0)
+                .html("");  // Clear content
+            
+            const tooltip = d3.select(containerId + " .tooltip");
+            
+            // Always ensure pointer events are enabled
+            tooltip.style("pointer-events", "auto")
+                   .style("display", "block"); // Ensure tooltip is displayed
+            
+            // Show the tooltip with full opacity
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", 1);
+            
+            // Get node info from the map
+            const nodeInfo = nodeInfoMap.get(d.id) || {};
+            
+            // Extract timestamp from the raw content
+            let timestamp = 'N/A';
+            if (nodeInfo.content) {
+                timestamp = nodeInfo.content.trim().split(',')[0];
+            }
+            
+            // Get filelist from localStorage for creating command buttons
+            const filelist = JSON.parse(localStorage.getItem('filelist') || '{}');
+            const fileButtons = Object.keys(filelist)
+                .map(fileName => `
+                    <button class="tooltip-cmd-btn" 
+                            data-filename="${fileName}" 
+                            data-nodeid="${d.id}"
+                            style="margin: 2px; 
+                                   padding: 6px 12px; 
+                                   background-color: #4CAF50; 
+                                   color: white;
+                                   border: none; 
+                                   border-radius: 4px; 
+                                   cursor: pointer;
+                                   font-size: 12px;
+                                   font-weight: 500;
+                                   text-align: center;
+                                   transition: background-color 0.2s;">
+                        ${fileName}
+                    </button>
+                `).join('');
+            
+            // Create tooltip content with node info and command buttons
+            const tooltipContent = `
+                <div style="min-width: 200px;">
+                    <table style="border-collapse: collapse; width: 100%; margin-bottom: 10px;">
+                        <tr>
+                            <td style="padding: 5px;"><strong>Node: ${d.id || 'Unknown'}</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px;"><strong>Last Hello: ${timestamp}</strong></td>
+                        </tr>
+                    </table>
+                    <div style="border-top: 1px solid #ccc; padding-top: 8px;">
+                        <div style="margin-bottom: 5px;"><strong>Available Commands:</strong></div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                            ${fileButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            tooltip
+                .html(tooltipContent)
+                .style("background-color", "white")
+                .style("border", "1px solid black")
+                .style("padding", "10px")
+                .style("border-radius", "5px")
+                .style("font-size", "12px")
+                .style("box-shadow", "2px 2px 6px rgba(0, 0, 0, 0.3)");
+            
+            // Position tooltip above the node
+            const tooltipNode = tooltip.node();
+            const tooltipHeight = tooltipNode.getBoundingClientRect().height;
+            const nodeRadius = d.id === "central" ? 15 : 10;
+            const yOffset = tooltipHeight + nodeRadius + 5; // 5px extra padding
+            
+            // Get SVG container's position
+            const svgRect = svg.node().getBoundingClientRect();
+            
+            tooltip
+                .style("position", "absolute")
+                .style("left", `${svgRect.left + d.x}px`)
+                .style("top", `${svgRect.top + d.y - yOffset}px`)
+                .style("transform", "translateX(-50%)") // Center horizontally
+                .style("z-index", "1000");
+            
+            // Add click handlers for the command buttons
+            tooltip.selectAll('.tooltip-cmd-btn').on('click', function(e) {
+                e.preventDefault();  // Prevent default button behavior
+                e.stopPropagation(); // Stop event bubbling
+                
+                const fileName = this.getAttribute('data-filename');
+                const nodeId = this.getAttribute('data-nodeid');
+                const filelist = JSON.parse(localStorage.getItem('filelist') || '{}');
+                const fileContent = filelist[fileName]?.content;
+                
+                if (fileContent) {
+                    const commandData = {
+                        toNodes: [nodeId],
+                        useDetectedShell: false,
+                        method: "cliCommand",
+                        methodArgs: ["/bin/bash", "-c", fileContent],
+                        methodTimeout: 3,
+                        fromNode: settings2.defaultNode,
+                        replyMethod: "webUI",
+                        ACKTimeout: 0
+                    };
+                    
+                    if (nc) {
+                        nc.publish(`${nodeId}.cliCommand`, JSON.stringify(commandData));
+                        outputArea.value += `\nSent command from template ${fileName} to node ${nodeId}\n`;
+                        outputArea.scrollTop = outputArea.scrollHeight;
+                    } else {
+                        console.error("NATS connection not available");
+                        outputArea.value += `\nError: NATS connection not available\n`;
+                    }
+                } else {
+                    console.error(`File content not found for ${fileName}`);
+                    outputArea.value += `\nError: File content not found for ${fileName}\n`;
+                }
+            });
+        })
+        .on("mouseout", function(event, d) {
+            const tooltip = d3.select(containerId + " .tooltip");
+            const toElement = event.relatedTarget;
+            
+            // Don't hide if moving to the tooltip
+            if (tooltip.node() && tooltip.node().contains(toElement)) {
+                return;
+            }
+            
+            // Start a timer to hide
+            setTimeout(() => {
+                // Only hide if not hovering over tooltip or node
+                if (!document.querySelector(containerId + " .tooltip:hover") && 
+                    !document.querySelector(containerId + " .node:hover")) {
+                    tooltip.transition()
+                        .duration(300)
+                        .style("opacity", 0)
+                        .on("end", function() {
+                            // After fade out, set display to none
+                            tooltip.style("display", "none");
+                        });
+                }
+            }, 100);
+        });
+
+    // Update the tooltip mouseleave handler
+    tooltip.on("mouseleave", function(event) {
+        const tooltip = d3.select(this);
+        
+        setTimeout(() => {
+            // Only hide if not hovering over node
+            if (!document.querySelector(containerId + " .node:hover")) {
+                tooltip.transition()
+                    .duration(300)
+                    .style("opacity", 0)
+                    .on("end", function() {
+                        // After fade out, set display to none
+                        tooltip.style("display", "none");
+                    });
+            }
+        }, 100);
+    });
+
+    // Add circles to nodes
+    node.append("circle")
+        .attr("r", d => d.id === "central" ? 15 : 10);
+
+    // Add labels to nodes
+    node.append("text")
+        .text(d => d.id)
+        .attr("x", 15)
+        .attr("y", 5);
+
+    // Update positions on each tick
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    // Drag functions
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+}
+
+// Add these styles to the existing style section
+const extraStyles = document.createElement('style');
+extraStyles.textContent = `
+    .extras-toggle {
+        cursor: pointer;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin: 10px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .extras-toggle:hover {
+        background-color: #e9e9e9;
+    }
+
+    .extras-content {
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+
+    .extras-content.collapsed {
+        max-height: 0;
+    }
+
+    .arrow {
+        margin-left: 10px;
+    }
+`;
+document.head.appendChild(extraStyles);
+
+// Add this function after your existing functions
+function autoResizeTextarea(textarea) {
+    // Reset height to 1 line (using line-height as reference)
+    textarea.style.height = 'auto';
+    
+    // Set new height based on scrollHeight
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+// Add this event listener with the other DOMContentLoaded event listeners
+flameGraphLink.addEventListener("click", function (e) {
+    e.preventDefault();
+    
+    const popupContent = document.querySelector('#flameGraphPopup .popup-content');
+    
+    popupContent.innerHTML = `
+        <span class="close-popup">&times;</span>
+        <h2>Flame Graph Demo</h2>
+        <div id="flameGraphContainer"></div>
+    `;
+
+    // Create demo data
+    const data = {
+        name: "root",
+        value: 380,  // Sum of all child process values
+        children: [
+            {
+                name: "Process A",
+                value: 180,  // Sum of all Task A values
+                children: [
+                    { name: "Task A1", value: 20 },
+                    { name: "Task A2", value: 20 },
+                    { name: "Task A3", value: 20 },
+                    { name: "Task A4", value: 20 },
+                    { name: "Task A5", value: 20 },
+                    { name: "Task A6", value: 20 },
+                    { name: "Task A7", value: 20 },
+                    { name: "Task A8", value: 20 },
+                    { name: "Task A9", value: 20 }
+                ]
+            },
+            {
+                name: "Process B",
+                value: 200,  // Sum of B1 (180) + B2 (20)
+                children: [
+                    { 
+                        name: "Task B1", 
+                        value: 180,  // Sum of subtasks
+                        children: [
+                            { name: "Subtask B1.1", value: 90 },
+                            { name: "Subtask B1.2", value: 90 }
+                        ]
+                    },
+                    { name: "Task B2", value: 20 }
+                ]
+            }
+        ]
+    };
+
+    // Update chart dimensions
+    const chart = flamegraph()
+        .width(900)
+        .height(350)    // Increased height but keeping it less than container height
+        .cellHeight(25)
+        .transitionDuration(750)
+        .minFrameSize(5)
+        .tooltip(true);
+
+    // Render flame graph
+    d3.select("#flameGraphContainer")
+        .datum(data)
+        .call(chart);
+
+    // Re-attach close button handler
+    document.querySelector('#flameGraphPopup .close-popup').addEventListener('click', function() {
+        flameGraphPopup.style.display = "none";
+    });
+
+    flameGraphPopup.style.display = "block";
+    closeMenu();
+});
+
+// Add keyboard shortcut for flame graph popup
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        flameGraphLink.click();
+    }
+});
+
+// Add these styles after the other styles in the file
+const flameGraphStyles = document.createElement('style');
+flameGraphStyles.textContent = `
+    #flameGraphContainer {
+        width: 100%;
+        height: 400px;  // Increased from 200px to match chart height plus margins
+        margin: 20px auto;
+    }
+
+    #flameGraphPopup .popup-content {
+        width: 90%;
+        max-width: 1000px;
+        margin: 5% auto;
+        padding: 30px;
+        box-sizing: border-box;
+        overflow: hidden;  // Added to contain the graph
+    }
+
+    .d3-flame-graph rect {
+        stroke: #EEE;
+        fill-opacity: .8;
+    }
+
+    .d3-flame-graph rect:hover {
+        stroke: #474747;
+        stroke-width: 0.5;
+        cursor: pointer;
+    }
+
+    .d3-flame-graph-label {
+        pointer-events: none;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        font-size: 12px;
+        font-family: Verdana;
+        margin-left: 4px;
+        margin-right: 4px;
+        line-height: 1.5;
+        padding: 0 0 0;
+        font-weight: 400;
+        color: black;
+    }
+
+    .d3-flame-graph .fade {
+        opacity: 0.6 !important;
+    }
+
+    .d3-flame-graph .title {
+        font-size: 20px;
+        font-family: Verdana;
+    }
+
+    #flameGraphPopup {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+    }
+
+    #flameGraphLink {
+        display: inline-block;
+        margin: 10px;
+        padding: 8px 15px;
+        background-color: #4CAF50;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+    }
+
+    #flameGraphLink:hover {
+        background-color: #45a049;
+    }
+`;
+document.head.appendChild(flameGraphStyles);

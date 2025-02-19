@@ -21,10 +21,12 @@ body {
 .left-panel {
   min-width: 200px;
   padding: 20px;
-  overflow-y: auto;
+  overflow-y: hidden;
   font-family: "Courier New", monospace;
   font-size: 14px;
-  width: 50%; /* Set initial width */
+  width: 50%;
+  display: flex;
+  flex-direction: column;
 }
 
 .right-panel {
@@ -54,6 +56,7 @@ form {
   padding: 30px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .form-group {
@@ -316,4 +319,103 @@ button:hover {
 .nkeys-group .form-group input[type="checkbox"] {
   width: auto;
   margin: 0;
+}
+
+/* Add these styles to your existing CSS */
+.graph-content {
+  width: 90%;
+  height: 80vh;
+  margin: 5vh auto;
+}
+
+#networkGraphForm {
+  margin-top: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+#networkGraphForm h3 {
+  margin-bottom: 10px;
+}
+
+#graphContainer2 {
+  width: 100%;
+  flex: 1;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  min-height: 200px;
+}
+
+/* Ensure the SVG fills the container */
+#graphContainer2 svg {
+  width: 100%;
+  height: 100%;
+}
+
+.node circle {
+  fill: #69b3a2;
+  stroke: #fff;
+  stroke-width: 2px;
+}
+
+.node.central circle {
+  fill: #ff7675;
+}
+
+.node text {
+  font-size: 12px;
+  font-family: sans-serif;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: 0.6;
+  stroke-width: 1px;
+}
+
+/* Update the tooltip styles */
+.tooltip {
+  position: absolute;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: auto; /* Changed from none to auto to allow hover */
+  z-index: 1000;
+  transform: translateX(-50%); /* Center horizontally */
+  transition: opacity 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip:hover {
+  opacity: 0.9;
+}
+
+.tooltip table {
+  margin: 0;
+  border-collapse: collapse;
+}
+
+.tooltip td {
+  padding: 4px 8px;
+  border: none;
+}
+
+.tooltip td:first-child {
+  color: #69b3a2;
+  font-weight: bold;
+  padding-right: 12px;
+}
+
+textarea.method-arg {
+  min-height: 2.4em;
+  height: 2.4em;
+  overflow-y: hidden;
+  line-height: 1.4;
+  padding: 0.5em;
+  resize: none;
+  transition: height 0.1s ease-out;
 }
