@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 )
 
@@ -231,7 +232,18 @@ func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context,
 	proc := newProcess(p.ctx, p.processes.server, sub)
 	proc.procFunc = pf
 
-	go proc.start()
+	go proc.start(true)
+
+	// If NodeAlias is set, also start a process for each alias.
+	if p.configuration.NodeAlias != "" {
+		for _, alias := range strings.Split(p.configuration.NodeAlias, ",") {
+			sub = newSubject(m, alias)
+			proc := newProcess(p.ctx, p.processes.server, sub)
+			proc.procFunc = pf
+
+			go proc.start(false)
+		}
+	}
 }
 
 // ---------------------------------------------------------------

@@ -148,7 +148,7 @@ func newProcess(ctx context.Context, server *server, subject Subject) process {
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
-func (p process) start() {
+func (p process) start(queueSubscriber bool) {
 
 	// Add prometheus metrics for the process.
 	if !p.isSubProcess {
@@ -157,7 +157,7 @@ func (p process) start() {
 
 	// Start a subscriber worker, which will start a go routine (process)
 	// to handle executing the request method defined in the message.
-	p.startSubscriber()
+	p.startSubscriber(queueSubscriber)
 
 	// Add information about the new process to the started processes map.
 	p.processes.active.mu.Lock()
@@ -167,7 +167,7 @@ func (p process) start() {
 	p.errorKernel.logDebug("successfully started process", "processName", p.processName)
 }
 
-func (p process) startSubscriber() {
+func (p process) startSubscriber(queueSubscriber bool) {
 	// If there is a procFunc for the process, start it.
 	if p.procFunc != nil {
 		// Initialize the channel for communication between the proc and
@@ -185,7 +185,7 @@ func (p process) startSubscriber() {
 		}()
 	}
 
-	p.natsSubscription = p.startNatsSubscriber()
+	p.natsSubscription = p.startNatsSubscriber(queueSubscriber)
 
 	// We also need to be able to remove all the information about this process
 	// when the process context is canceled.
@@ -604,15 +604,24 @@ func executeHandler(p process, message Message, thisNode string) {
 // SubscribeMessage will register the Nats callback function for the specified
 // nats subject. This allows us to receive Nats messages for a given subject
 // on a node.
-func (p process) startNatsSubscriber() *nats.Subscription {
+func (p process) startNatsSubscriber(queueSubscriber bool) *nats.Subscription {
 	subject := string(p.subject.name())
-	// natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
-	natsSubscription, err := p.natsConn.QueueSubscribe(subject, subject, func(msg *nats.Msg) {
-		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
-		// Start up the subscriber handler.
-		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
-	})
+	var natsSubscription *nats.Subscription
+	var err error
+
+	switch queueSubscriber {
+	case true:
+		natsSubscription, err = p.natsConn.QueueSubscribe(subject, subject, func(msg *nats.Msg) {
+			// Start up the subscriber handler.
+			go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
+		})
+	case false:
+		natsSubscription, err = p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+			go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
+		})
+	}
+
 	if err != nil {
 		p.errorKernel.logDebug("Subscribe failed", "error", err)
 		return nil

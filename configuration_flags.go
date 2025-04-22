@@ -37,6 +37,8 @@ type Configuration struct {
 	DatabaseFolder string `comment:"The folder where the database should live"`
 	// Unique string to identify this Edge unit
 	NodeName string `comment:"Unique string to identify this Edge unit"`
+	// NodeAlias for adding extra aliases for the node name
+	NodeAlias string `comment:"NodeAlias"`
 	// The address of the message broker, <address>:<port>
 	BrokerAddress string `comment:"The address of the message broker, <address>:<port>"`
 	// NatsConnOptTimeout the timeout for trying the connect to nats broker
@@ -165,6 +167,7 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.HTTPListener, "httpListener", CheckEnv("HTTP_LISTENER", c.HTTPListener).(string), "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", CheckEnv("DATABASE_FOLDER", c.DatabaseFolder).(string), "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", CheckEnv("NODE_NAME", c.NodeName).(string), "some unique string to identify this Edge unit")
+	flag.StringVar(&c.NodeAlias, "nodeAlias", CheckEnv("NODE_ALIAS", c.NodeAlias).(string), "extra aliases for the node name")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", CheckEnv("BROKER_ADDRESS", c.BrokerAddress).(string), "the address of the message broker")
 	flag.IntVar(&c.NatsConnOptTimeout, "natsConnOptTimeout", CheckEnv("NATS_CONN_OPT_TIMEOUT", c.NatsConnOptTimeout).(int), "default nats client conn timeout in seconds")
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", CheckEnv("NATS_CONNECT_RETRY_INTERVAL", c.NatsConnectRetryInterval).(int), "default nats retry connect interval in seconds.")
@@ -261,6 +264,7 @@ func newConfigurationDefaults() Configuration {
 		HTTPListener:               "",
 		DatabaseFolder:             "./var/lib",
 		NodeName:                   "",
+		NodeAlias:                  "",
 		BrokerAddress:              "127.0.0.1:4222",
 		NatsConnOptTimeout:         20,
 		NatsConnectRetryInterval:   10,

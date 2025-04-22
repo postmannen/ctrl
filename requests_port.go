@@ -150,7 +150,7 @@ func methodPortSrc(proc process, message Message, node string) ([]byte, error) {
 		portSrcSubProc.handler = portSrcSubHandler()
 
 		// Start sub process. The process will be killed when the context expires.
-		go portSrcSubProc.start()
+		go portSrcSubProc.start(true)
 
 		proc.errorKernel.logDebug("methodPortSrc, pid", "pid", pid)
 
@@ -260,7 +260,7 @@ func methodPortDst(proc process, message Message, node string) ([]byte, error) {
 		portDstSubProc.handler = portDstSubHandler()
 
 		// The process will be killed when the context expires.
-		go portDstSubProc.start()
+		go portDstSubProc.start(true)
 
 		replyData := fmt.Sprintf("info: succesfully initiated port destination process: procName=%v, srcNode=%v, starting sub process=%v for the actual copying", portDstSubProc.processName, node, subProcessName)
 
