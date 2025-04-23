@@ -14,10 +14,29 @@ As long as you can do something as an operator in a shell on a system you can do
 
 ## Features
 
-- Run bash commands or complete scripts of your prefered scripting language (bash, python, powershell and so on).
-- Read and write to files.
-- Copy files.
-- ACL's to restric who can do what.
+| Feature |
+|---------|
+|Run bash commands or complete scripts in your prefered scripting language (bash, python, powershell..)|
+|Read and write to all files on the node|
+|Copy files between nodes with builtin download manager in case of connection issues|
+|Forward tcp connections between nodes, or use as a tcp proxy|
+|ACL's to restric who can do what like who can send to which nodes, and what commands a node are allowed to execute on another node|
+|Broadcast the same message to all nodes to for example update config files on all nodes|
+|Create groups of nodes, for granular control|
+|Graphical view of all nodes and their connections|
+|Builtin Http Get method to get the content of web pages|
+|Write the result of a command executed to a file, database, or use the result in a next method to craft a new message to send to a next node|
+|Schedule tasks to run on a recurring basis, like cron jobs|
+|Audit log of all actions taken, and commands executed|
+|Centralized error logging and reporting|
+|Run as a sidecar in Kubernetes for direct access to the pod|
+|Start as a runner in github actions to control your infrastructure with a Github repository as the source of truth. Control nodes with instructions commited to a repository, or as a part your CI/CD pipeline|
+|Detailed logs of when a node or host was last seen online|
+|Tail log files, and send the output to a central log server to directly inject the output into a database or file|
+|Signature verification of messages to ensure the message is authentic, and the sender is who they claim to be|
+|All traffic is encrypted with TLS|
+|All communication is outbound, so no need to open ports for incoming connections|
+|And more...|
 
 ## Doc
 

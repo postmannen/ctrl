@@ -172,6 +172,10 @@ const (
 
 	// WebUI is used to send messages to the web ui.
 	WebUI Method = "webUI"
+	// GraphAddNode
+	GraphAddNode Method = "graphAddNode"
+	// GraphGetNode
+	GraphGetNode Method = "graphGetNode"
 )
 
 type Handler func(proc process, message Message, node string) ([]byte, error)
@@ -234,7 +238,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			AclImport:                     Handler(methodAclImport),
 			Test:                          Handler(methodTest),
 
-			WebUI: Handler(nil),
+			WebUI:        Handler(nil),
+			GraphAddNode: Handler(methodGraphAddNode),
+			GraphGetNode: Handler(methodGraphGetNode),
 		},
 	}
 
