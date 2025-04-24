@@ -14,23 +14,25 @@ As long as you can do something as an operator in a shell on a system you can do
 
 ## Features
 
+Terminology: A **node** is a host computer, server, kubernetes pod, or in short any system that can run **ctrl** and is controlled by **ctrl**.
+
 | Feature |
 |---------|
-|Run bash commands or complete scripts in your prefered scripting language (bash, python, powershell..)|
-|Read and write to all files on the node|
-|Copy files between nodes with builtin download manager in case of connection issues|
-|Forward tcp connections between nodes, or use as a tcp proxy|
-|ACL's to restric who can do what like who can send to which nodes, and what commands a node are allowed to execute on another node|
-|Broadcast the same message to all nodes to for example update config files on all nodes|
+|Run bash commands or complete scripts in your prefered scripting language (bash, python, powershell..) on one node, a set of nodes, or all nodes|
+|Read,write or update files|
+|Copy files between nodes with builtin download manager to handle connection issues|
+|Forward tcp connections between nodes via **ctrl**, or use it as a tcp proxy without any direct access to those ports. Example use case are for opening ssh tunnels to start a shell to a host via **ctrl**, or forward local ports active on a host to your computer.|
+|ACL's to restric who can do what. Like who can send to which nodes, and what commands a node are allowed to execute on another node|
+|Broadcast the same message to all nodes to for example update config or run the same command on all nodes|
 |Create groups of nodes, for granular control|
-|Graphical view of all nodes and their connections|
-|Builtin Http Get method to get the content of web pages|
-|Write the result of a command executed to a file, database, or use the result in a next method to craft a new message to send to a next node|
-|Schedule tasks to run on a recurring basis, like cron jobs|
+|Graphical view of all nodes,their connections, stats, and to execute commands on a node|
+|Builtin Http Get method to get the content of web pages where curl is not available on the node operating system, to for examplescrape prometheus metrics|
+|Write the result of a command executed to a file, database. You can also use the result of one command sent to a node to craft a new message to send to a another node|
+|Schedule commands to run on a recurring basis, like cron jobs|
 |Audit log of all actions taken, and commands executed|
 |Centralized error logging and reporting|
 |Run as a sidecar in Kubernetes for direct access to the pod|
-|Start as a runner in github actions to control your infrastructure with a Github repository as the source of truth. Control nodes with instructions commited to a repository, or as a part your CI/CD pipeline|
+|Start as a runner in Github Actions to control your infrastructure with a Github repository as the source of truth. Control nodes with instructions commited to a repository, or as a part your CI/CD pipeline|
 |Detailed logs of when a node or host was last seen online|
 |Tail log files, and send the output to a central log server to directly inject the output into a database or file|
 |Signature verification of messages to ensure the message is authentic, and the sender is who they claim to be|
