@@ -98,6 +98,8 @@ type process struct {
 	errorKernel *errorKernel
 	// metrics
 	metrics *metrics
+	// graph
+	graph *graph
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -131,6 +133,7 @@ func newProcess(ctx context.Context, server *server, subject Subject) process {
 		centralAuth:      server.centralAuth,
 		errorKernel:      server.errorKernel,
 		metrics:          server.metrics,
+		graph:            server.graph,
 	}
 
 	// We use the full name of the subject to identify a unique
