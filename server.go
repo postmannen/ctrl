@@ -80,6 +80,7 @@ type server struct {
 	// audit logging
 	auditLogCh  chan []Message
 	zstdEncoder *zstd.Encoder
+	graph       *graph
 }
 
 type messageID struct {
@@ -257,6 +258,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		centralAuth:           centralAuth,
 		auditLogCh:            make(chan []Message),
 		zstdEncoder:           zstdEncoder,
+		graph:                 newGraph(configuration),
 	}
 
 	s.processes = newProcesses(ctx, &s)

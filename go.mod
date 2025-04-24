@@ -1,6 +1,8 @@
 module github.com/postmannen/ctrl
 
-go 1.22
+go 1.24.0
+
+toolchain go1.24.2
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0
@@ -15,6 +17,7 @@ require (
 	github.com/nats-io/nats.go v1.37.0
 	github.com/nats-io/nkeys v0.4.7
 	github.com/pkg/profile v1.7.0
+	github.com/postmannen/graphed v0.0.0-20250311050942-cf144258c009
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
 	github.com/tenebris-tech/tail v1.0.5
@@ -31,6 +34,7 @@ require (
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
