@@ -1,5 +1,5 @@
 # build stage
-FROM golang:1.22-alpine AS build-env
+FROM golang:1.24-alpine AS build-env
 RUN apk --no-cache add build-base git gcc
 
 RUN mkdir -p /build

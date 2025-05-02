@@ -96,6 +96,8 @@ func (p *processes) Start(proc process) {
 	proc.startup.startProcess(proc, Test, nil)
 	proc.startup.startProcess(proc, GraphAddNode, nil)
 	proc.startup.startProcess(proc, GraphGetNode, nil)
+	proc.startup.startProcess(proc, GraphGetNodeChildren, nil)
+	proc.startup.startProcess(proc, GraphGetNodeParents, nil)
 
 	if proc.configuration.StartProcesses.StartSubFileAppend {
 		proc.startup.startProcess(proc, FileAppend, nil)

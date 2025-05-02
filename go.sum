@@ -85,6 +85,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/postmannen/graphed v0.0.0-20250311050942-cf144258c009 h1:eXNUMl7tVEfDS0REC/RgHc8l3yPs/bMumIBkOdxN6KE=
 github.com/postmannen/graphed v0.0.0-20250311050942-cf144258c009/go.mod h1:XPyVKhqIwL1C3Zh4knfZBoZLGyDaiA3PYk3GBN195lY=
+github.com/postmannen/graphed v0.0.0-20250425043629-022345b6862f h1:S1qGoWyGzc/E2XQLQlZiVA8DNBdu9IWHP+utjq0auQs=
+github.com/postmannen/graphed v0.0.0-20250425043629-022345b6862f/go.mod h1:XPyVKhqIwL1C3Zh4knfZBoZLGyDaiA3PYk3GBN195lY=
 github.com/prometheus/client_golang v1.14.0 h1:nJdhIvne2eSX/XRAFV9PcvFFRbrjbcTUj0VP62TMhnw=
 github.com/prometheus/client_golang v1.14.0/go.mod h1:8vpkKitgIVNcqrRBWh1C4TIUQgYNtG/XQE4E/Zae36Y=
 github.com/prometheus/client_model v0.3.0 h1:UBgGFHqYdG/TPFD1B1ogZywDqEkwp3fBMvqdiQ7Xew4=

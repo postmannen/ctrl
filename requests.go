@@ -176,6 +176,10 @@ const (
 	GraphAddNode Method = "graphAddNode"
 	// GraphGetNode
 	GraphGetNode Method = "graphGetNode"
+	// GraphGetNodeChildren
+	GraphGetNodeChildren Method = "graphGetNodeChildren"
+	// GraphGetNodeParents
+	GraphGetNodeParents Method = "graphGetNodeParents"
 )
 
 type Handler func(proc process, message Message, node string) ([]byte, error)
@@ -238,9 +242,11 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			AclImport:                     Handler(methodAclImport),
 			Test:                          Handler(methodTest),
 
-			WebUI:        Handler(nil),
-			GraphAddNode: Handler(methodGraphAddNode),
-			GraphGetNode: Handler(methodGraphGetNode),
+			WebUI:                Handler(nil),
+			GraphAddNode:         Handler(methodGraphAddNode),
+			GraphGetNode:         Handler(methodGraphGetNode),
+			GraphGetNodeChildren: Handler(methodGraphGetNodeChildren),
+			GraphGetNodeParents:  Handler(methodGraphGetNodeParents),
 		},
 	}
 

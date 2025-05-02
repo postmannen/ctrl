@@ -17,7 +17,7 @@ require (
 	github.com/nats-io/nats.go v1.37.0
 	github.com/nats-io/nkeys v0.4.7
 	github.com/pkg/profile v1.7.0
-	github.com/postmannen/graphed v0.0.0-20250311050942-cf144258c009
+	github.com/postmannen/graphed v0.0.0-20250425043629-022345b6862f
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
 	github.com/tenebris-tech/tail v1.0.5
