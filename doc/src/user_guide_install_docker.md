@@ -26,7 +26,7 @@ create a .env file
 ```bash
 cat << EOF > .env
 NODE_NAME="node1"
-BROKER_ADDRESS="127.0.0,1:4444"
+BROKER_ADDRESS="127.0.0.1:4444"
 NKEY_SEED=<REPLACE WITH seed created for the node>
 ENABLE_DEBUG=1
 START_PUB_HELLO=60

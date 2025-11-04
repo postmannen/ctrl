@@ -38,7 +38,7 @@ Create a .env file for the startup options. Flags can also be used.
 ```bash
 cat << EOF > .env
 NODE_NAME="node1"
-BROKER_ADDRESS="127.0.0,1:4444"
+BROKER_ADDRESS="127.0.0.1:4444"
 ENABLE_DEBUG=1
 START_PUB_HELLO=60
 IS_CENTRAL_ERROR_LOGGER=0
