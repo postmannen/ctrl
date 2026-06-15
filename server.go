@@ -374,9 +374,10 @@ func (s *server) Start() {
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
 
-	// Start Jetstream publisher and consumer.
-	go s.jetstreamPublish()
-	go s.jetstreamConsume()
+	// TODO: NB: Disabled Jetstream for now.
+	// // Start Jetstream publisher and consumer.
+	// go s.jetstreamPublish()
+	// go s.jetstreamConsume()
 
 	// Start exposing the the data folder via HTTP if flag is set.
 	if s.configuration.ExposeDataFolder != "" {
