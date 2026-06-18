@@ -6,10 +6,10 @@ replace github.com/postmannen/actress => ./actress
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0
-	github.com/fxamacker/cbor/v2 v2.5.0
+	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/go-playground/validator/v10 v10.10.1
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.6.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.18.6
@@ -17,6 +17,7 @@ require (
 	github.com/nats-io/nats.go v1.51.0
 	github.com/nats-io/nkeys v0.4.16
 	github.com/pkg/profile v1.7.0
+	github.com/postmannen/actress v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
 	github.com/tenebris-tech/tail v1.0.5
