@@ -322,15 +322,25 @@ func (s *server) Start() {
 	log.Printf("Starting ctrl, version=%+v\n", s.version)
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
+	//--------------------------------------------------------------------------
+
 	// NOTE: Not using the flagset for now.
 	rootCfg, _ := actress.NewConfig("info")
 	// Add and start root actor
 	root := actress.NewRootProcess(s.ctx, nil, rootCfg)
 	err := root.Act()
 	if err != nil {
-		log.Printf("error: failed to start the root actor: &v\n", err)
+		log.Printf("error: failed to start the root actor: %v\n", err)
 		os.Exit(1)
 	}
+
+	err = actress.NewProcess(s.ctx, root, actress.ETRemote, etRemoteFn()).Act()
+	if err != nil {
+		log.Printf("error: failed to start etRemote actor: %v\n", err)
+		os.Exit(1)
+	}
+
+	//--------------------------------------------------------------------------
 
 	go func() {
 		err := s.errorKernel.start(s.newMessagesCh)

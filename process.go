@@ -664,34 +664,4 @@ func (p process) publishAMessage(m Message, natsConn *nats.Conn) {
 		p.processes.active.procNames[pn] = p
 		p.processes.active.mu.Unlock()
 	}
-
-	// // Handle the error.
-	// //
-	// // NOTE: None of the processes above generate an error, so the the
-	// // if clause will never be triggered. But keeping it here as an example
-	// // for now for how to handle errors.
-	// if err != nil {
-	// 	// Create an error type which also creates a channel which the
-	// 	// errorKernel will send back the action about what to do.
-	// 	ep := errorEvent{
-	// 		//errorType:     logOnly,
-	// 		process:       p,
-	// 		message:       m,
-	// 		errorActionCh: make(chan errorAction),
-	// 	}
-	// 	p.errorCh <- ep
-	//
-	// 	// Wait for the response action back from the error kernel, and
-	// 	// decide what to do. Should we continue, quit, or .... ?
-	// 	switch <-ep.errorActionCh {
-	// 	case errActionContinue:
-	// 		// Just log and continue
-	// 		log.Printf("The errAction was continue...so we're continuing\n")
-	// 	case errActionKill:
-	// 		log.Printf("The errAction was kill...so we're killing\n")
-	// 		// ....
-	// 	default:
-	// 		log.Printf("Info: publishMessages: The errAction was not defined, so we're doing nothing\n")
-	// 	}
-	// }
 }
