@@ -42,9 +42,14 @@ package ctrl
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/postmannen/actress"
 )
 
 // Method is used to specify the actual function/method that
@@ -382,7 +387,27 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		PreviousMessage: &thisMsg,
 	}
 
-	proc.newMessagesCh <- newMsg
+	b, err := cbor.Marshal(newMsg)
+	if err != nil {
+		log.Printf("error: newReplyMessage: failed to cbor marshal message: %v\n", err)
+		os.Exit(1)
+	}
+
+	// NB: Note: Refactor:
+	// - Setting ETNone for now since we just need this event to be forwarded
+	//	 with ETRemote, and it we don't really use any of the event types
+	//	 actively from actress yet.
+	// - Putting DstNode value "REMOTE" just to trigger the message to be
+	//   forwarded to ETRemote.
+	ev := actress.Event{
+		Name:    ETNone,
+		Data:    b,
+		DstNode: "REMOTE",
+	}
+
+	proc.server.root.AddEvent(ev)
+
+	// proc.newMessagesCh <- newMsg
 }
 
 // selectFileNaming will figure out the correct naming of the file

@@ -81,6 +81,7 @@ type server struct {
 	// audit logging
 	auditLogCh  chan []Message
 	zstdEncoder *zstd.Encoder
+	root        *actress.Process
 }
 
 type messageID struct {
@@ -314,6 +315,8 @@ func createSocket(socketFolder string, socketFileName string) (net.Listener, err
 	return nl, nil
 }
 
+const ETNone actress.EventName = "ETNone"
+
 // Start will spawn up all the predefined subscriber processes.
 // Spawning of publisher processes is done on the fly by checking
 // if there is publisher process for a given message subject, and
@@ -334,7 +337,15 @@ func (s *server) Start() {
 		os.Exit(1)
 	}
 
-	err = actress.NewProcess(s.ctx, root, actress.ETRemote, etRemoteFn()).Act()
+	s.root = root
+
+	err = actress.NewProcess(s.ctx, root, actress.ETRemote, etRemoteFn(s)).Act()
+	if err != nil {
+		log.Printf("error: failed to start etRemote actor: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = actress.NewProcess(s.ctx, root, ETNone, nil).Act()
 	if err != nil {
 		log.Printf("error: failed to start etRemote actor: %v\n", err)
 		os.Exit(1)
