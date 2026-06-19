@@ -19,6 +19,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/postmannen/actress"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/exp/slog"
 )
 
 type processName string
@@ -53,9 +54,6 @@ type server struct {
 	messageDeliverLocalCh chan []Message
 	// Channel for messages to publish with Jetstream.
 	jetstreamPublishCh chan Message
-	// errorKernel is doing all the error handling like what to do if
-	// an error occurs.
-	errorKernel *errorKernel
 	// metric exporter
 	metrics *metrics
 	// Version of package
@@ -90,10 +88,6 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	metrics := newMetrics(configuration.PromHostAndPort)
-
-	// Start the error kernel that will do all the error handling
-	// that is not done within a process.
-	errorKernel := newErrorKernel(ctx, metrics, configuration)
 
 	var opt nats.Option
 
@@ -205,13 +199,13 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	//var nodeAuth *nodeAuth
 	//if configuration.EnableSignatureCheck {
-	nodeAuth := newNodeAuth(configuration, errorKernel)
+	nodeAuth := newNodeAuth(configuration)
 	// fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
 	//}
 
 	//var centralAuth *centralAuth
 	//if configuration.IsCentralAuth {
-	centralAuth := newCentralAuth(configuration, errorKernel)
+	centralAuth := newCentralAuth(configuration)
 	//}
 
 	zstdEncoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
@@ -237,7 +231,6 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		jetstreamPublishCh:    make(chan Message),
 		metrics:               metrics,
 		version:               version,
-		errorKernel:           errorKernel,
 		nodeAuth:              nodeAuth,
 		helloRegister:         newHelloRegister(),
 		centralAuth:           centralAuth,
@@ -258,7 +251,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", configuration.SubscribersDataFolder, err)
 		}
 
-		s.errorKernel.logDebug("NewServer: creating subscribers data folder at", "path", configuration.SubscribersDataFolder)
+		slog.Debug("NewServer: creating subscribers data folder at", "path", configuration.SubscribersDataFolder)
 	}
 
 	return &s, nil
@@ -343,18 +336,17 @@ func (s *server) Start() {
 
 	err = actress.NewProcess(s.ctx, root, ETReadFolder, etReadFolderFn(s)).Act()
 	if err != nil {
-		log.Printf("error: failed to start etReadSocket actor: %v\n", err)
+		log.Printf("error: failed to start etReadFolder actor: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = actress.NewProcess(s.ctx, root, ETErrorKernel, etErrorKernelFn(s)).Act()
+	if err != nil {
+		log.Printf("error: failed to start etErrorKernel actor: %v\n", err)
 		os.Exit(1)
 	}
 
 	//--------------------------------------------------------------------------
-
-	go func() {
-		err := s.errorKernel.start(s.newMessagesCh)
-		if err != nil {
-			log.Printf("%v\n", err)
-		}
-	}()
 
 	// Start collecting the metrics
 	go func() {
@@ -425,7 +417,8 @@ func (s *server) startAuditLog(ctx context.Context) {
 				js, err := json.Marshal(msgForPermStore)
 				if err != nil {
 					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-					s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+					// s.errorKernel.(s.processInitial, Message{}, er, logError)
+					fmt.Printf("%v\n", er)
 				}
 				d := time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
 
@@ -466,7 +459,8 @@ func (s *server) directSAMSChRead() {
 					mh, ok := p.methodsAvailable.CheckIfExists(messages[i].Method)
 					if !ok {
 						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Method)
-						p.errorKernel.errSend(p, messages[i], er, logError)
+						// p.errorKernel.(p, messages[i], er, logError)
+						fmt.Printf("%v\n", er)
 						continue
 					}
 
@@ -486,9 +480,6 @@ func (s *server) Stop() {
 	s.processes.Stop()
 	log.Printf("info: stopped all subscribers\n")
 	fmt.Printf("-------------------------------------------------------IS CLOSED\n")
-	// Stop the errorKernel.
-	s.errorKernel.stop()
-	log.Printf("info: stopped the errorKernel\n")
 
 	// Stop the main context.
 	s.cancel()
@@ -569,7 +560,7 @@ func (s *server) messageDeserializeAndUncompress(msgData []byte) (Message, error
 	// headerFromNode := msg.Headers().Get("fromNode")
 	// if headerFromNode != "" {
 	// 	er := fmt.Errorf("info: subscriberHandlerJetstream: nats message received from %v, with subject %v ", headerFromNode, msg.Subject())
-	// 	s.errorKernel.logDebug(er)
+	// 	s.slog.Debug(er)
 	// }
 	msgData2 := msgData
 
