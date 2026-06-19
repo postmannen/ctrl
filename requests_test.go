@@ -308,7 +308,7 @@ func TestRequest(t *testing.T) {
 
 		switch tt.containsOrEquals {
 		case REQTestEquals:
-			result := <-tstSrv.errorKernel.testCh
+			result := <-tstSrv.testCh
 			resStr := string(result)
 			resStr = strings.TrimSuffix(resStr, "\n")
 			result = []byte(resStr)
@@ -319,7 +319,7 @@ func TestRequest(t *testing.T) {
 			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 
 		case REQTestContains:
-			result := <-tstSrv.errorKernel.testCh
+			result := <-tstSrv.testCh
 			resStr := string(result)
 			resStr = strings.TrimSuffix(resStr, "\n")
 			result = []byte(resStr)

@@ -29,7 +29,7 @@ type errorKernel struct {
 	// errorCh is used to report errors from a process
 	errorCh chan errorEvent
 	// testCh is used within REQTest for receving data for tests.
-	testCh chan []byte
+	// testCh chan []byte
 
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -51,8 +51,8 @@ func etErrorKernelFn(s *server) actress.ETFunc {
 	fn := func(ctx context.Context, p *actress.Process) func() {
 		fn := func() {
 			e := errorKernel{
-				errorCh:       make(chan errorEvent, 2),
-				testCh:        make(chan []byte),
+				errorCh: make(chan errorEvent, 2),
+				// testCh:        make(chan []byte),
 				ctx:           ctx,
 				cancel:        s.cancel,
 				metrics:       s.metrics,

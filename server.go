@@ -75,6 +75,7 @@ type server struct {
 	auditLogCh  chan []Message
 	zstdEncoder *zstd.Encoder
 	root        *actress.Process
+	testCh      chan []byte
 }
 
 type messageID struct {
@@ -236,6 +237,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		centralAuth:           centralAuth,
 		auditLogCh:            make(chan []Message),
 		zstdEncoder:           zstdEncoder,
+		testCh:                make(chan []byte),
 	}
 
 	s.processes = newProcesses(ctx, &s)

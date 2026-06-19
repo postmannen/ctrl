@@ -199,7 +199,7 @@ func methodTest(proc process, message Message, node string) ([]byte, error) {
 		// have a test started the data will be read from the testCh.
 		// If no test is reading from the testCh the data will be dropped.
 		select {
-		case proc.errorKernel.testCh <- message.Data:
+		case proc.server.testCh <- message.Data:
 		default:
 			// drop.
 		}
