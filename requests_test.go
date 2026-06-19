@@ -1,6 +1,7 @@
 package ctrl
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -306,27 +307,27 @@ func TestRequest(t *testing.T) {
 		}
 
 		switch tt.containsOrEquals {
-		//case REQTestEquals:
-		//	result := <-tstSrv.errorKernel.testCh
-		//	resStr := string(result)
-		//	resStr = strings.TrimSuffix(resStr, "\n")
-		//	result = []byte(resStr)
-		//
-		//	if !bytes.Equal(result, tt.want) {
-		//		t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
-		//	}
-		//	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
-		//
-		//case REQTestContains:
-		//	result := <-tstSrv.errorKernel.testCh
-		//	resStr := string(result)
-		//	resStr = strings.TrimSuffix(resStr, "\n")
-		//	result = []byte(resStr)
-		//
-		//	if !strings.Contains(string(result), string(tt.want)) {
-		//		t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
-		//	}
-		//	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
+		case REQTestEquals:
+			result := <-tstSrv.errorKernel.testCh
+			resStr := string(result)
+			resStr = strings.TrimSuffix(resStr, "\n")
+			result = []byte(resStr)
+
+			if !bytes.Equal(result, tt.want) {
+				t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
+			}
+			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
+
+		case REQTestContains:
+			result := <-tstSrv.errorKernel.testCh
+			resStr := string(result)
+			resStr = strings.TrimSuffix(resStr, "\n")
+			result = []byte(resStr)
+
+			if !strings.Contains(string(result), string(tt.want)) {
+				t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
+			}
+			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 
 		case fileContains:
 			resultFile := filepath.Join(tstConf.SubscribersDataFolder, tt.message.Directory, string(tt.message.FromNode), tt.message.FileName)
