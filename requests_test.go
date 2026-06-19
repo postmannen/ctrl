@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/fxamacker/cbor/v2"
 	natsserver "github.com/nats-io/nats-server/v2/server"
+	"github.com/postmannen/actress"
 )
 
 var logging = flag.Bool("logging", false, "set to true to enable the normal logger of the package")
@@ -284,7 +286,19 @@ func TestRequest(t *testing.T) {
 	for _, tt := range tests {
 		switch tt.viaSocketOrCh {
 		case viaCh:
-			tstSrv.newMessagesCh <- tt.message
+			//tstSrv.newMessagesCh <- tt.message
+			b, err := cbor.Marshal(tt.message)
+			if err != nil {
+				t.Fatalf("error: TestRequest: faield to cbor marshal: %v\n", err)
+			}
+
+			ev := actress.Event{
+				Name:    ETNone,
+				Data:    b,
+				DstNode: "REMOTE",
+			}
+
+			tstSrv.root.AddEvent(ev)
 
 		case viaSocket:
 			msgs := []Message{tt.message}

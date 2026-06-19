@@ -5,14 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -417,9 +414,6 @@ func (s *server) Start() {
 		go s.exposeDataFolder()
 	}
 
-	// Start the processing of new messages from an input channel.
-	s.routeMessagesToPublisherProcess()
-
 	// Start reading the channel for injecting direct messages that should
 	// not be sent via the message broker.
 	s.directSAMSChRead()
@@ -508,10 +502,16 @@ func (s *server) directSAMSChRead() {
 
 // Will stop all processes started during startup.
 func (s *server) Stop() {
+
+	err := s.ctrlSocket.Close()
+	if err != nil {
+		fmt.Printf("GOT ERROR CLOSING SOCKET: %v\n", err)
+	}
+
 	// Stop the started pub/sub message processes.
 	s.processes.Stop()
 	log.Printf("info: stopped all subscribers\n")
-
+	fmt.Printf("-------------------------------------------------------IS CLOSED\n")
 	// Stop the errorKernel.
 	s.errorKernel.stop()
 	log.Printf("info: stopped the errorKernel\n")
@@ -531,109 +531,6 @@ func (s *server) Stop() {
 		}
 	}
 
-}
-
-// routeMessagesToPublisherProcess takes a database name it's input argument.
-// The database will be used as the persistent k/v store for the work
-// queue which is implemented as a ring buffer.
-// The ringBufferInCh are where we get new messages to publish.
-// Incomming messages will be routed to the correct subject process, where
-// the handling of each nats subject is handled within it's own separate
-// worker process.
-// It will also handle the process of spawning more worker processes
-// for publisher subjects if it does not exist.
-func (s *server) routeMessagesToPublisherProcess() {
-	// Start reading new fresh messages received on the incomming message
-	// pipe/file.
-
-	// Process the messages that are in the ring buffer. Check and
-	// send if there are a specific subject for it, and if no subject
-	// exist throw an error.
-
-	var method Method
-	methodsAvailable := method.GetMethodsAvailable()
-
-	go func() {
-		for message := range s.newMessagesCh {
-
-			go func(message Message) {
-
-				s.messageID.mu.Lock()
-				s.messageID.id++
-				message.ID = s.messageID.id
-				s.messageID.mu.Unlock()
-
-				s.metrics.promMessagesProcessedIDLast.Set(float64(message.ID))
-
-				// Check if the format of the message is correct.
-				if _, ok := methodsAvailable.CheckIfExists(message.Method); !ok {
-					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", message.Method)
-					s.errorKernel.errSend(s.processInitial, message, er, logError)
-					return
-				}
-
-				switch {
-				case message.Retries < 0:
-					message.Retries = s.configuration.DefaultMessageRetries
-				}
-				if message.MethodTimeout < 1 && message.MethodTimeout != -1 {
-					message.MethodTimeout = s.configuration.DefaultMethodTimeout
-				}
-
-				// ---
-				// Check for {{CTRL_FILE}} and if we should read and load a local file into
-				// the message before sending.
-
-				var filePathToOpen string
-				foundFile := false
-				var argPos int
-				for i, v := range message.MethodArgs {
-					if strings.Contains(v, "{{CTRL_FILE:") {
-						foundFile = true
-						argPos = i
-
-						// Example to split:
-						// echo {{CTRL_FILE:/somedir/msg_file.yaml}}>ctrlfile.txt
-						//
-						// Split at colon. We want the part after.
-						ss := strings.Split(v, ":")
-						// Split at "}}",so pos [0] in the result contains just the file path.
-						sss := strings.Split(ss[1], "}}")
-						filePathToOpen = sss[0]
-
-					}
-				}
-
-				if foundFile {
-
-					fh, err := os.Open(filePathToOpen)
-					if err != nil {
-						s.errorKernel.logError("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
-						return
-					}
-					defer fh.Close()
-
-					b, err := io.ReadAll(fh)
-					if err != nil {
-						s.errorKernel.logError("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
-						return
-					}
-
-					// Replace the {{CTRL_FILE}} with the actual content read from file.
-					re := regexp.MustCompile(`(.*)({{CTRL_FILE.*}})(.*)`)
-					message.MethodArgs[argPos] = re.ReplaceAllString(message.MethodArgs[argPos], `${1}`+string(b)+`${3}`)
-					// ---
-
-				}
-
-				message.ArgSignature = s.processInitial.addMethodArgSignature(message)
-
-				go s.processInitial.publishAMessage(message, s.natsConn)
-
-			}(message)
-
-		}
-	}()
 }
 
 func (s *server) exposeDataFolder() {

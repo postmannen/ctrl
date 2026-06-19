@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/postmannen/actress"
 
 	"gopkg.in/yaml.v3"
 )
@@ -252,10 +254,13 @@ func (s *server) getFilePaths(dirName string) ([]string, error) {
 func (s *server) readSocket() {
 	// Loop, and wait for new connections.
 	for {
+		fmt.Printf("DEBUG 1\n")
 		conn, err := s.ctrlSocket.Accept()
+		fmt.Printf("DEBUG 2\n")
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
 			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+			os.Exit(0)
 		}
 
 		go func(conn net.Conn) {
@@ -300,7 +305,22 @@ func (s *server) readSocket() {
 				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, messages[i])
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
-				s.newMessagesCh <- messages[i]
+				// -------------------
+				b, err := cbor.Marshal(messages[i])
+				if err != nil {
+					fmt.Printf("error: TestRequest: faield to cbor marshal: %v\n", err)
+				}
+
+				ev := actress.Event{
+					Name:    ETNone,
+					Data:    b,
+					DstNode: "REMOTE",
+				}
+
+				s.root.AddEvent(ev)
+				// -------------------
+
+				// s.newMessagesCh <- messages[i]
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.

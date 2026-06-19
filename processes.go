@@ -189,9 +189,16 @@ func (p *processes) Start(proc process) {
 
 // Stop all subscriber processes.
 func (p *processes) Stop() {
+	p.server.cancel()
 	log.Printf("info: canceling all subscriber processes...\n")
 	p.cancel()
+	// TODO: REFACTOR: The stop seems to hang waiting for the waitgroup at least
+	//   in test, and never finnishes waiting. Might also be when the code is run
+	//	 normally.
+	//	 NB: This might now be a problem, since later all these will be actors,
+	//	   and the stoping will be handled by the actress system.
 	p.wg.Wait()
+	fmt.Printf("DEBUG REFACTOR: Done waiting for waitgroups.")
 	log.Printf("info: done canceling all subscriber processes.\n")
 
 }

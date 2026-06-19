@@ -70,7 +70,7 @@ func main() {
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation hangs.
 	go func() {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 5)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
 	}()
