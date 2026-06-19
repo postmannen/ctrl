@@ -39,8 +39,6 @@ type server struct {
 	configuration *Configuration
 	// The nats connection to the broker
 	natsConn *nats.Conn
-	// net listener for communicating via the ctrl socket
-	ctrlSocket net.Listener
 	// processes holds all the information about running processes
 	processes *processes
 	// The name of the node
@@ -185,7 +183,6 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	log.Printf(" * conn.Opts.ReconnectJitterTLS: %v\n", conn.Opts.ReconnectJitterTLS)
 	log.Printf(" * conn.Opts.ReconnectJitter: %v\n", conn.Opts.ReconnectJitter)
 
-	var ctrlSocket net.Listener
 	var err error
 
 	// Check if tmp folder for socket exists, if not create it
@@ -194,15 +191,6 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", configuration.SocketFolder, err)
-		}
-	}
-
-	// Open the ctrl socket file, and start the listener if enabled.
-	if configuration.EnableSocket {
-		ctrlSocket, err = createSocket(configuration.SocketFolder, "ctrl.sock")
-		if err != nil {
-			cancel()
-			return nil, err
 		}
 	}
 
@@ -244,7 +232,6 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		configuration:         configuration,
 		nodeName:              configuration.NodeName,
 		natsConn:              conn,
-		ctrlSocket:            ctrlSocket,
 		newMessagesCh:         make(chan Message),
 		messageDeliverLocalCh: make(chan []Message),
 		jetstreamPublishCh:    make(chan Message),
@@ -348,6 +335,18 @@ func (s *server) Start() {
 		os.Exit(1)
 	}
 
+	err = actress.NewProcess(s.ctx, root, ETReadSocket, etReadSocketFn(s)).Act()
+	if err != nil {
+		log.Printf("error: failed to start etReadSocket actor: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = actress.NewProcess(s.ctx, root, ETReadFolder, etReadFolderFn(s)).Act()
+	if err != nil {
+		log.Printf("error: failed to start etReadSocket actor: %v\n", err)
+		os.Exit(1)
+	}
+
 	//--------------------------------------------------------------------------
 
 	go func() {
@@ -365,26 +364,6 @@ func (s *server) Start() {
 			os.Exit(1)
 		}
 	}()
-
-	// Start the checking the input socket for new messages from operator.
-	if s.configuration.EnableSocket {
-		go s.readSocket()
-	}
-
-	// Start the checking the readfolder for new messages from operator.
-	if s.configuration.EnableReadFolder {
-		go s.readFolder()
-	}
-
-	// Check if we should start the tcp listener for new messages from operator.
-	if s.configuration.TCPListener != "" {
-		go s.readTCPListener()
-	}
-
-	// Check if we should start the http listener for new messages from operator.
-	if s.configuration.HTTPListener != "" {
-		go s.readHttpListener()
-	}
 
 	// Start audit logger.
 	go s.startAuditLog(s.ctx)
@@ -502,11 +481,6 @@ func (s *server) directSAMSChRead() {
 
 // Will stop all processes started during startup.
 func (s *server) Stop() {
-
-	err := s.ctrlSocket.Close()
-	if err != nil {
-		fmt.Printf("GOT ERROR CLOSING SOCKET: %v\n", err)
-	}
 
 	// Stop the started pub/sub message processes.
 	s.processes.Stop()

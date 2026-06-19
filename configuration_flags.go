@@ -29,10 +29,6 @@ type Configuration struct {
 	ReadFolder string `comment:"The folder where the readfolder should live"`
 	// EnableReadFolder for enabling the read messages api from readfolder
 	EnableReadFolder bool `comment:"EnableReadFolder for enabling the read messages api from readfolder"`
-	// TCP Listener for sending messages to the system, <host>:<port>
-	TCPListener string `comment:"TCP Listener for sending messages to the system, <host>:<port>"`
-	// HTTP Listener for sending messages to the system, <host>:<port>
-	HTTPListener string `comment:"HTTP Listener for sending messages to the system, <host>:<port>"`
 	// The folder where the database should live
 	DatabaseFolder string `comment:"The folder where the database should live"`
 	// Unique string to identify this Edge unit
@@ -163,8 +159,6 @@ func NewConfiguration() *Configuration {
 	flag.StringVar(&c.ShellOnNode, "shellOnNode", CheckEnv("SHELL_ON_NODE", c.ShellOnNode).(string), "set a value to override the default shell used as interpreter for running cliCommand's on node.")
 	flag.StringVar(&c.SocketFolder, "socketFolder", CheckEnv("SOCKET_FOLDER", c.SocketFolder).(string), "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.ReadFolder, "readFolder", CheckEnv("READ_FOLDER", c.ReadFolder).(string), "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
-	flag.StringVar(&c.TCPListener, "tcpListener", CheckEnv("TCP_LISTENER", c.TCPListener).(string), "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
-	flag.StringVar(&c.HTTPListener, "httpListener", CheckEnv("HTTP_LISTENER", c.HTTPListener).(string), "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", CheckEnv("DATABASE_FOLDER", c.DatabaseFolder).(string), "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", CheckEnv("NODE_NAME", c.NodeName).(string), "some unique string to identify this Edge unit")
 	flag.StringVar(&c.NodeAlias, "nodeAlias", CheckEnv("NODE_ALIAS", c.NodeAlias).(string), "extra aliases for the node name")
@@ -260,8 +254,6 @@ func newConfigurationDefaults() Configuration {
 		SocketFolder:               "./tmp",
 		ReadFolder:                 "./readfolder",
 		EnableReadFolder:           true,
-		TCPListener:                "",
-		HTTPListener:               "",
 		DatabaseFolder:             "./var/lib",
 		NodeName:                   "",
 		NodeAlias:                  "",

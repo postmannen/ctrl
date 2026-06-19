@@ -2,11 +2,11 @@ package ctrl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -248,142 +248,66 @@ func (s *server) getFilePaths(dirName string) ([]string, error) {
 	return filePaths, nil
 }
 
-// readSocket will read the .sock file specified.
-// It will take a channel of []byte as input, and it is in this
-// channel the content of a file that has changed is returned.
-func (s *server) readSocket() {
-	// Loop, and wait for new connections.
-	for {
-		fmt.Printf("DEBUG 1\n")
-		conn, err := s.ctrlSocket.Accept()
-		fmt.Printf("DEBUG 2\n")
-		if err != nil {
-			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
-			os.Exit(0)
-		}
+const ETReadSocket actress.EventName = "ETReadSocket"
 
-		go func(conn net.Conn) {
-			defer conn.Close()
+func etReadSocketFn(s *server) actress.ETFunc {
+	fn := func(ctx context.Context, p *actress.Process) func() {
+		fn := func() {
+			// Open the ctrl socket file, and start the listener if enabled.
+			var err error
+			var ctrlSocket net.Listener
 
-			var readBytes []byte
-
-			for {
-				b := make([]byte, 1500)
-				_, err = conn.Read(b)
-				if err != nil && err != io.EOF {
-					er := fmt.Errorf("error: failed to read data from socket: %v", err)
-					s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-					return
-				}
-
-				readBytes = append(readBytes, b...)
-
-				if err == io.EOF {
-					break
-				}
-			}
-
-			readBytes = bytes.Trim(readBytes, "\x00")
-
-			// unmarshal the JSON into a struct
-			messages, err := s.convertBytesToMessages(readBytes)
-			if err != nil {
-				er := fmt.Errorf("error: malformed json received on socket: %s\n %v", readBytes, err)
-				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-				return
-			}
-
-			for i := range messages {
-
-				// Fill in the value for the FromNode field, so the receiver
-				// can check this field to know where it came from.
-				messages[i].FromNode = Node(s.nodeName)
-
-				// Send an info message to the central about the message picked
-				// for auditing.
-				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, messages[i])
-				s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
-
-				// -------------------
-				b, err := cbor.Marshal(messages[i])
+			if s.configuration.EnableSocket {
+				ctrlSocket, err = createSocket(s.configuration.SocketFolder, "ctrl.sock")
 				if err != nil {
-					fmt.Printf("error: TestRequest: faield to cbor marshal: %v\n", err)
+					fmt.Printf("error: failed to create socket: %v\n", err)
+					os.Exit(1)
 				}
-
-				ev := actress.Event{
-					Name:    ETNone,
-					Data:    b,
-					DstNode: "REMOTE",
-				}
-
-				s.root.AddEvent(ev)
-				// -------------------
-
-				// s.newMessagesCh <- messages[i]
 			}
 
-			// Send the SAM struct to be picked up by the ring buffer.
+			p.SignalReady()
 
-			s.auditLogCh <- messages
+			// TODO: REFACTOR: The listener (ctrlSocekt) should only be defined here, and not in
+			//	 the server struct.
 
-		}(conn)
-	}
-}
+			go func() {
+				for {
+					fmt.Printf("DEBUG 1\n")
+					conn, err := ctrlSocket.Accept()
+					fmt.Printf("DEBUG 2\n")
+					if err != nil {
+						er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
+						s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+						os.Exit(0)
+					}
 
-// readFolder
-func (s *server) readFolder() {
-	// Check if the startup folder exist.
-	if _, err := os.Stat(s.configuration.ReadFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(s.configuration.ReadFolder, 0770)
-		if err != nil {
-			s.errorKernel.logError("readfolder: failed to create readfolder", "error", err)
-			os.Exit(1)
-		}
-	}
+					go func(conn net.Conn) {
+						defer conn.Close()
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		s.errorKernel.logError("readfolder: failed to create new logWatcher", "error", err)
-		os.Exit(1)
-	}
+						var readBytes []byte
 
-	// Start listening for events.
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
+						for {
+							b := make([]byte, 1500)
+							_, err = conn.Read(b)
+							if err != nil && err != io.EOF {
+								er := fmt.Errorf("error: failed to read data from socket: %v", err)
+								s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+								return
+							}
 
-				if event.Op == fsnotify.Create || event.Op == fsnotify.Write {
-					time.Sleep(time.Millisecond * 250)
-					s.errorKernel.logDebug("readFolder: got file event", "name", event.Name, "op", event.Op)
+							readBytes = append(readBytes, b...)
 
-					func() {
-						fh, err := os.Open(event.Name)
-						if err != nil {
-							er := fmt.Errorf("error: readFolder: failed to open readFile from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logDebug)
-							return
+							if err == io.EOF {
+								break
+							}
 						}
 
-						b, err := io.ReadAll(fh)
-						if err != nil {
-							er := fmt.Errorf("error: readFolder: failed to readall from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-							fh.Close()
-							return
-						}
-						fh.Close()
-
-						b = bytes.Trim(b, "\x00")
+						readBytes = bytes.Trim(readBytes, "\x00")
 
 						// unmarshal the JSON into a struct
-						messages, err := s.convertBytesToMessages(b)
+						messages, err := s.convertBytesToMessages(readBytes)
 						if err != nil {
-							er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
+							er := fmt.Errorf("error: malformed json received on socket: %s\n %v", readBytes, err)
 							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 							return
 						}
@@ -396,183 +320,168 @@ func (s *server) readFolder() {
 
 							// Send an info message to the central about the message picked
 							// for auditing.
-							er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, messages[i])
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+							er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, messages[i])
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
-							// Check if it is a message to publish with Jetstream.
-							if messages[i].JetstreamToNode != "" {
-
-								s.jetstreamPublishCh <- messages[i]
-								s.errorKernel.logDebug("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh", "messages", messages)
-
-								continue
+							// -------------------
+							b, err := cbor.Marshal(messages[i])
+							if err != nil {
+								fmt.Printf("error: TestRequest: faield to cbor marshal: %v\n", err)
 							}
 
-							s.newMessagesCh <- messages[i]
+							ev := actress.Event{
+								Name:    ETNone,
+								Data:    b,
+								DstNode: "REMOTE",
+							}
 
-							s.errorKernel.logDebug("readFolder: read new message in readfolder and putting it on s.samToSendCh", "messages", messages)
+							s.root.AddEvent(ev)
+							// -------------------
+
+							// s.newMessagesCh <- messages[i]
 						}
 
 						// Send the SAM struct to be picked up by the ring buffer.
+
 						s.auditLogCh <- messages
 
-						// Delete the file.
-						err = os.Remove(event.Name)
-						if err != nil {
-							er := fmt.Errorf("error: readFolder: failed to remove readFile from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+					}(conn)
+				}
+			}()
+
+			<-ctx.Done()
+			ctrlSocket.Close()
+
+		}
+		return fn
+	}
+	return fn
+}
+
+const ETReadFolder actress.EventName = "ETReadFolder"
+
+func etReadFolderFn(s *server) actress.ETFunc {
+	fn := func(ctx context.Context, p *actress.Process) func() {
+		fn := func() {
+			p.SignalReady()
+
+			// Check if the startup folder exist.
+			if _, err := os.Stat(s.configuration.ReadFolder); os.IsNotExist(err) {
+				err := os.MkdirAll(s.configuration.ReadFolder, 0770)
+				if err != nil {
+					s.errorKernel.logError("readfolder: failed to create readfolder", "error", err)
+					os.Exit(1)
+				}
+			}
+
+			watcher, err := fsnotify.NewWatcher()
+			if err != nil {
+				s.errorKernel.logError("readfolder: failed to create new logWatcher", "error", err)
+				os.Exit(1)
+			}
+
+			// Start listening for events.
+			go func() {
+				for {
+					select {
+					case event, ok := <-watcher.Events:
+						if !ok {
 							return
 						}
 
-					}()
+						if event.Op == fsnotify.Create || event.Op == fsnotify.Write {
+							time.Sleep(time.Millisecond * 250)
+							s.errorKernel.logDebug("readFolder: got file event", "name", event.Name, "op", event.Op)
+
+							func() {
+								fh, err := os.Open(event.Name)
+								if err != nil {
+									er := fmt.Errorf("error: readFolder: failed to open readFile from readFolder: %v", err)
+									s.errorKernel.errSend(s.processInitial, Message{}, er, logDebug)
+									return
+								}
+
+								b, err := io.ReadAll(fh)
+								if err != nil {
+									er := fmt.Errorf("error: readFolder: failed to readall from readFolder: %v", err)
+									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									fh.Close()
+									return
+								}
+								fh.Close()
+
+								b = bytes.Trim(b, "\x00")
+
+								// unmarshal the JSON into a struct
+								messages, err := s.convertBytesToMessages(b)
+								if err != nil {
+									er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
+									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									return
+								}
+
+								for i := range messages {
+
+									// Fill in the value for the FromNode field, so the receiver
+									// can check this field to know where it came from.
+									messages[i].FromNode = Node(s.nodeName)
+
+									// Send an info message to the central about the message picked
+									// for auditing.
+									er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, messages[i])
+									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+
+									// Check if it is a message to publish with Jetstream.
+									if messages[i].JetstreamToNode != "" {
+
+										s.jetstreamPublishCh <- messages[i]
+										s.errorKernel.logDebug("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh", "messages", messages)
+
+										continue
+									}
+
+									s.newMessagesCh <- messages[i]
+
+									s.errorKernel.logDebug("readFolder: read new message in readfolder and putting it on s.samToSendCh", "messages", messages)
+								}
+
+								// Send the SAM struct to be picked up by the ring buffer.
+								s.auditLogCh <- messages
+
+								// Delete the file.
+								err = os.Remove(event.Name)
+								if err != nil {
+									er := fmt.Errorf("error: readFolder: failed to remove readFile from readFolder: %v", err)
+									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									return
+								}
+
+							}()
+						}
+
+					case err, ok := <-watcher.Errors:
+						if !ok {
+							return
+						}
+						er := fmt.Errorf("error: readFolder: file watcher error: %v", err)
+						s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+					}
 				}
+			}()
 
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				er := fmt.Errorf("error: readFolder: file watcher error: %v", err)
-				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-			}
-		}
-	}()
-
-	// Add a path.
-	err = watcher.Add(s.configuration.ReadFolder)
-	if err != nil {
-		s.errorKernel.logError("readFolder: start logs watcher: failed to add watcher", "error", err)
-		os.Exit(1)
-	}
-}
-
-// readTCPListener wait and read messages delivered on the TCP
-// port if started.
-// It will take a channel of []byte as input, and it is in this
-// channel the content of a file that has changed is returned.
-func (s *server) readTCPListener() {
-	ln, err := net.Listen("tcp", s.configuration.TCPListener)
-	if err != nil {
-		s.errorKernel.logError("readTCPListener: failed to start tcp listener", "error", err)
-		os.Exit(1)
-	}
-	// Loop, and wait for new connections.
-	for {
-
-		conn, err := ln.Accept()
-		if err != nil {
-			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
-			continue
-		}
-
-		go func(conn net.Conn) {
-			defer conn.Close()
-
-			var readBytes []byte
-
-			for {
-				b := make([]byte, 1500)
-				_, err = conn.Read(b)
-				if err != nil && err != io.EOF {
-					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-					return
-				}
-
-				readBytes = append(readBytes, b...)
-
-				if err == io.EOF {
-					break
-				}
-			}
-
-			readBytes = bytes.Trim(readBytes, "\x00")
-
-			// unmarshal the JSON into a struct
-			messages, err := s.convertBytesToMessages(readBytes)
+			// Add a path.
+			err = watcher.Add(s.configuration.ReadFolder)
 			if err != nil {
-				er := fmt.Errorf("error: malformed json received on tcp listener: %v", err)
-				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-				return
+				s.errorKernel.logError("readFolder: start logs watcher: failed to add watcher", "error", err)
+				os.Exit(1)
 			}
 
-			for i := range messages {
+			<-ctx.Done()
 
-				// Fill in the value for the FromNode field, so the receiver
-				// can check this field to know where it came from.
-				messages[i].FromNode = Node(s.nodeName)
-				s.newMessagesCh <- messages[i]
-			}
-
-			// Send the SAM struct to be picked up by the ring buffer.
-			s.auditLogCh <- messages
-
-		}(conn)
-	}
-}
-
-func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request) {
-
-	var readBytes []byte
-
-	for {
-		b := make([]byte, 1500)
-		_, err := r.Body.Read(b)
-		if err != nil && err != io.EOF {
-			er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-			return
 		}
-
-		readBytes = append(readBytes, b...)
-
-		if err == io.EOF {
-			break
-		}
+		return fn
 	}
-
-	readBytes = bytes.Trim(readBytes, "\x00")
-
-	// unmarshal the JSON into a struct
-	messages, err := s.convertBytesToMessages(readBytes)
-	if err != nil {
-		er := fmt.Errorf("error: malformed json received on HTTPListener: %v", err)
-		s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
-		return
-	}
-
-	for i := range messages {
-
-		// Fill in the value for the FromNode field, so the receiver
-		// can check this field to know where it came from.
-		messages[i].FromNode = Node(s.nodeName)
-		s.newMessagesCh <- messages[i]
-	}
-
-	// Send the SAM struct to be picked up by the ring buffer.
-	s.auditLogCh <- messages
-
-}
-
-func (s *server) readHttpListener() {
-	go func() {
-		n, err := net.Listen("tcp", s.configuration.HTTPListener)
-		if err != nil {
-			s.errorKernel.logError("readHttpListener: failed to open listen port", "error", err)
-			os.Exit(1)
-		}
-		mux := http.NewServeMux()
-		mux.HandleFunc("/", s.readHTTPlistenerHandler)
-		// TODO: Make this configurable, and move it out of the readHttpListener function,
-		// make a separate conf flag and function for it.
-		mux.Handle("/webui/", http.StripPrefix("/webui/", http.FileServer(http.Dir("/Users/bt/ctrl/webui"))))
-
-		err = http.Serve(n, mux)
-		if err != nil {
-			s.errorKernel.logError("readHttpListener: failed to start http.Serve", "error", err)
-			os.Exit(1)
-		}
-	}()
+	return fn
 }
 
 // convertBytesToSAMs will range over the  byte representing a message given in
