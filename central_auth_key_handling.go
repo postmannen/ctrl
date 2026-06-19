@@ -11,6 +11,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/exp/slog"
 )
 
 // centralAuth holds the logic related to handling public keys and auth maps.
@@ -20,17 +21,15 @@ type centralAuth struct {
 	// public key distribution related data and methods.
 	pki           *pki
 	configuration *Configuration
-	errorKernel   *errorKernel
 }
 
 // newCentralAuth will return a new and prepared *centralAuth
-func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
+func newCentralAuth(configuration *Configuration) *centralAuth {
 	c := centralAuth{
 		configuration: configuration,
-		errorKernel:   errorKernel,
 	}
-	c.pki = newPKI(configuration, errorKernel)
-	c.accessLists = newAccessLists(c.pki, errorKernel, configuration)
+	c.pki = newPKI(configuration)
+	c.accessLists = newAccessLists(c.pki, configuration)
 
 	c.generateACLsForAllNodes()
 
@@ -61,18 +60,16 @@ type pki struct {
 	configuration          *Configuration
 	db                     *bolt.DB
 	bucketNamePublicKeys   string
-	errorKernel            *errorKernel
 }
 
 // newKeys will return a prepared *keys with input values set.
-func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
+func newPKI(configuration *Configuration) *pki {
 	p := pki{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
 		nodesAcked:             newNodesAcked(),
 		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(),
 		configuration:          configuration,
 		bucketNamePublicKeys:   "publicKeys",
-		errorKernel:            errorKernel,
 	}
 
 	databaseFilepath := filepath.Join(configuration.DatabaseFolder, "auth.db")
@@ -80,7 +77,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	// Open the database file for persistent storage of public keys.
 	db, err := bolt.Open(databaseFilepath, 0660, nil)
 	if err != nil {
-		errorKernel.logDebug("newPKI: error: failed to open db", "error", err)
+		slog.Debug("newPKI: error: failed to open db", "error", err)
 		return &p
 	}
 
@@ -89,14 +86,14 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	// Get public keys from db storage.
 	keys, err := p.dbDumpPublicKey()
 	if err != nil {
-		errorKernel.logDebug("newPKI: dbPublicKeyDump failed, probably empty db", "error", err)
+		slog.Debug("newPKI: dbPublicKeyDump failed, probably empty db", "error", err)
 	}
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
 		p.nodesAcked.keysAndHash.Keys = keys
 		for k, v := range keys {
-			errorKernel.logDebug("newPKI: public keys db contains", "key", k, "value", []byte(v))
+			slog.Debug("newPKI: public keys db contains", "key", k, "value", []byte(v))
 		}
 	}
 
@@ -124,7 +121,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		proc.errorKernel.logDebug("addPublicKey: public key value for registered node is the same, doing nothing", "node", msg.FromNode)
+		slog.Debug("addPublicKey: public key value for registered node is the same, doing nothing", "node", msg.FromNode)
 		return
 	}
 
@@ -140,7 +137,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
 	er := fmt.Errorf("addPublicKey: key(s) needs to be allowed by operator for nodes: %v", notAckedNodes)
-	c.pki.errorKernel.infoSend(proc, msg, er)
+	fmt.Printf("INFO SEND: %v\n", er)
 }
 
 // deletePublicKeys to the db if the node do not exist, or if it is a new value.
@@ -158,11 +155,11 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 
 	err := c.pki.dbDeletePublicKeys(c.pki.bucketNamePublicKeys, nodes)
 	if err != nil {
-		proc.errorKernel.errSend(proc, msg, err, logWarning)
+		fmt.Printf("ERR SEND: %v\n", err)
 	}
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
-	c.pki.errorKernel.infoSend(proc, msg, er)
+	fmt.Printf("INFO SEND: %v\n", er)
 }
 
 // dbUpdatePublicKey will update the public key for a node in the db.
@@ -260,7 +257,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	b, err := cbor.Marshal(sortedNodesAndKeys)
 	if err != nil {
 		er := fmt.Errorf("error: updateHash, failed to marshal slice, and will not update hash for public keys:  %v", err)
-		c.pki.errorKernel.errSend(proc, message, er, logError)
+		fmt.Printf("ERR SEND: %v\n", er)
 
 		return
 	}
@@ -273,7 +270,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	err = c.pki.dbUpdateHash(hash[:])
 	if err != nil {
 		er := fmt.Errorf("error: methodKeysAllow, failed to store the hash into the db:  %v", err)
-		c.pki.errorKernel.errSend(proc, message, er, logError)
+		fmt.Printf("ERR SEND: %v\n", er)
 
 		return
 	}
@@ -288,13 +285,13 @@ func (p *pki) dbViewHash() ([]byte, error) {
 		//Open a bucket to get key's and values from.
 		bu := tx.Bucket([]byte("hash"))
 		if bu == nil {
-			p.errorKernel.logWarn("no db hash bucket exist", "bucket", "hash")
+			slog.Warn("no db hash bucket exist", "bucket", "hash")
 			return nil
 		}
 
 		v := bu.Get([]byte("hash"))
 		if len(v) == 0 {
-			p.errorKernel.logWarn("dbViewHash: get bucket equals", "length", 0)
+			slog.Warn("dbViewHash: get bucket equals", "length", 0)
 			return nil
 		}
 

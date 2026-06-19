@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 	"sync"
+
+	"golang.org/x/exp/slog"
 )
 
 // processes holds all the information about running processes
@@ -28,8 +30,6 @@ type processes struct {
 	metrics *metrics
 	// Waitgroup to keep track of all the processes started.
 	wg sync.WaitGroup
-	// errorKernel
-	errorKernel *errorKernel
 	// configuration
 	configuration *Configuration
 
@@ -43,7 +43,6 @@ func newProcesses(ctx context.Context, server *server) *processes {
 	p := processes{
 		server:        server,
 		active:        *newProcsMap(),
-		errorKernel:   server.errorKernel,
 		configuration: server.configuration,
 		nodeAuth:      server.nodeAuth,
 		metrics:       server.metrics,
@@ -225,7 +224,7 @@ func newStartup(server *server) *startup {
 // startProcess will start a process. It takes the initial process, request method,
 // and a procFunc as it's input arguments. If a procFunc is not needed, use the value nil.
 func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context, proc process, procFuncCh chan Message) error) {
-	p.errorKernel.logDebug("starting subscriber", "node", m, p.node)
+	slog.Debug("starting subscriber", "node", m, p.node)
 
 	var sub Subject
 	switch {
@@ -257,13 +256,13 @@ func (s *startup) startProcess(p process, m Method, pf func(ctx context.Context,
 
 // Print the content of the processes map.
 func (p *processes) printProcessesMap() {
-	p.errorKernel.logDebug("output of processes map : ")
+	slog.Debug("output of processes map : ")
 
 	{
 		p.active.mu.Lock()
 
 		for pName, proc := range p.active.procNames {
-			p.errorKernel.logDebug("process map", "name", pName, "ID", proc.processID, "subject", proc.subject.name())
+			slog.Debug("process map", "name", pName, "ID", proc.processID, "subject", proc.subject.name())
 		}
 
 		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))

@@ -216,7 +216,7 @@ func methodDummyDst(proc process, message Message, node string) ([]byte, error) 
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			proc.errorKernel.logDebug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
+			slog.Debug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
 
 			// If the process name already existed we return here before any
 			// new information is registered in the process map and we avoid
@@ -251,9 +251,9 @@ func dummySrcSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			proc.errorKernel.logDebug("copySrcHandler: process ended", "processName", proc.processName)
+			slog.Debug("copySrcHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			proc.errorKernel.logDebug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
+			slog.Debug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
 		}
 
 		return nil, nil
@@ -267,9 +267,9 @@ func dummyDstSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			proc.errorKernel.logDebug("copyDstHandler: process ended", "processName", proc.processName)
+			slog.Debug("copyDstHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			proc.errorKernel.logDebug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
+			slog.Debug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
 
 		}
 

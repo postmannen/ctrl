@@ -13,6 +13,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"golang.org/x/exp/slog"
 )
 
 // portInitialData is the data that is sent to the source and destination nodes when a port forwarding is created.
@@ -79,39 +80,39 @@ func methodPortSrc(proc process, message Message, node string) ([]byte, error) {
 
 		proc.processes.wg.Add(1)
 		if len(message.MethodArgs) < arg3_MaxSessionTimeout {
-			proc.errorKernel.logError("methodPortSrc: to few methodArgs defined in message", "want", wantMethodArgs)
+			slog.Error("methodPortSrc: to few methodArgs defined in message", "want", wantMethodArgs)
 			return
 		}
 
 		// Destination node
 		if message.MethodArgs[arg0_DestinationNode] == "" {
-			proc.errorKernel.logError("methodPortSrc: no destination node specified in method args", "want", wantMethodArgs)
+			slog.Error("methodPortSrc: no destination node specified in method args", "want", wantMethodArgs)
 			return
 		}
 		destinationNode := Node(message.MethodArgs[arg0_DestinationNode])
 
 		// Destination port
 		if message.MethodArgs[arg1_DestinationIPAndPort] == "" {
-			proc.errorKernel.logError("methodPortSrc: no destination port specified in method args", "want", wantMethodArgs)
+			slog.Error("methodPortSrc: no destination port specified in method args", "want", wantMethodArgs)
 			return
 		}
 		destinationIPAndPort := message.MethodArgs[arg1_DestinationIPAndPort]
 
 		// Source port
 		if message.MethodArgs[arg2_SourceIPandPort] == "" {
-			proc.errorKernel.logError("methodPortSrc: no source port specified in method args", "want", wantMethodArgs)
+			slog.Error("methodPortSrc: no source port specified in method args", "want", wantMethodArgs)
 			return
 		}
 		sourceIPAndPort := message.MethodArgs[arg2_SourceIPandPort]
 
 		// Max session timeout
 		if message.MethodArgs[arg3_MaxSessionTimeout] == "" {
-			proc.errorKernel.logError("methodPortSrc: no max session time specified in method args", "want", wantMethodArgs)
+			slog.Error("methodPortSrc: no max session time specified in method args", "want", wantMethodArgs)
 			return
 		}
 		n, err := strconv.Atoi(message.MethodArgs[arg3_MaxSessionTimeout])
 		if err != nil {
-			proc.errorKernel.logError("methodPortSrc: unable to convert max session timeout from string to int", "error", err)
+			slog.Error("methodPortSrc: unable to convert max session timeout from string to int", "error", err)
 			return
 		}
 		maxSessionTimeout := n
@@ -152,13 +153,13 @@ func methodPortSrc(proc process, message Message, node string) ([]byte, error) {
 		// Start sub process. The process will be killed when the context expires.
 		go portSrcSubProc.start(true)
 
-		proc.errorKernel.logDebug("methodPortSrc, pid", "pid", pid)
+		slog.Debug("methodPortSrc, pid", "pid", pid)
 
 		// ------- Prepare the data payload to send to the dst to start the dst sub process -------
 		cb, err := cbor.Marshal(pid)
 		if err != nil {
 			er := fmt.Errorf("error: methodPortSrc: cbor marshalling failed: %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			cancel()
 		}
 
@@ -205,11 +206,11 @@ func methodPortDst(proc process, message Message, node string) ([]byte, error) {
 		err := cbor.Unmarshal(message.Data, &pid)
 		if err != nil {
 			er := fmt.Errorf("error: methodPortDst: failed to cbor Unmarshal data: %v, message=%v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			return
 		}
 
-		proc.errorKernel.logDebug("methodPortDst: got pid", "pid", pid)
+		slog.Debug("methodPortDst: got pid", "pid", pid)
 
 		// Create a child context to use with the procFunc
 		var ctx context.Context
@@ -242,7 +243,7 @@ func methodPortDst(proc process, message Message, node string) ([]byte, error) {
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			proc.errorKernel.logDebug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
+			slog.Debug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
 
 			// If the process name already existed we return here before any
 			// new information is registered in the process map and we avoid
@@ -280,9 +281,9 @@ func portSrcSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			proc.errorKernel.logDebug("copySrcHandler: process ended", "processName", proc.processName)
+			slog.Debug("copySrcHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			proc.errorKernel.logDebug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
+			slog.Debug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
 		}
 
 		return nil, nil
@@ -299,9 +300,9 @@ func portDstSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			proc.errorKernel.logDebug("copyDstHandler: process ended", "processName", proc.processName)
+			slog.Debug("copyDstHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			proc.errorKernel.logDebug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
+			slog.Debug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
 
 		}
 
@@ -325,15 +326,15 @@ type portData struct {
 // data in the message to the source IP and port.
 func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel context.CancelFunc) func(context.Context, process, chan Message) error {
 	pf := func(ctx context.Context, proc process, procFuncCh chan Message) error {
-		proc.errorKernel.logDebug("STARTED PROCFUNC", "processName", proc.subject.name())
+		slog.Debug("STARTED PROCFUNC", "processName", proc.subject.name())
 		defer cancel()
-		defer proc.errorKernel.logDebug("portSrcProcFunc: canceled procFunc", "processName", proc.processName)
+		defer slog.Debug("portSrcProcFunc: canceled procFunc", "processName", proc.processName)
 
 		listener, err := net.Listen("tcp", pid.SourceIPAndPort)
 		if err != nil {
 			// TODO: Send a message to destination sub process that there was an error,
 			// and that it should stop.
-			proc.errorKernel.logError("portSrcSubProcFunc: net.Listen failed", "err", err)
+			slog.Error("portSrcSubProcFunc: net.Listen failed", "err", err)
 			return err
 		}
 
@@ -344,14 +345,14 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 				if err != nil {
 					// TODO: Send a message to destination sub process that there was an error,
 					// and that it should stop.
-					proc.errorKernel.logError("portSrcSubProcFunc: listener.Accept failed", "err", err)
+					slog.Error("portSrcSubProcFunc: listener.Accept failed", "err", err)
 					return
 				}
 
 				defer func() {
 					conn.Close()
 					listener.Close()
-					proc.errorKernel.logDebug("portSrcSubProcFunc: closed connection and listener")
+					slog.Debug("portSrcSubProcFunc: closed connection and listener")
 				}()
 
 				// Read the data from the tcp connection, create messages from it, and
@@ -362,7 +363,7 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 						b := make([]byte, 65535)
 						n, err := conn.Read(b)
 						if err != nil {
-							proc.errorKernel.logError("portSrcSubProcFunc: conn.Read failed", "err=", err)
+							slog.Error("portSrcSubProcFunc: conn.Read failed", "err=", err)
 							return
 						}
 
@@ -374,7 +375,7 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 
 						cb, err := cbor.Marshal(pd)
 						if err != nil {
-							proc.errorKernel.logError("portDstSubProcFunc: cbor marshalling failed", "err", err)
+							slog.Error("portDstSubProcFunc: cbor marshalling failed", "err", err)
 							return
 						}
 
@@ -387,14 +388,14 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 							ReplyMethod: None,
 						}
 
-						proc.errorKernel.logDebug("portSrcSubProcFunc: Created message to send", "pd.ID", pd.ID)
+						slog.Debug("portSrcSubProcFunc: Created message to send", "pd.ID", pd.ID)
 
 						select {
 						case <-ctx.Done():
-							proc.errorKernel.logDebug("portSrcProcFunc: canceling procFunc", "processName", proc.processName)
+							slog.Debug("portSrcProcFunc: canceling procFunc", "processName", proc.processName)
 							return
 						case proc.newMessagesCh <- msg:
-							proc.errorKernel.logDebug(" ---->: Sending message", "pd.ID", pd.ID, "length", len(pd.Data))
+							slog.Debug(" ---->: Sending message", "pd.ID", pd.ID, "length", len(pd.Data))
 						}
 					}
 				}()
@@ -408,7 +409,7 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 				for {
 					select {
 					case <-ctx.Done():
-						proc.errorKernel.logDebug("portSrcProcFunc: canceling procFunc", "processName", proc.processName)
+						slog.Debug("portSrcProcFunc: canceling procFunc", "processName", proc.processName)
 						return
 
 					// Handle the messages reveived from the sub process on the src node.
@@ -418,11 +419,11 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 						var pd portData
 						err := cbor.Unmarshal(message.Data, &pd)
 						if err != nil {
-							proc.errorKernel.logError("portSrcSubProcFunc: cbor unmarshalling failed", "err", err)
+							slog.Error("portSrcSubProcFunc: cbor unmarshalling failed", "err", err)
 							return
 						}
 
-						proc.errorKernel.logDebug("<---- GOT MESSAGE ON SRC", "pd.OK", pd.OK, "pd.ID", pd.ID, "length", len(pd.Data))
+						slog.Debug("<---- GOT MESSAGE ON SRC", "pd.OK", pd.OK, "pd.ID", pd.ID, "length", len(pd.Data))
 
 						buffer.Push(pd)
 
@@ -433,30 +434,30 @@ func portSrcSubProcFunc(pid portInitialData, initialMessage Message, cancel cont
 								nextID, _ := buffer.PeekNextID()
 
 								if expectedID != nextID {
-									proc.errorKernel.logDebug("portSrcSubProcFunc: WRONG ID, WILL WAIT FOR NEXT MESSAGE", "expectedID", expectedID, "nextID", pd.ID)
+									slog.Debug("portSrcSubProcFunc: WRONG ID, WILL WAIT FOR NEXT MESSAGE", "expectedID", expectedID, "nextID", pd.ID)
 									return nil
 								}
 
-								proc.errorKernel.logDebug("portSrcSubProcFunc correct id", "EXPECTED", expectedID, "GOT", pd.ID)
+								slog.Debug("portSrcSubProcFunc correct id", "EXPECTED", expectedID, "GOT", pd.ID)
 
 								pdPopped, ok := buffer.Pop()
 								if !ok {
-									proc.errorKernel.logDebug("portSrcSubProcFunc: Buffer is empty, break out, and wait for next message.")
+									slog.Debug("portSrcSubProcFunc: Buffer is empty, break out, and wait for next message.")
 									return nil
 								}
-								proc.errorKernel.logDebug("portSrcSubProcFunc: popped", "id", pdPopped.ID, "size", len(pdPopped.Data))
+								slog.Debug("portSrcSubProcFunc: popped", "id", pdPopped.ID, "size", len(pdPopped.Data))
 
 								n, err := conn.Write(pdPopped.Data)
 								if err != nil {
-									proc.errorKernel.logError("portSrcSubProcFunc: conn.Write failed", "err", err)
+									slog.Error("portSrcSubProcFunc: conn.Write failed", "err", err)
 									return err
 								}
-								proc.errorKernel.logDebug("--------> conn: portSrcSubProcFunc: wrote bytes with ID to connection, exptedID was", "bytes", n, "popped id", pdPopped.ID, "expectedID", expectedID)
+								slog.Debug("--------> conn: portSrcSubProcFunc: wrote bytes with ID to connection, exptedID was", "bytes", n, "popped id", pdPopped.ID, "expectedID", expectedID)
 
 								expectedID++
 
 								if !pdPopped.OK {
-									proc.errorKernel.logDebug("error: portSrcSubProcFunc: pdd.OK is false", "err", pdPopped.ErrorMsg)
+									slog.Debug("error: portSrcSubProcFunc: pdd.OK is false", "err", pdPopped.ErrorMsg)
 									return fmt.Errorf("%v", pdPopped.ErrorMsg)
 								}
 							}
@@ -490,14 +491,14 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 	pf := func(ctx context.Context, proc process, procFuncCh chan Message) error {
 		defer cancel()
 
-		proc.errorKernel.logDebug("portDstSubProcFunc: STARTED PROCFUNC", "processName", proc.subject.name())
-		defer proc.errorKernel.logDebug("portDstProcFunc: canceled procFunc", "processName", proc.processName)
+		slog.Debug("portDstSubProcFunc: STARTED PROCFUNC", "processName", proc.subject.name())
+		defer slog.Debug("portDstProcFunc: canceled procFunc", "processName", proc.processName)
 
 		// TODO: Start the tcp connection for the dst node here.
 		// ------------
 		conn, err := net.Dial("tcp", pid.DestinationIPAndPort)
 		if err != nil {
-			proc.errorKernel.logError("portDstSubProcFunc: dial failed", "err", err)
+			slog.Error("portDstSubProcFunc: dial failed", "err", err)
 			return err
 		}
 		defer conn.Close()
@@ -519,18 +520,18 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 					switch {
 					case err == io.EOF:
 						ok = false
-						proc.errorKernel.logError("portDstSubProcFunc: conn.Read() returned EOF", "bytes", n)
+						slog.Error("portDstSubProcFunc: conn.Read() returned EOF", "bytes", n)
 					case strings.Contains(err.Error(), "use of closed network connection"):
 						ok = false
-						proc.errorKernel.logError("portDstSubProcFunc: conn.Read(): closed network connection", "err", err, "bytes", n)
+						slog.Error("portDstSubProcFunc: conn.Read(): closed network connection", "err", err, "bytes", n)
 					default:
 						ok = false
-						proc.errorKernel.logError("portDstSubProcFunc: conn.Read(): other error", "err", err, "bytes", n)
+						slog.Error("portDstSubProcFunc: conn.Read(): other error", "err", err, "bytes", n)
 					}
 
 				}
 
-				proc.errorKernel.logDebug("portDstSubProcFunc: read from network conn", "bytes", n)
+				slog.Debug("portDstSubProcFunc: read from network conn", "bytes", n)
 
 				pdd := portData{
 					OK:       ok,
@@ -542,7 +543,7 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 
 				cb, err := cbor.Marshal(pdd)
 				if err != nil {
-					proc.errorKernel.logError("portDstSubProcFunc: cbor marshalling failed", "err", err)
+					slog.Error("portDstSubProcFunc: cbor marshalling failed", "err", err)
 					return
 				}
 
@@ -556,7 +557,7 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 				}
 
 				proc.newMessagesCh <- msg
-				proc.errorKernel.logDebug("portDstSubProcFunc: Created message to send", "id", id)
+				slog.Debug("portDstSubProcFunc: Created message to send", "id", id)
 
 				// If there was en error while reading, we exit the loop, so the connection is closed.
 				if !ok {
@@ -579,7 +580,7 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 		for {
 			select {
 			case <-ctx.Done():
-				proc.errorKernel.logDebug("portDstProcFunc: got <-ctx.Done() cancelling procFunc", "processName", proc.processName)
+				slog.Debug("portDstProcFunc: got <-ctx.Done() cancelling procFunc", "processName", proc.processName)
 				return nil
 
 			// Pick up the message recived by the copySrcSubHandler.
@@ -588,10 +589,10 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 				var pd portData
 				err := cbor.Unmarshal(message.Data, &pd)
 				if err != nil {
-					proc.errorKernel.logError("portDstSubProcFunc: cbor unmarshalling failed", "err", err)
+					slog.Error("portDstSubProcFunc: cbor unmarshalling failed", "err", err)
 				}
 
-				proc.errorKernel.logDebug("portdstSubProcFunc: <---- GOT DATA ON DST, id: %v, length: %v\n", pd.ID, len(pd.Data))
+				slog.Debug("portdstSubProcFunc: <---- GOT DATA ON DST, id: %v, length: %v\n", pd.ID, len(pd.Data))
 
 				buffer.Push(pd)
 
@@ -601,11 +602,11 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 						nextID, _ := buffer.PeekNextID()
 
 						if expectedID != nextID {
-							proc.errorKernel.logDebug("portdstSubProcFunc: WRONG ID, WILL WAIT FOR NEXT MESSAGE", "expectedID", expectedID, "nextID", pd.ID)
+							slog.Debug("portdstSubProcFunc: WRONG ID, WILL WAIT FOR NEXT MESSAGE", "expectedID", expectedID, "nextID", pd.ID)
 							return nil
 						}
 
-						proc.errorKernel.logDebug("portDstSubProcFunc: CORRECT ID, EXPECTED: %v, GOT: %v\n", expectedID, pd.ID)
+						slog.Debug("portDstSubProcFunc: CORRECT ID, EXPECTED: %v, GOT: %v\n", expectedID, pd.ID)
 
 						pdPopped, ok := buffer.Pop()
 
@@ -617,10 +618,10 @@ func portDstSubProcFunc(pid portInitialData, message Message, cancel context.Can
 						n, err := conn.Write(pdPopped.Data)
 						if err != nil {
 							err := fmt.Errorf("error: portDstSubProcFunc: conn.Write failed. err=%v", err)
-							proc.errorKernel.logError(err.Error())
+							slog.Error(err.Error())
 							return err
 						}
-						proc.errorKernel.logDebug("portDstSubProcFunc: --------> conn: wrote to connection", "bytes", n)
+						slog.Debug("portDstSubProcFunc: --------> conn: wrote to connection", "bytes", n)
 
 						expectedID++
 					}

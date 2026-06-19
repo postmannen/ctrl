@@ -5,11 +5,13 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"golang.org/x/exp/slog"
 )
 
 // handler to do a Http Get.
 func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- REQHttpGet received", "fromNode", message.FromNode, "data", message.Data)
+	slog.Debug("<--- REQHttpGet received", "fromNode", message.FromNode, "data", message.Data)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -21,7 +23,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodHttpGet: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
@@ -39,7 +41,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			er := fmt.Errorf("error: methodHttpGet: NewRequest failed: %v, bailing out: %v", err, message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			cancel()
 			return
@@ -54,7 +56,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 			resp, err := client.Do(req)
 			if err != nil {
 				er := fmt.Errorf("error: methodHttpGet: client.Do failed: %v, bailing out: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
 			}
@@ -63,7 +65,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 			if resp.StatusCode != 200 {
 				cancel()
 				er := fmt.Errorf("error: methodHttpGet: not 200, were %#v, bailing out: %v", resp.StatusCode, message)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
 			}
@@ -71,7 +73,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				er := fmt.Errorf("error: methodHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
@@ -88,7 +90,7 @@ func methodHttpGet(proc process, message Message, node string) ([]byte, error) {
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodHttpGet: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 		case out := <-outCh:
 			cancel()

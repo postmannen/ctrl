@@ -16,6 +16,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/postmannen/actress"
+	"golang.org/x/exp/slog"
 
 	"gopkg.in/yaml.v3"
 )
@@ -39,16 +40,17 @@ func (s *server) readStartupFolder() {
 	filePaths, err := s.getFilePaths(startupFolder)
 	if err != nil {
 		er := fmt.Errorf("error: readStartupFolder: unable to get filenames: %v", err)
-		s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+		// s.s.processInitial, Message{}, er, logWarning)
+		fmt.Printf("TOSEND: %v\n", er)
 		return
 	}
 
 	for _, fp := range filePaths {
-		s.errorKernel.logInfo("readStartupFolder: ranging filepaths, current filePath contains", "filepath", fp)
+		slog.Info("readStartupFolder: ranging filepaths, current filePath contains", "filepath", fp)
 	}
 
 	for _, filePath := range filePaths {
-		s.errorKernel.logInfo("readStartupFolder: reading and working on file from startup folder ", "file", filePath)
+		slog.Info("readStartupFolder: reading and working on file from startup folder ", "file", filePath)
 
 		// Read the content of each file.
 		readBytes, err := func(filePath string) ([]byte, error) {
@@ -69,7 +71,8 @@ func (s *server) readStartupFolder() {
 		}(filePath)
 
 		if err != nil {
-			s.errorKernel.errSend(s.processInitial, Message{}, err, logWarning)
+			// s.s.processInitial, Message{}, err, logWarning)
+			fmt.Printf("TOSEND: %v\n", err)
 			continue
 		}
 
@@ -79,7 +82,8 @@ func (s *server) readStartupFolder() {
 		messages, err := s.convertBytesToMessages(readBytes)
 		if err != nil {
 			er := fmt.Errorf("error: startup folder: malformed json read: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+			// s.s.processInitial, Message{}, er, logWarning)
+			fmt.Printf("TOSEND: %v\n", er)
 			continue
 		}
 
@@ -94,19 +98,22 @@ func (s *server) readStartupFolder() {
 			switch {
 			case messages[i].FromNode == "":
 				er := fmt.Errorf(" error: missing value in fromNode field in startup message, discarding message")
-				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+				// s.s.processInitial, Message{}, er, logWarning)
+				fmt.Printf("TOSEND: %v\n", er)
 				continue
 
 			case messages[i].ToNode == "" && len(messages[i].ToNodes) == 0:
 				er := fmt.Errorf(" error: missing value in both toNode and toNodes fields in startup message, discarding message")
-				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+				// s.s.processInitial, Message{}, er, logWarning)
+				fmt.Printf("TOSEND: %v\n", er)
 				continue
 			}
 
 		}
 
 		er := fmt.Errorf("%v", messages)
-		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+		// s.s.processInitial, Message{}, er, logInfo)
+		fmt.Printf("TOSEND: %v\n", er)
 
 		s.messageDeliverLocalCh <- messages
 
@@ -175,7 +182,8 @@ func (s *server) jetstreamConsume() {
 	}
 
 	er := fmt.Errorf("jetstreamConsume: will consume the following subjects: %v", filterSubjectValues)
-	s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+	// s.s.processInitial, Message{}, er, logInfo)
+	fmt.Printf("TOSEND: %v\n", er)
 
 	cons, err := stream.CreateOrUpdateConsumer(s.ctx, jetstream.ConsumerConfig{
 		Name:           s.nodeName,
@@ -188,14 +196,16 @@ func (s *server) jetstreamConsume() {
 
 	consumeContext, _ := cons.Consume(func(msg jetstream.Msg) {
 		er := fmt.Errorf("jetstreamConsume: jetstream msg received: subject %q, data: %q", msg.Subject(), string(msg.Data()))
-		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+		// s.s.processInitial, Message{}, er, logInfo)
+		fmt.Printf("TOSEND: %v\n", er)
 
 		msg.Ack()
 
 		m, err := s.messageDeserializeAndUncompress(msg.Data())
 		if err != nil {
 			er := fmt.Errorf("jetstreamConsume: deserialize and uncompress failed: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+			// s.s.processInitial, Message{}, er, logError)
+			fmt.Printf("TOSEND: %v\n", er)
 			return
 		}
 
@@ -277,7 +287,8 @@ func etReadSocketFn(s *server) actress.ETFunc {
 					fmt.Printf("DEBUG 2\n")
 					if err != nil {
 						er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-						s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
+						// s.s.processInitial, Message{}, er, logError)
+						fmt.Printf("TOSEND: %v\n", er)
 						os.Exit(0)
 					}
 
@@ -291,7 +302,8 @@ func etReadSocketFn(s *server) actress.ETFunc {
 							_, err = conn.Read(b)
 							if err != nil && err != io.EOF {
 								er := fmt.Errorf("error: failed to read data from socket: %v", err)
-								s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+								// s.s.processInitial, Message{}, er, logWarning)
+								fmt.Printf("TOSEND: %v\n", er)
 								return
 							}
 
@@ -308,7 +320,8 @@ func etReadSocketFn(s *server) actress.ETFunc {
 						messages, err := s.convertBytesToMessages(readBytes)
 						if err != nil {
 							er := fmt.Errorf("error: malformed json received on socket: %s\n %v", readBytes, err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+							// s.s.processInitial, Message{}, er, logWarning)
+							fmt.Printf("TOSEND: %v\n", er)
 							return
 						}
 
@@ -321,7 +334,8 @@ func etReadSocketFn(s *server) actress.ETFunc {
 							// Send an info message to the central about the message picked
 							// for auditing.
 							er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, messages[i])
-							s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
+							// s.s.processInitial, Message{}, er, logInfo)
+							fmt.Printf("TOSEND: %v\n", er)
 
 							// -------------------
 							b, err := cbor.Marshal(messages[i])
@@ -369,14 +383,14 @@ func etReadFolderFn(s *server) actress.ETFunc {
 			if _, err := os.Stat(s.configuration.ReadFolder); os.IsNotExist(err) {
 				err := os.MkdirAll(s.configuration.ReadFolder, 0770)
 				if err != nil {
-					s.errorKernel.logError("readfolder: failed to create readfolder", "error", err)
+					slog.Error("readfolder: failed to create readfolder", "error", err)
 					os.Exit(1)
 				}
 			}
 
 			watcher, err := fsnotify.NewWatcher()
 			if err != nil {
-				s.errorKernel.logError("readfolder: failed to create new logWatcher", "error", err)
+				slog.Error("readfolder: failed to create new logWatcher", "error", err)
 				os.Exit(1)
 			}
 
@@ -391,20 +405,22 @@ func etReadFolderFn(s *server) actress.ETFunc {
 
 						if event.Op == fsnotify.Create || event.Op == fsnotify.Write {
 							time.Sleep(time.Millisecond * 250)
-							s.errorKernel.logDebug("readFolder: got file event", "name", event.Name, "op", event.Op)
+							slog.Debug("readFolder: got file event", "name", event.Name, "op", event.Op)
 
 							func() {
 								fh, err := os.Open(event.Name)
 								if err != nil {
 									er := fmt.Errorf("error: readFolder: failed to open readFile from readFolder: %v", err)
-									s.errorKernel.errSend(s.processInitial, Message{}, er, logDebug)
+									// s.s.processInitial, Message{}, er, logDebug)
+									fmt.Printf("TOSEND: %v\n", er)
 									return
 								}
 
 								b, err := io.ReadAll(fh)
 								if err != nil {
 									er := fmt.Errorf("error: readFolder: failed to readall from readFolder: %v", err)
-									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									// s.s.processInitial, Message{}, er, logWarning)
+									fmt.Printf("TOSEND: %v\n", er)
 									fh.Close()
 									return
 								}
@@ -416,7 +432,8 @@ func etReadFolderFn(s *server) actress.ETFunc {
 								messages, err := s.convertBytesToMessages(b)
 								if err != nil {
 									er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
-									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									// s.s.processInitial, Message{}, er, logWarning)
+									fmt.Printf("TOSEND: %v\n", er)
 									return
 								}
 
@@ -429,20 +446,21 @@ func etReadFolderFn(s *server) actress.ETFunc {
 									// Send an info message to the central about the message picked
 									// for auditing.
 									er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, messages[i])
-									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									// s.s.processInitial, Message{}, er, logWarning)
+									fmt.Printf("TOSEND: %v\n", er)
 
 									// Check if it is a message to publish with Jetstream.
 									if messages[i].JetstreamToNode != "" {
 
 										s.jetstreamPublishCh <- messages[i]
-										s.errorKernel.logDebug("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh", "messages", messages)
+										slog.Debug("readFolder: read new JETSTREAM message in readfolder and putting it on s.jetstreamPublishCh", "messages", messages)
 
 										continue
 									}
 
 									s.newMessagesCh <- messages[i]
 
-									s.errorKernel.logDebug("readFolder: read new message in readfolder and putting it on s.samToSendCh", "messages", messages)
+									slog.Debug("readFolder: read new message in readfolder and putting it on s.samToSendCh", "messages", messages)
 								}
 
 								// Send the SAM struct to be picked up by the ring buffer.
@@ -452,7 +470,8 @@ func etReadFolderFn(s *server) actress.ETFunc {
 								err = os.Remove(event.Name)
 								if err != nil {
 									er := fmt.Errorf("error: readFolder: failed to remove readFile from readFolder: %v", err)
-									s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+									// s.s.processInitial, Message{}, er, logWarning)
+									fmt.Printf("TOSEND: %v\n", er)
 									return
 								}
 
@@ -464,7 +483,8 @@ func etReadFolderFn(s *server) actress.ETFunc {
 							return
 						}
 						er := fmt.Errorf("error: readFolder: file watcher error: %v", err)
-						s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
+						// s.s.processInitial, Message{}, er, logWarning)
+						fmt.Printf("TOSEND: %v\n", er)
 					}
 				}
 			}()
@@ -472,7 +492,7 @@ func etReadFolderFn(s *server) actress.ETFunc {
 			// Add a path.
 			err = watcher.Add(s.configuration.ReadFolder)
 			if err != nil {
-				s.errorKernel.logError("readFolder: start logs watcher: failed to add watcher", "error", err)
+				slog.Error("readFolder: start logs watcher: failed to add watcher", "error", err)
 				os.Exit(1)
 			}
 
@@ -537,7 +557,8 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 		// the slice since it is not valid.
 		default:
 			er := fmt.Errorf("error: no toNode or toNodes where specified in the message, dropping message: %v", v)
-			s.errorKernel.errSend(s.processInitial, v, er, logWarning)
+			// s.s.processInitial, v, er, logWarning)
+			fmt.Printf("TOSEND: %v\n", er)
 			continue
 		}
 	}

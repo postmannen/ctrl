@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"golang.org/x/exp/slog"
 )
 
 // nodeAuth is the structure that holds both keys and acl's
@@ -35,16 +37,13 @@ type nodeAuth struct {
 	SignPublicKey []byte
 
 	configuration *Configuration
-
-	errorKernel *errorKernel
 }
 
-func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAuth {
+func newNodeAuth(configuration *Configuration) *nodeAuth {
 	n := nodeAuth{
-		nodeAcl:       newNodeAcl(configuration, errorKernel),
-		publicKeys:    newPublicKeys(configuration, errorKernel),
+		nodeAcl:       newNodeAcl(configuration),
+		publicKeys:    newPublicKeys(configuration),
 		configuration: configuration,
-		errorKernel:   errorKernel,
 	}
 
 	// Set the signing key paths.
@@ -54,7 +53,7 @@ func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAu
 
 	err := n.loadSigningKeys()
 	if err != nil {
-		errorKernel.logError("newNodeAuth", "error", err)
+		slog.Error("newNodeAuth", "error", err)
 		os.Exit(1)
 	}
 
@@ -81,21 +80,19 @@ type nodeAcl struct {
 	aclAndHash    aclAndHash
 	filePath      string
 	mu            sync.Mutex
-	errorKernel   *errorKernel
 	configuration *Configuration
 }
 
-func newNodeAcl(c *Configuration, errorKernel *errorKernel) *nodeAcl {
+func newNodeAcl(c *Configuration) *nodeAcl {
 	n := nodeAcl{
 		aclAndHash:    newAclAndHash(),
 		filePath:      filepath.Join(c.DatabaseFolder, "node_aclmap.txt"),
-		errorKernel:   errorKernel,
 		configuration: c,
 	}
 
 	err := n.loadFromFile()
 	if err != nil {
-		errorKernel.logError("newNodeAcl: loading acl's from file", "file", err)
+		slog.Error("newNodeAcl: loading acl's from file", "file", err)
 	}
 
 	return &n
@@ -108,7 +105,7 @@ func (n *nodeAcl) loadFromFile() error {
 	if _, err := os.Stat(n.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		n.errorKernel.logDebug("nodeAcl:loadFromFile: no acl file found", "file", n.filePath)
+		slog.Debug("nodeAcl:loadFromFile: no acl file found", "file", n.filePath)
 		return nil
 	}
 
@@ -130,7 +127,7 @@ func (n *nodeAcl) loadFromFile() error {
 		return err
 	}
 
-	n.errorKernel.logDebug("nodeAcl: loadFromFile: Loaded existing acl's from file", "hash", n.aclAndHash.Hash)
+	slog.Debug("nodeAcl: loadFromFile: Loaded existing acl's from file", "hash", n.aclAndHash.Hash)
 
 	return nil
 }
@@ -183,21 +180,19 @@ type publicKeys struct {
 	keysAndHash   *keysAndHash
 	mu            sync.Mutex
 	filePath      string
-	errorKernel   *errorKernel
 	configuration *Configuration
 }
 
-func newPublicKeys(c *Configuration, errorKernel *errorKernel) *publicKeys {
+func newPublicKeys(c *Configuration) *publicKeys {
 	p := publicKeys{
 		keysAndHash:   newKeysAndHash(),
 		filePath:      filepath.Join(c.DatabaseFolder, "publickeys.txt"),
-		errorKernel:   errorKernel,
 		configuration: c,
 	}
 
 	err := p.loadFromFile()
 	if err != nil {
-		errorKernel.logError("newPublicKeys: loading public keys from file", "file", err)
+		slog.Error("newPublicKeys: loading public keys from file", "file", err)
 	}
 
 	return &p
@@ -210,7 +205,7 @@ func (p *publicKeys) loadFromFile() error {
 	if _, err := os.Stat(p.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		p.errorKernel.logInfo("publicKeys: loadFromFile: no public keys file found, new file will be created", "file", p.filePath)
+		slog.Info("publicKeys: loadFromFile: no public keys file found, new file will be created", "file", p.filePath)
 		return nil
 	}
 
@@ -232,7 +227,7 @@ func (p *publicKeys) loadFromFile() error {
 		return err
 	}
 
-	p.errorKernel.logDebug("nodeAuth: loadFromFile: Loaded existing keys from file", "hash", p.keysAndHash.Hash)
+	slog.Debug("nodeAuth: loadFromFile: Loaded existing keys from file", "hash", p.keysAndHash.Hash)
 
 	return nil
 }
@@ -312,7 +307,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 		n.SignPublicKey = pub
 		n.SignPrivateKey = priv
 
-		n.errorKernel.logInfo("loadSigningKeys: no signing keys found, generating new keys")
+		slog.Info("loadSigningKeys: no signing keys found, generating new keys")
 
 		// We got the new generated keys now, so we can return.
 		return nil
@@ -399,7 +394,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	// in the map, we return that the signature was verified
 	// to true to allow the method to be executed.
 	if _, ok := signatureCheckMap[m.Method]; !ok {
-		n.errorKernel.logInfo("verifySignature: will not do signature check for method", "method", m.Method)
+		slog.Info("verifySignature: will not do signature check for method", "method", m.Method)
 		return true
 	}
 
@@ -424,10 +419,10 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	}()
 
 	if err != nil {
-		n.errorKernel.logError("verifySignature", "error", err)
+		slog.Error("verifySignature", "error", err)
 	}
 
-	n.errorKernel.logInfo("verifySignature:", "result", ok, "fromNode", m.FromNode, "method", m.Method)
+	slog.Info("verifySignature:", "result", ok, "fromNode", m.FromNode, "method", m.Method)
 
 	return ok
 }
@@ -436,7 +431,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 func (n *nodeAuth) verifyAcl(m Message) bool {
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != CliCommand {
-		n.errorKernel.logInfo("verifyAcl: we shall not do acl check on method", "method", m.Method)
+		slog.Info("verifyAcl: we shall not do acl check on method", "method", m.Method)
 		return true
 	}
 
@@ -448,23 +443,23 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
 	if !ok {
-		n.errorKernel.logError("verifyAcl: The fromNode was not found in the acl", "fromNode", m.FromNode)
+		slog.Error("verifyAcl: The fromNode was not found in the acl", "fromNode", m.FromNode)
 		return false
 	}
 
 	_, ok = cmdMap[command("*")]
 	if ok {
-		n.errorKernel.logInfo("verifyAcl: The acl said \"*\", all commands allowed from node", "fromNode", m.FromNode)
+		slog.Info("verifyAcl: The acl said \"*\", all commands allowed from node", "fromNode", m.FromNode)
 		return true
 	}
 
 	_, ok = cmdMap[command(argsStringified)]
 	if !ok {
-		n.errorKernel.logInfo("verifyAcl: The command was NOT FOUND in the acl", "methodArgs", m.MethodArgs)
+		slog.Info("verifyAcl: The command was NOT FOUND in the acl", "methodArgs", m.MethodArgs)
 		return false
 	}
 
-	n.errorKernel.logInfo("verifyAcl: the command was FOUND in the acl", "result", ok, "fromNode", m.FromNode, "method", m.Method)
+	slog.Info("verifyAcl: the command was FOUND in the acl", "result", ok, "fromNode", m.FromNode, "method", m.Method)
 
 	return true
 }

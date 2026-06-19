@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/exp/slog"
 )
 
 // -----
@@ -27,7 +28,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
 
-		proc.errorKernel.logDebug("methodHello: Creating subscribers data folder at ", "foldertree", folderTree)
+		slog.Debug("methodHello: Creating subscribers data folder at ", "foldertree", folderTree)
 	}
 
 	// Open file and write data.
@@ -45,7 +46,7 @@ func methodHello(proc process, message Message, node string) ([]byte, error) {
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v", err)
-		proc.errorKernel.errSend(proc, message, er, logWarning)
+		fmt.Printf("ERR SEND: %v\n", er)
 	}
 
 	// The handling of the public key that is in the message.Data field is handled in the procfunc.
@@ -74,7 +75,7 @@ func procFuncHelloSubscriber(ctx context.Context, proc process, procFuncCh chan 
 		select {
 		case m = <-procFuncCh:
 		case <-ctx.Done():
-			proc.errorKernel.logDebug("procFuncHelloSubscriber: stopped handleFunc for: subscriber", "subject", proc.subject.name())
+			slog.Debug("procFuncHelloSubscriber: stopped handleFunc for: subscriber", "subject", proc.subject.name())
 
 			return nil
 		}
@@ -118,7 +119,7 @@ func procFuncHelloPublisher(ctx context.Context, proc process, procFuncCh chan M
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			proc.errorKernel.logDebug("procFuncHelloPublisher: stopped handleFunc for: publisher", "subject", proc.subject.name())
+			slog.Debug("procFuncHelloPublisher: stopped handleFunc for: publisher", "subject", proc.subject.name())
 
 			return nil
 		}
@@ -142,7 +143,7 @@ func methodErrorLog(proc process, message Message, node string) ([]byte, error) 
 			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
 
-		proc.errorKernel.logDebug("methodErrorLog: Creating subscribers data folder", "foldertree", folderTree)
+		slog.Debug("methodErrorLog: Creating subscribers data folder", "foldertree", folderTree)
 	}
 
 	// Open file and write data.
@@ -158,7 +159,7 @@ func methodErrorLog(proc process, message Message, node string) ([]byte, error) 
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v", err)
-		proc.errorKernel.errSend(proc, message, er, logWarning)
+		fmt.Printf("ERR SEND: %v\n", er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

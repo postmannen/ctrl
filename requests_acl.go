@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
+	"golang.org/x/exp/slog"
 )
 
 // ----
 
 // Handler to get all acl's from a central server.
 func methodAclRequestUpdate(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- subscriber methodAclRequestUpdate received from node with hash", "fromNode", message.FromNode, "hash", message.Data)
+	slog.Debug("<--- subscriber methodAclRequestUpdate received from node with hash", "fromNode", message.FromNode, "hash", message.Data)
 
 	// fmt.Printf("\n --- subscriber methodAclRequestUpdate: the message brought to handler : %+v\n", message)
 
@@ -45,20 +46,20 @@ func methodAclRequestUpdate(proc process, message Message, node string) ([]byte,
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				proc.errorKernel.logDebug("methodAclRequestUpdate: got acl hash from node with hash", "fromNode", message.FromNode, "hash", message.Data)
+				slog.Debug("methodAclRequestUpdate: got acl hash from node with hash", "fromNode", message.FromNode, "hash", message.Data)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
-				proc.errorKernel.logDebug("methodAclRequestUpdate:  the central acl hash", "hash", hash32)
+				slog.Debug("methodAclRequestUpdate:  the central acl hash", "hash", hash32)
 
 				if bytes.Equal(hash, message.Data) {
-					proc.errorKernel.logDebug("info: subscriber methodAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
+					slog.Debug("info: subscriber methodAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
 					return
 				}
 
-				proc.errorKernel.logDebug("info: subscriber methodAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
+				slog.Debug("info: subscriber methodAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
 
 				// Generate JSON for Message.Data
 
@@ -71,10 +72,10 @@ func methodAclRequestUpdate(proc process, message Message, node string) ([]byte,
 				js, err := json.Marshal(hdh)
 				if err != nil {
 					er := fmt.Errorf("error: REQAclRequestUpdate : json marshal failed: %v, message: %v", err, message)
-					proc.errorKernel.errSend(proc, message, er, logWarning)
+					fmt.Printf("ERR SEND: %v\n", er)
 				}
 
-				proc.errorKernel.logDebug("----> subscriber methodAclRequestUpdate: SENDING ACL'S TO NODE", "node", message.FromNode, "serializedAndHash", hdh)
+				slog.Debug("----> subscriber methodAclRequestUpdate: SENDING ACL'S TO NODE", "node", message.FromNode, "serializedAndHash", hdh)
 
 				newReplyMessage(proc, message, js)
 			}()
@@ -95,7 +96,7 @@ func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan
 		// and update with new keys back.
 
 		proc.nodeAuth.nodeAcl.mu.Lock()
-		proc.errorKernel.logDebug(" ----> publisher AclRequestUpdate: sending our current hash", "hash", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+		slog.Debug(" ----> publisher AclRequestUpdate: sending our current hash", "hash", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
 
 		m := Message{
 			FileName:    "aclRequestUpdate.log",
@@ -115,7 +116,7 @@ func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			proc.errorKernel.logDebug("stopped handleFunc for publisher", "subject", proc.subject.name())
+			slog.Debug("stopped handleFunc for publisher", "subject", proc.subject.name())
 			// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 			return nil
 		}
@@ -126,7 +127,7 @@ func procFuncAclRequestUpdate(ctx context.Context, proc process, procFuncCh chan
 
 // Handler to receive the acls from a central server.
 func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- subscriber methodAclDeliverUpdate received from", "fromNode", message.FromNode, "data", message.Data)
+	slog.Debug("<--- subscriber methodAclDeliverUpdate received from", "fromNode", message.FromNode, "data", message.Data)
 
 	// fmt.Printf("\n --- subscriber methodAclRequestUpdate: the message received on handler : %+v\n\n", message)
 
@@ -162,7 +163,7 @@ func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte,
 			err := json.Unmarshal(message.Data, &hdh)
 			if err != nil {
 				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 
 			mapOfFromNodeCommands := make(map[Node]map[command]struct{})
@@ -171,7 +172,7 @@ func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte,
 				err = cbor.Unmarshal(hdh.Data, &mapOfFromNodeCommands)
 				if err != nil {
 					er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : cbor unmarshal failed: %v, message: %v", err, message)
-					proc.errorKernel.errSend(proc, message, er, logError)
+					fmt.Printf("ERR SEND: %v\n", er)
 				}
 			}
 
@@ -185,7 +186,7 @@ func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte,
 			err = proc.nodeAuth.nodeAcl.saveToFile()
 			if err != nil {
 				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : save to file failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er, logError)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 
 			// Prepare and queue for sending a new message with the output
@@ -202,7 +203,7 @@ func methodAclDeliverUpdate(proc process, message Message, node string) ([]byte,
 // ---
 
 func methodAclAddCommand(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclAddCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclAddCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -241,12 +242,12 @@ func methodAclAddCommand(proc process, message Message, node string) ([]byte, er
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclAddAccessList: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -263,7 +264,7 @@ func methodAclAddCommand(proc process, message Message, node string) ([]byte, er
 // ---
 
 func methodAclDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclDeleteCommand received", "fromnode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclDeleteCommand received", "fromnode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -302,12 +303,12 @@ func methodAclDeleteCommand(proc process, message Message, node string) ([]byte,
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclDeleteCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -324,7 +325,7 @@ func methodAclDeleteCommand(proc process, message Message, node string) ([]byte,
 // ---
 
 func methodAclDeleteSource(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclDeleteSource received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclDeleteSource received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -362,12 +363,12 @@ func methodAclDeleteSource(proc process, message Message, node string) ([]byte, 
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclDeleteSource: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -384,7 +385,7 @@ func methodAclDeleteSource(proc process, message Message, node string) ([]byte, 
 // ---
 
 func methodAclGroupNodesAddNode(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclGroupNodesAddNode received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclGroupNodesAddNode received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -422,12 +423,12 @@ func methodAclGroupNodesAddNode(proc process, message Message, node string) ([]b
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclGroupNodesAddNode: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -444,7 +445,7 @@ func methodAclGroupNodesAddNode(proc process, message Message, node string) ([]b
 // ---
 
 func methodAclGroupNodesDeleteNode(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclGroupNodesDeleteNode received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclGroupNodesDeleteNode received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -482,12 +483,12 @@ func methodAclGroupNodesDeleteNode(proc process, message Message, node string) (
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -504,7 +505,7 @@ func methodAclGroupNodesDeleteNode(proc process, message Message, node string) (
 // ---
 
 func methodAclGroupNodesDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclGroupNodesDeleteGroup received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclGroupNodesDeleteGroup received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -541,12 +542,12 @@ func methodAclGroupNodesDeleteGroup(proc process, message Message, node string) 
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclGroupNodesDeleteGroup: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -563,7 +564,7 @@ func methodAclGroupNodesDeleteGroup(proc process, message Message, node string) 
 // ---
 
 func methodAclGroupCommandsAddCommand(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclGroupCommandsAddCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclGroupCommandsAddCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -601,12 +602,12 @@ func methodAclGroupCommandsAddCommand(proc process, message Message, node string
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclGroupCommandsAddCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -623,7 +624,7 @@ func methodAclGroupCommandsAddCommand(proc process, message Message, node string
 // ---
 
 func methodAclGroupCommandsDeleteCommand(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclGroupCommandsDeleteCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclGroupCommandsDeleteCommand received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -661,12 +662,12 @@ func methodAclGroupCommandsDeleteCommand(proc process, message Message, node str
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclGroupCommandsDeleteCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -683,7 +684,7 @@ func methodAclGroupCommandsDeleteCommand(proc process, message Message, node str
 // ---
 
 func methodAclGroupCommandsDeleteGroup(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclGroupCommandsDeleteGroup received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclGroupCommandsDeleteGroup received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -720,12 +721,12 @@ func methodAclGroupCommandsDeleteGroup(proc process, message Message, node strin
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclGroupCommandsDeleteGroup: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -742,7 +743,7 @@ func methodAclGroupCommandsDeleteGroup(proc process, message Message, node strin
 // ---
 
 func methodAclExport(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclExport received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclExport received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -775,12 +776,12 @@ func methodAclExport(proc process, message Message, node string) ([]byte, error)
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclExport: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -797,7 +798,7 @@ func methodAclExport(proc process, message Message, node string) ([]byte, error)
 // ---
 
 func methodAclImport(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- methodAclImport received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- methodAclImport received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -838,12 +839,12 @@ func methodAclImport(proc process, message Message, node string) ([]byte, error)
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err, logError)
+			fmt.Printf("ERR SEND: %v\n", err)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodAclImport: method timed out")
-			proc.errorKernel.errSend(proc, message, er, logInfo)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output

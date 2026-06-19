@@ -15,6 +15,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"golang.org/x/exp/slog"
 )
 
 type copyInitialData struct {
@@ -108,12 +109,12 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		// The value will be replaced
 		folderPermission := uint64(0755)
 
-		proc.errorKernel.logDebug("methodCopySrc: before switch: FolderPermission defined in message for socket: %04o", "folderPermission", folderPermission)
+		slog.Debug("methodCopySrc: before switch: FolderPermission defined in message for socket: %04o", "folderPermission", folderPermission)
 		// Verify and check the methodArgs
 
 		if len(message.MethodArgs) < 3 {
 			er := fmt.Errorf("error: methodCopySrc: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			return
 		}
 
@@ -123,7 +124,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 			splitChunkSize, err = strconv.Atoi(message.MethodArgs[3])
 			if err != nil {
 				er := fmt.Errorf("error: methodCopySrc: unble to convert splitChunkSize into int value: %v", err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 		}
 
@@ -133,7 +134,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 			maxTotalCopyTime, err = strconv.Atoi(message.MethodArgs[4])
 			if err != nil {
 				er := fmt.Errorf("error: methodCopySrc: unble to convert maxTotalCopyTime into int value: %v", err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 		}
 
@@ -142,14 +143,14 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 			var err error
 			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
 			if err != nil {
-				proc.errorKernel.logError("methodCopySrc: failed to parse uint", "error", err)
+				slog.Error("methodCopySrc: failed to parse uint", "error", err)
 			}
 
-			proc.errorKernel.logDebug("methodCopySrc: FolderPermission defined in message for socket", "socket", message.MethodArgs[5], "converted", folderPermission)
+			slog.Debug("methodCopySrc: FolderPermission defined in message for socket", "socket", message.MethodArgs[5], "converted", folderPermission)
 
 			if err != nil {
 				er := fmt.Errorf("error: methodCopySrc: unable to convert folderPermission into int value: %v", err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 		}
 
@@ -183,7 +184,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		fileInfo, err := os.Stat(SrcFilePath)
 		if err != nil {
 			// errCh <- fmt.Errorf("error: methodCopySrc: failed to open file: %v, %v", SrcFilePath, err)
-			proc.errorKernel.logDebug("error: copySrcSubProcFunc: failed to stat", "file", err)
+			slog.Debug("error: copySrcSubProcFunc: failed to stat", "file", err)
 			return
 		}
 
@@ -227,7 +228,7 @@ func methodCopySrc(proc process, message Message, node string) ([]byte, error) {
 		cb, err := cbor.Marshal(cia)
 		if err != nil {
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			cancel()
 		}
 
@@ -281,7 +282,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		err := cbor.Unmarshal(message.Data, &cia)
 		if err != nil {
 			er := fmt.Errorf("error: methodCopyDst: failed to cbor Unmarshal data: %v, message=%v", err, message)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			return
 		}
 
@@ -317,7 +318,7 @@ func methodCopyDst(proc process, message Message, node string) ([]byte, error) {
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			proc.errorKernel.logDebug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
+			slog.Debug("methodCopyDst: subprocesses already existed, will not start another subscriber for", "processName", pn)
 
 			// HERE!!!
 			// If the process name already existed we return here before any
@@ -358,9 +359,9 @@ func copySrcSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			proc.errorKernel.logDebug("copySrcHandler: process ended", "processName", proc.processName)
+			slog.Debug("copySrcHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			proc.errorKernel.logDebug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
+			slog.Debug("copySrcHandler: passing message over to procFunc", "processName", proc.processName)
 		}
 
 		return nil, nil
@@ -374,9 +375,9 @@ func copyDstSubHandler() func(process, Message, string) ([]byte, error) {
 
 		select {
 		case <-proc.ctx.Done():
-			proc.errorKernel.logDebug("copyDstHandler: process ended", "processName", proc.processName)
+			slog.Debug("copyDstHandler: process ended", "processName", proc.processName)
 		case proc.procFuncCh <- message:
-			proc.errorKernel.logDebug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
+			slog.Debug("copyDstHandler: passing message over to procFunc", "processName", proc.processName)
 
 		}
 
@@ -418,7 +419,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 		fi, err := os.Stat(file)
 		if err != nil {
 			er := fmt.Errorf("DEBUG: ERROR while os.Stat(file): copySrcProcFunc, fileInfo: %v, err: %v", fi, err)
-			proc.errorKernel.errSend(proc, Message{}, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 		}
 
@@ -448,7 +449,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 		fh, err := os.Open(cia.SrcFilePath)
 		if err != nil {
 			er := fmt.Errorf("error: copySrcSubProcFunc: failed to open file: %v", err)
-			proc.errorKernel.errSend(proc, Message{}, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 			return er
 		}
@@ -458,7 +459,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 		for {
 			select {
 			case <-ctx.Done():
-				proc.errorKernel.logDebug("copySrcProcFunc: canceling procFunc", "processName", proc.processName)
+				slog.Debug("copySrcProcFunc: canceling procFunc", "processName", proc.processName)
 				return nil
 
 			// Pick up the message recived by the copySrcSubHandler.
@@ -467,7 +468,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 				err := cbor.Unmarshal(message.Data, &csa)
 				if err != nil {
 					er := fmt.Errorf("error: copySrcSubHandler: cbor unmarshal of csa failed: %v", err)
-					proc.errorKernel.errSend(proc, message, er, logWarning)
+					fmt.Printf("ERR SEND: %v\n", er)
 					newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 					return er
 				}
@@ -482,7 +483,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 						n, err := fh.Read(b)
 						if err != nil && err != io.EOF {
 							er := fmt.Errorf("error: copySrcSubHandler: failed to read chunk from file: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
+							fmt.Printf("ERR SEND: %v\n", er)
 							newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 							return er
 						}
@@ -511,7 +512,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 						csaSerialized, err := cbor.Marshal(csa)
 						if err != nil {
 							er := fmt.Errorf("error: copySrcSubProcFunc: cbor marshal of csa failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
+							fmt.Printf("ERR SEND: %v\n", er)
 							newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 							return er
 						}
@@ -547,7 +548,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 				case copyResendLast:
 					if resendRetries > message.Retries {
 						er := fmt.Errorf("error: %v: failed to resend the chunk for the %v time, giving up", cia.DstMethod, resendRetries)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
+						fmt.Printf("ERR SEND: %v\n", er)
 						newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 						// NB: Should we call cancel here, or wait for the timeout ?
 						proc.ctxCancel()
@@ -573,7 +574,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 					csaSerialized, err := cbor.Marshal(csa)
 					if err != nil {
 						er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
+						fmt.Printf("ERR SEND: %v\n", er)
 						newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 						return er
 					}
@@ -605,7 +606,7 @@ func copySrcSubProcFunc(cia copyInitialData, cancel context.CancelFunc, initialM
 
 				default:
 					er := fmt.Errorf("error: copySrcSubProcFunc: not valid copyStatus, exiting: %v", csa.CopyStatus)
-					proc.errorKernel.errSend(proc, message, er, logWarning)
+					fmt.Printf("ERR SEND: %v\n", er)
 					newReplyMessage(proc, msgForSubErrors, []byte(er.Error()))
 					return er
 				}
@@ -629,7 +630,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 		csaSerialized, err := cbor.Marshal(csa)
 		if err != nil {
 			er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			return er
 		}
 
@@ -656,7 +657,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 		err = os.Mkdir(tmpFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("copyDstProcSubFunc: create tmp folder for copying failed: %v", err)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			return er
 		}
 
@@ -664,21 +665,21 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 			err = os.RemoveAll(tmpFolder)
 			if err != nil {
 				er := fmt.Errorf("error: copyDstSubProcFunc: remove temp dir failed: %v", err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 		}()
 
 		for {
 			select {
 			case <-ctx.Done():
-				proc.errorKernel.logDebug("copyDstProcFunc: procFunc ended: %v", "processName", proc.processName)
+				slog.Debug("copyDstProcFunc: procFunc ended: %v", "processName", proc.processName)
 				return nil
 			case message := <-procFuncCh:
 				var csa copySubData
 				err := cbor.Unmarshal(message.Data, &csa)
 				if err != nil {
 					er := fmt.Errorf("error: copySrcSubHandler: cbor unmarshal of csa failed: %v", err)
-					proc.errorKernel.errSend(proc, message, er, logWarning)
+					fmt.Printf("ERR SEND: %v\n", er)
 					return er
 				}
 
@@ -686,7 +687,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 				// trigger the resend of the last message in the switch below.
 				hash := sha256.Sum256(csa.CopyData)
 				if hash != csa.Hash {
-					proc.errorKernel.logDebug("copyDstSubProcFunc: hash of received message is not correct for", "DstMethod", cia.DstMethod)
+					slog.Debug("copyDstSubProcFunc: hash of received message is not correct for", "DstMethod", cia.DstMethod)
 
 					csa.CopyStatus = copyResendLast
 				}
@@ -712,7 +713,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 					}()
 
 					if err != nil {
-						proc.errorKernel.errSend(proc, message, err, logWarning)
+						fmt.Printf("ERR SEND: %v\n", err)
 						return err
 					}
 
@@ -724,7 +725,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 					csaSer, err := cbor.Marshal(csa)
 					if err != nil {
 						er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
+						fmt.Printf("ERR SEND: %v\n", er)
 						return er
 					}
 
@@ -750,7 +751,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 					csaSer, err := cbor.Marshal(csa)
 					if err != nil {
 						er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er, logWarning)
+						fmt.Printf("ERR SEND: %v\n", er)
 						return er
 					}
 
@@ -776,14 +777,14 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 						filePath := filepath.Join(cia.DstDir, cia.DstFile)
 
 						// HERE:
-						proc.errorKernel.logDebug("copyDstSubProcFunc: Before creating folder: cia.FolderPermission: %04o", "FolderPermission", cia.FolderPermission)
+						slog.Debug("copyDstSubProcFunc: Before creating folder: cia.FolderPermission: %04o", "FolderPermission", cia.FolderPermission)
 
 						if _, err := os.Stat(cia.DstDir); os.IsNotExist(err) {
 							err := os.MkdirAll(cia.DstDir, fs.FileMode(cia.FolderPermission))
 							if err != nil {
 								return fmt.Errorf("copyDstSubProcFunc: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
 							}
-							proc.errorKernel.logDebug("copyDstSubProcFunc: Created folder: with cia.FolderPermission: %04o", "folderPermission", cia.FolderPermission)
+							slog.Debug("copyDstSubProcFunc: Created folder: with cia.FolderPermission: %04o", "folderPermission", cia.FolderPermission)
 						}
 
 						// Rename the file so we got a backup.
@@ -793,7 +794,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 						mainfh, err := os.OpenFile(filePath, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, cia.FileMode)
 						if err != nil {
 							er := fmt.Errorf("error: copyDstSubProcFunc: open final destination file failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
+							fmt.Printf("ERR SEND: %v\n", er)
 							return er
 						}
 						defer mainfh.Close()
@@ -839,7 +840,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 
 						if err != nil {
 							er := fmt.Errorf("error: copyDstSubProcFunc: creation of slice of chunk paths failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
+							fmt.Printf("ERR SEND: %v\n", er)
 							return er
 						}
 
@@ -871,17 +872,17 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 
 						if err != nil {
 							er := fmt.Errorf("error: copyDstSubProcFunc: write to final destination file failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
+							fmt.Printf("ERR SEND: %v\n", er)
 						}
 
 						// Remove the backup file.
 						err = os.Remove(backupOriginalFileName)
 						if err != nil && !os.IsNotExist(err) {
 							er := fmt.Errorf("error: copyDstSubProcFunc: remove of backup of original file failed: %v", err)
-							proc.errorKernel.errSend(proc, message, er, logWarning)
+							fmt.Printf("ERR SEND: %v\n", er)
 						}
 
-						proc.errorKernel.logDebug("copyDstSubProcFunc: copy: successfully wrote all split chunk files into", "file", filePath)
+						slog.Debug("copyDstSubProcFunc: copy: successfully wrote all split chunk files into", "file", filePath)
 
 						// Signal back to src that we are done, so it can cancel the process.
 						{
@@ -892,7 +893,7 @@ func copyDstSubProcFunc(cia copyInitialData, message Message, cancel context.Can
 							csaSerialized, err := cbor.Marshal(csa)
 							if err != nil {
 								er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
-								proc.errorKernel.errSend(proc, message, er, logWarning)
+								fmt.Printf("ERR SEND: %v\n", er)
 								return er
 							}
 

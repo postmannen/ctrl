@@ -10,6 +10,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/postmannen/actress"
+	"golang.org/x/exp/slog"
 )
 
 func etRemoteFn(s *server) actress.ETFunc {
@@ -48,7 +49,8 @@ func etRemoteFn(s *server) actress.ETFunc {
 						// Check if the format of the message is correct.
 						if _, ok := methodsAvailable.CheckIfExists(message.Method); !ok {
 							er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", message.Method)
-							s.errorKernel.errSend(s.processInitial, message, er, logError)
+							// s.s.processInitial, message, er, logError)
+							fmt.Printf("%v\n", er)
 							return
 						}
 
@@ -88,14 +90,14 @@ func etRemoteFn(s *server) actress.ETFunc {
 
 							fh, err := os.Open(filePathToOpen)
 							if err != nil {
-								s.errorKernel.logError("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
+								slog.Error("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
 								return
 							}
 							defer fh.Close()
 
 							b, err := io.ReadAll(fh)
 							if err != nil {
-								s.errorKernel.logError("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
+								slog.Error("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
 								return
 							}
 
@@ -200,14 +202,14 @@ func etRemoteFn(s *server) actress.ETFunc {
 //
 //							fh, err := os.Open(filePathToOpen)
 //							if err != nil {
-//								s.errorKernel.logError("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
+//								slog.Error("routeMessagesToPublisherProcess: failed to open file given as CTRL_FILE argument", "error", err)
 //								return
 //							}
 //							defer fh.Close()
 //
 //							b, err := io.ReadAll(fh)
 //							if err != nil {
-//								s.errorKernel.logError("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
+//								slog.Error("routeMessagesToPublisherProcess: failed to read file given as CTRL_FILE argument", "file", filePathToOpen, "error", err)
 //								return
 //							}
 //

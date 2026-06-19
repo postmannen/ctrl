@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/tenebris-tech/tail"
+	"golang.org/x/exp/slog"
 )
 
 func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
@@ -23,7 +24,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	// data to the socket instead of writing it to a normal file.
 	fi, err := os.Stat(file)
 	if err == nil && !os.IsNotExist(err) {
-		proc.errorKernel.logDebug("reqWriteFileOrSocket: failed to stat file, but will continue", "folderTree", folderTree)
+		slog.Debug("reqWriteFileOrSocket: failed to stat file, but will continue", "folderTree", folderTree)
 	}
 
 	if fi != nil && fi.Mode().Type() == fs.ModeSocket {
@@ -52,7 +53,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 			return er
 		}
 
-		proc.errorKernel.logDebug("reqWriteFileOrSocket: Creating subscribers data folder at", "folderTree", folderTree)
+		slog.Debug("reqWriteFileOrSocket: Creating subscribers data folder at", "folderTree", folderTree)
 	}
 
 	var fileFlag int
@@ -87,7 +88,7 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 func methodFileAppend(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(true, proc, message)
 	if err != nil {
-		proc.errorKernel.errSend(proc, message, err, logWarning)
+		fmt.Printf("ERR SEND: %v\n", err)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -101,7 +102,7 @@ func methodFileAppend(proc process, message Message, node string) ([]byte, error
 func methodToFile(proc process, message Message, node string) ([]byte, error) {
 	err := reqWriteFileOrSocket(false, proc, message)
 	if err != nil {
-		proc.errorKernel.errSend(proc, message, err, logWarning)
+		fmt.Printf("ERR SEND: %v\n", err)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -114,7 +115,7 @@ func methodToFile(proc process, message Message, node string) ([]byte, error) {
 // return the output of the command run back to the calling publisher
 // as a new message.
 func methodTailFile(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- TailFile REQUEST received", "fromNode", message.FromNode, "data", message.Data)
+	slog.Debug("<--- TailFile REQUEST received", "fromNode", message.FromNode, "data", message.Data)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -123,7 +124,7 @@ func methodTailFile(proc process, message Message, node string) ([]byte, error) 
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodTailFile: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 
 			return
 		}
@@ -150,7 +151,7 @@ func methodTailFile(proc process, message Message, node string) ([]byte, error) 
 		}})
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToTailFile: tailFile: %v", err)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 		}
 
 		proc.processes.wg.Add(1)
@@ -179,7 +180,7 @@ func methodTailFile(proc process, message Message, node string) ([]byte, error) 
 				// go routine.
 				// close(t.Lines)
 				er := fmt.Errorf("info: method timeout reached REQTailFile, canceling: %v", message.MethodArgs)
-				proc.errorKernel.infoSend(proc, message, er)
+				fmt.Printf("INFO SEND: %v\n", er)
 
 				return
 			case out := <-outCh:

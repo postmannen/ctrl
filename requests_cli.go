@@ -9,13 +9,15 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slog"
 )
 
 // handler to run a CLI command with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // as a new message.
 func methodCliCommand(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- CLICommandREQUEST received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
+	slog.Debug("<--- CLICommandREQUEST received", "fromNode", message.FromNode, "methodArgs", message.MethodArgs)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -31,7 +33,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodCliCommand: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
@@ -83,7 +85,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 			if err != nil {
 				er := fmt.Errorf("error: methodCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
 
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
@@ -98,7 +100,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodCliCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 		case out := <-outCh:
 			cancel()
@@ -127,7 +129,7 @@ func methodCliCommand(proc process, message Message, node string) ([]byte, error
 // longer time and you want to send the output of the command continually
 // back as it is generated, and not just when the command is finished.
 func methodCliCommandCont(proc process, message Message, node string) ([]byte, error) {
-	proc.errorKernel.logDebug("<--- CLInCommandCont REQUEST received", "fromNode", message.FromNode, "methodArgs", message.Data)
+	slog.Debug("<--- CLInCommandCont REQUEST received", "fromNode", message.FromNode, "methodArgs", message.Data)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -147,7 +149,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodCliCommand: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er, logWarning)
+			fmt.Printf("ERR SEND: %v\n", er)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
@@ -172,21 +174,21 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 			outReader, err := cmd.StdoutPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodCliCommandCont: cmd.StdoutPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			ErrorReader, err := cmd.StderrPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodCliCommandCont: cmd.StderrPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			cmd.WaitDelay = time.Second * 5
 			if err := cmd.Start(); err != nil {
 				er := fmt.Errorf("error: methodCliCommandCont: cmd.Start failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
@@ -217,7 +219,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 
 			if err := cmd.Wait(); err != nil {
 				er := fmt.Errorf("info: methodCliCommandCont: method timeout reached, canceled: methodArgs: %v, %v", message.MethodArgs, err)
-				proc.errorKernel.errSend(proc, message, er, logWarning)
+				fmt.Printf("ERR SEND: %v\n", er)
 			}
 
 		}()
@@ -228,7 +230,7 @@ func methodCliCommandCont(proc process, message Message, node string) ([]byte, e
 			case <-ctx.Done():
 				cancel()
 				er := fmt.Errorf("info: methodCliCommandCont: method timeout reached, canceling: methodArgs: %v", message.MethodArgs)
-				proc.errorKernel.infoSend(proc, message, er)
+				fmt.Printf("INFO SEND: %v\n", er)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
 			case out := <-outCh:

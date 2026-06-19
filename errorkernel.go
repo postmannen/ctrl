@@ -201,8 +201,6 @@ func etErrorKernelFn(s *server) actress.ETFunc {
 				}
 			}
 
-			<-ctx.Done()
-
 		}
 		return fn
 	}
